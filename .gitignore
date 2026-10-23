@@ -21,6 +21,8 @@ windows/artifacts/
 .vs/
 # Node
 node_modules/
+# Python
+__pycache__/
 # Release artifacts
 dist/
 # OS
