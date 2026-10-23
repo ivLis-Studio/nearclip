@@ -36,6 +36,13 @@ struct HistoryView: View {
                 .padding(.vertical, 9)
         }
         .frame(width: HistoryPanelController.size.width, height: HistoryPanelController.size.height)
+        .overlay {
+            if let id = state.previewId, let item = flat.first(where: { $0.id == id }) {
+                ClipPreviewOverlay(model: model, item: item, copy: { actions.copy(item) }, close: { state.previewId = nil })
+                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: state.previewId)
         .onChange(of: state.focusToken) { _, _ in searchFocused = true }
         .onChange(of: state.query) { _, _ in state.selection = state.flat(model).first?.id }
         .onChange(of: state.filter) { _, _ in state.selection = state.flat(model).first?.id }
@@ -413,6 +420,85 @@ struct ClipRow: View {
                 .foregroundStyle(.tertiary)
                 .accessibilityHidden(true)
         }
+    }
+}
+
+
+/// Full preview of a clip inside the panel (Space / Esc).
+struct ClipPreviewOverlay: View {
+    let model: AppModel
+    let item: ClipItem
+    let copy: () -> Void
+    let close: () -> Void
+
+    var body: some View {
+        let sc = item.clip
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Image(systemName: model.sourceSymbol(sc)).font(.system(size: 11))
+                Text(verbatim: model.sourceName(sc) + " · " + Format.relative(sc.clip.ts))
+                    .font(.system(size: 11.5))
+                    .lineLimit(1)
+                Spacer()
+                Button(action: close) {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 15)).foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Close"))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            Divider().opacity(0.5)
+            Group {
+                if sc.clip.isImage, let img = NSImage(contentsOf: model.node.blobURL(for: sc.id)) {
+                    Image(nsImage: img)
+                        .resizable()
+                        .scaledToFit()
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .padding(14)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        Text(verbatim: sc.clip.text ?? "")
+                            .font(.system(size: 13))
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(14)
+                    }
+                }
+            }
+            Divider().opacity(0.5)
+            HStack {
+                Text(verbatim: detail(sc))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                Spacer()
+                Button(action: copy) {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Brand.iris)
+                .controlSize(.small)
+                .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+        }
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.primary.opacity(0.08)))
+        .shadow(color: .black.opacity(0.25), radius: 18, y: 6)
+        .padding(10)
+    }
+
+    private func detail(_ sc: StoredClip) -> String {
+        if sc.clip.isImage {
+            let dims = (sc.clip.w ?? 0) > 0 ? "\(sc.clip.w!)×\(sc.clip.h ?? 0) · " : ""
+            return dims + Format.bytes(sc.clip.size ?? 0)
+        }
+        let t = sc.clip.text ?? ""
+        return String(localized: "\(t.count) characters")
     }
 }
 

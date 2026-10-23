@@ -8,13 +8,19 @@ final class ToastController {
     private let model: AppModel
     private var panel: NSPanel?
     private var hideWork: DispatchWorkItem?
+    var onClick: (() -> Void)?
 
     init(model: AppModel) { self.model = model }
 
     func show(_ sc: StoredClip) {
         guard model.settings.showToasts else { return }
         let view = ToastView(symbol: model.sourceSymbol(sc), source: model.sourceName(sc), clip: sc,
-                             thumbnail: sc.clip.isImage ? Thumbnails.shared.image(id: sc.id, url: model.node.blobURL(for: sc.id)) : nil)
+                             thumbnail: sc.clip.isImage ? Thumbnails.shared.image(id: sc.id, url: model.node.blobURL(for: sc.id)) : nil,
+                             onClick: { [weak self] in
+                                 self?.hideWork?.cancel()
+                                 self?.panel?.orderOut(nil)
+                                 self?.onClick?()
+                             })
         let host = NSHostingView(rootView: view)
         host.layoutSubtreeIfNeeded()
         let size = host.fittingSize
@@ -79,6 +85,7 @@ struct ToastView: View {
     let source: String
     let clip: StoredClip
     let thumbnail: NSImage?
+    var onClick: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 10) {
@@ -108,6 +115,8 @@ struct ToastView: View {
         .padding(.leading, 10)
         .padding(.trailing, 14)
         .padding(.vertical, 9)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onClick)
         .accessibilityElement(children: .combine)
     }
 

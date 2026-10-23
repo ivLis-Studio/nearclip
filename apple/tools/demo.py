@@ -69,7 +69,8 @@ def start_app(show, extra=None):
     env.update(extra or {})
     if show:
         env["NC_SHOW"] = show
-    return subprocess.Popen([APP], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    log = open(os.path.join(BASE, "app.log"), "a")
+    return subprocess.Popen([APP], env=env, stdout=log, stderr=log)
 
 def main():
     ap = argparse.ArgumentParser()

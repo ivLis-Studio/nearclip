@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld characters": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld자"
+          }
+        }
+      }
+    },
     "1 day": {
       "localizations": {
         "ko": {

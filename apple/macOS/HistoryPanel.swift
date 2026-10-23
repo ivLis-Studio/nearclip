@@ -15,6 +15,8 @@ final class PanelState {
     var filter: HistoryFilter = .all
     var selection: String?
     var focusToken = 0
+    /// Clip shown in the full preview (Space with an empty search field).
+    var previewId: String?
     /// Bumped whenever the panel opens so permission banners re-check the system state.
     var openToken = 0
 
@@ -128,6 +130,7 @@ final class HistoryPanelController: NSObject, NSWindowDelegate {
 
     func show(anchor: NSView?) {
         state.query = ""
+        state.previewId = nil
         state.openToken += 1
         state.selection = state.flat(model).first?.id
         position(anchor)
@@ -181,6 +184,11 @@ final class HistoryPanelController: NSObject, NSWindowDelegate {
 
     private func handle(_ e: NSEvent) -> Bool {
         let flags = e.modifierFlags.intersection([.command, .option, .control, .shift])
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["NC_DEBUG_KEYS"] != nil {
+            FileHandle.standardError.write(Data("key \(e.keyCode) flags \(flags.rawValue) query '\(state.query)'\n".utf8))
+        }
+        #endif
         switch Int(e.keyCode) {
         case kVK_DownArrow: move(1); return true
         case kVK_UpArrow: move(-1); return true
@@ -188,7 +196,10 @@ final class HistoryPanelController: NSObject, NSWindowDelegate {
             if let item = selectedItem { copy(item) }
             return true
         case kVK_Escape:
-            if !state.query.isEmpty { state.query = "" } else { hide() }
+            if state.previewId != nil { state.previewId = nil } else if !state.query.isEmpty { state.query = "" } else { hide() }
+            return true
+        case kVK_Space where flags.isEmpty && state.query.isEmpty:
+            if state.previewId != nil { state.previewId = nil } else { state.previewId = selectedItem?.id }
             return true
         case kVK_Delete where flags == .command:
             if let item = selectedItem { model.delete(item) }

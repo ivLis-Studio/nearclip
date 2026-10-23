@@ -63,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         status = StatusItemController(model: model, panel: panel, windows: windows)
         windows.onShortcutChange = { [weak self] in self?.registerHotKey() }
         model.onReceive = { [weak self] sc in self?.toast.show(sc) }
+        toast.onClick = { [weak self] in self?.panel.show(anchor: self?.status.anchorView) }
         model.onActivity = { [weak self] in self?.status.pulse() }
         model.onPairPrompt = { [weak self] prompt in self?.windows.showPairPrompt(prompt) }
         hotKey.onPress = { [weak self] in self?.panel.toggle(anchor: nil) }
@@ -109,6 +110,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switch what {
         case "panel": panel.show(anchor: status.anchorView)
         case "panel-centered": panel.show(anchor: nil)
+        case "panel-preview":
+            panel.show(anchor: nil)
+            panel.state.previewId = panel.state.flat(model).first?.id
         case "add": windows.showAddDevice()
         case "onboarding": windows.showOnboarding()
         default:
