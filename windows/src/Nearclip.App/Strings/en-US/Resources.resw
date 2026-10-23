@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="ThisPC" xml:space="preserve"><value>This PC</value></data>
+  <data name="Status_Paused" xml:space="preserve"><value>Syncing paused</value></data>
+  <data name="Status_NoDevices" xml:space="preserve"><value>No other devices yet</value></data>
+  <data name="Status_Waiting" xml:space="preserve"><value>Waiting for your devices</value></data>
+  <data name="Status_Connected1" xml:space="preserve"><value>Connected to 1 device</value></data>
+  <data name="Status_ConnectedN" xml:space="preserve"><value>Connected to {0} devices</value></data>
+  <data name="AnotherDevice" xml:space="preserve"><value>Another device</value></data>
+  <data name="Kind_Image" xml:space="preserve"><value>Image</value></data>
+  <data name="TooLarge" xml:space="preserve"><value>Too large to sync</value></data>
+  <data name="Fail_Declined" xml:space="preserve"><value>The other device declined.</value></data>
+  <data name="Fail_Expired" xml:space="preserve"><value>That code expired. Show a new one on the other device.</value></data>
+  <data name="Fail_Unreachable" xml:space="preserve"><value>Couldn't reach the device. Make sure both devices are on the same Wi-Fi.</value></data>
+  <data name="Fail_Timeout" xml:space="preserve"><value>The other device didn't answer in time.</value></data>
+  <data name="Fail_Busy" xml:space="preserve"><value>The other device is pairing with someone else. Try again in a moment.</value></data>
+  <data name="Fail_Self" xml:space="preserve"><value>That's this device.</value></data>
+  <data name="Fail_BadLink" xml:space="preserve"><value>That isn't a Nearclip pairing code.</value></data>
+  <data name="Fail_Generic" xml:space="preserve"><value>Pairing didn't work. Please try again.</value></data>
+  <data name="Pair_Joined" xml:space="preserve"><value>‘{0}’ is now one of your devices.</value></data>
+  <data name="Removed_Notice" xml:space="preserve"><value>This PC was removed from your devices.</value></data>
+  <data name="Time_JustNow" xml:space="preserve"><value>Just now</value></data>
+  <data name="Time_Minutes" xml:space="preserve"><value>{0} min ago</value></data>
+  <data name="Time_Hours" xml:space="preserve"><value>{0} hr ago</value></data>
+  <data name="Time_Yesterday" xml:space="preserve"><value>Yesterday</value></data>
+  <data name="Time_Days" xml:space="preserve"><value>{0} days ago</value></data>
+  <data name="Devices_LastSeen" xml:space="preserve"><value>Last seen {0}</value></data>
+  <data name="Devices_NotNearby" xml:space="preserve"><value>Not nearby</value></data>
+  <data name="Section_Today" xml:space="preserve"><value>Today</value></data>
+  <data name="Section_Yesterday" xml:space="preserve"><value>Yesterday</value></data>
+  <data name="Section_Pinned" xml:space="preserve"><value>Pinned</value></data>
+  <data name="DeleteEverywhere" xml:space="preserve"><value>Delete from all devices</value></data>
+  <data name="Unpin" xml:space="preserve"><value>Unpin</value></data>
+  <data name="Pin" xml:space="preserve"><value>Pin</value></data>
+  <data name="Row_Accessible" xml:space="preserve"><value>{0}, from {1}, {2}</value></data>
+  <data name="Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="OpenLink" xml:space="preserve"><value>Open link</value></data>
+  <data name="More" xml:space="preserve"><value>More</value></data>
+  <data name="AddDevice" xml:space="preserve"><value>Add device</value></data>
+  <data name="AddDevice_Ellipsis" xml:space="preserve"><value>Add device…</value></data>
+  <data name="Settings_Ellipsis" xml:space="preserve"><value>Settings…</value></data>
+  <data name="Quit" xml:space="preserve"><value>Quit Nearclip</value></data>
+  <data name="Search_Placeholder" xml:space="preserve"><value>Search history</value></data>
+  <data name="Filter_All" xml:space="preserve"><value>All</value></data>
+  <data name="Filter_Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Filter_Links" xml:space="preserve"><value>Links</value></data>
+  <data name="Filter_Images" xml:space="preserve"><value>Images</value></data>
+  <data name="Filter_Pinned" xml:space="preserve"><value>Pinned</value></data>
+  <data name="Resume" xml:space="preserve"><value>Resume syncing</value></data>
+  <data name="PauseSyncing" xml:space="preserve"><value>Pause syncing</value></data>
+  <data name="Paused_Body" xml:space="preserve"><value>Nothing is sent or received until you resume.</value></data>
+  <data name="Copied" xml:space="preserve"><value>Copied</value></data>
+  <data name="Empty_NoMatches" xml:space="preserve"><value>No matches</value></data>
+  <data name="Empty_TryDifferent" xml:space="preserve"><value>Try a different search or filter.</value></data>
+  <data name="Empty_Title" xml:space="preserve"><value>Nothing here yet</value></data>
+  <data name="Empty_Body" xml:space="preserve"><value>Copy something on any of your devices.</value></data>
+  <data name="Connected" xml:space="preserve"><value>Connected</value></data>
+  <data name="Menu_Open" xml:space="preserve"><value>Open history</value></data>
+  <data name="Toast_CopiedFrom" xml:space="preserve"><value>Copied from {0}</value></data>
+  <data name="Toast_ImageSize" xml:space="preserve"><value>Image · {0}×{1}</value></data>
+  <data name="Add_QrAccessible" xml:space="preserve"><value>Pairing QR code</value></data>
+  <data name="Add_ScanTitle" xml:space="preserve"><value>Scan to add a phone</value></data>
+  <data name="Add_ScanBody" xml:space="preserve"><value>Use your phone's camera or the Nearclip app.</value></data>
+  <data name="Add_Address" xml:space="preserve"><value>{0} · port {1}</value></data>
+  <data name="Add_NewCode" xml:space="preserve"><value>New code in {0}</value></data>
+  <data name="Add_ReadyToPair" xml:space="preserve"><value>Ready to pair</value></data>
+  <data name="Pair" xml:space="preserve"><value>Pair</value></data>
+  <data name="Firewall_AllowLink" xml:space="preserve"><value>Windows Firewall may block your devices. Allow…</value></data>
+  <data name="Nearby" xml:space="preserve"><value>Nearby</value></data>
+  <data name="Add_NearbyBody" xml:space="preserve"><value>Computers and phones on this network that aren't yours yet.</value></data>
+  <data name="Add_Looking" xml:space="preserve"><value>Looking for devices…</value></data>
+  <data name="Add_LookingBody" xml:space="preserve"><value>Open Nearclip on your other device — it will appear here.</value></data>
+  <data name="Add_ConnectByAddress" xml:space="preserve"><value>Connect by address</value></data>
+  <data name="Add_IpAddress" xml:space="preserve"><value>IP address</value></data>
+  <data name="Add_Port" xml:space="preserve"><value>Port</value></data>
+  <data name="Add_PasteLink" xml:space="preserve"><value>Or paste a nearclip:// link</value></data>
+  <data name="Join" xml:space="preserve"><value>Join</value></data>
+  <data name="Pair_CodeAccessible" xml:space="preserve"><value>Pairing code {0}</value></data>
+  <data name="Join_Connecting" xml:space="preserve"><value>Connecting to ‘{0}’…</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Join_Waiting" xml:space="preserve"><value>Waiting for confirmation…</value></data>
+  <data name="Join_ConfirmTitle" xml:space="preserve"><value>Confirm on ‘{0}’</value></data>
+  <data name="Join_ConfirmBody" xml:space="preserve"><value>Make sure ‘{0}’ shows the same code, then choose Add there.</value></data>
+  <data name="Join_SuccessTitle" xml:space="preserve"><value>You're connected</value></data>
+  <data name="Join_SuccessBody" xml:space="preserve"><value>This PC now syncs with ‘{0}’ and your other devices.</value></data>
+  <data name="Done" xml:space="preserve"><value>Done</value></data>
+  <data name="Join_FailedTitle" xml:space="preserve"><value>Couldn't connect</value></data>
+  <data name="OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Prompt_Title" xml:space="preserve"><value>Add ‘{0}’?</value></data>
+  <data name="Prompt_Body" xml:space="preserve"><value>Make sure ‘{0}’ shows this code.</value></data>
+  <data name="Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Decline" xml:space="preserve"><value>Decline</value></data>
+  <data name="Tagline" xml:space="preserve"><value>Copy here. Paste there.</value></data>
+  <data name="Tagline_TwoLines" xml:space="preserve"><value>Copy here.
+Paste there.</value></data>
+  <data name="Onb_WelcomeBody" xml:space="preserve"><value>Nearclip keeps the clipboard of your devices in sync over your Wi-Fi. Nothing leaves your network.</value></data>
+  <data name="Onb_SetupTitle" xml:space="preserve"><value>Quick setup</value></data>
+  <data name="Onb_SetupBody" xml:space="preserve"><value>Nearclip only asks for what it needs to sync.</value></data>
+  <data name="Onb_DevicesTitle" xml:space="preserve"><value>Add your devices</value></data>
+  <data name="Onb_DevicesBody" xml:space="preserve"><value>Install Nearclip on your other devices, then scan the code or pick them below.</value></data>
+  <data name="Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Onb_LocalTitle" xml:space="preserve"><value>Local network only</value></data>
+  <data name="Onb_LocalBody" xml:space="preserve"><value>Your devices talk to each other directly — no servers, no accounts.</value></data>
+  <data name="Onb_E2eTitle" xml:space="preserve"><value>End-to-end encrypted</value></data>
+  <data name="Onb_E2eBody" xml:space="preserve"><value>Only your paired devices can read what you copy.</value></data>
+  <data name="Onb_PlatformsTitle" xml:space="preserve"><value>Mac, Windows, Android and iPhone</value></data>
+  <data name="Onb_PlatformsBody" xml:space="preserve"><value>Text and images, with a shared history on every device.</value></data>
+  <data name="Firewall_Allow" xml:space="preserve"><value>Allow…</value></data>
+  <data name="Firewall_Title" xml:space="preserve"><value>Windows Firewall</value></data>
+  <data name="Firewall_Body" xml:space="preserve"><value>When Windows asks, allow Nearclip on private networks so your other devices can reach this PC.</value></data>
+  <data name="Firewall_PublicBody" xml:space="preserve"><value>This network is set to Public. Select Allow… so your other devices can reach this PC.</value></data>
+  <data name="Firewall_BlockedBody" xml:space="preserve"><value>Windows Firewall is blocking your other devices. Select Allow… to let them reach this PC.</value></data>
+  <data name="Firewall_AllowedBody" xml:space="preserve"><value>Your other devices can reach this PC on this network.</value></data>
+  <data name="Gen_Shortcut" xml:space="preserve"><value>Shortcut for history</value></data>
+  <data name="Onb_ShortcutBody" xml:space="preserve"><value>Press {0} anywhere to open your history. You can change it in Settings.</value></data>
+  <data name="Gen_OpenAtLogin" xml:space="preserve"><value>Open at login</value></data>
+  <data name="Gen_OpenAtLoginBody" xml:space="preserve"><value>Nearclip starts quietly in the notification area when you sign in.</value></data>
+  <data name="Allowed" xml:space="preserve"><value>Allowed</value></data>
+  <data name="Firewall_Blocked" xml:space="preserve"><value>Blocked</value></data>
+  <data name="Firewall_AskedWhenNeeded" xml:space="preserve"><value>Asked when needed</value></data>
+  <data name="Firewall_Off" xml:space="preserve"><value>Firewall off</value></data>
+  <data name="Firewall_NotYet" xml:space="preserve"><value>Not allowed yet</value></data>
+  <data name="GetStarted" xml:space="preserve"><value>Get started</value></data>
+  <data name="Continue" xml:space="preserve"><value>Continue</value></data>
+  <data name="SkipForNow" xml:space="preserve"><value>Skip for now</value></data>
+  <data name="SettingsTitle" xml:space="preserve"><value>Nearclip Settings</value></data>
+  <data name="Page_General" xml:space="preserve"><value>General</value></data>
+  <data name="Page_Devices" xml:space="preserve"><value>Devices</value></data>
+  <data name="Page_Privacy" xml:space="preserve"><value>Privacy</value></data>
+  <data name="Page_History" xml:space="preserve"><value>History</value></data>
+  <data name="Page_About" xml:space="preserve"><value>About</value></data>
+  <data name="On" xml:space="preserve"><value>On</value></data>
+  <data name="Off" xml:space="preserve"><value>Off</value></data>
+  <data name="Gen_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Gen_NameBody" xml:space="preserve"><value>Your other devices see this name.</value></data>
+  <data name="Gen_Sync" xml:space="preserve"><value>Sync</value></data>
+  <data name="Gen_PauseBody" xml:space="preserve"><value>Nothing is sent or received until you resume.</value></data>
+  <data name="Gen_AutoApply" xml:space="preserve"><value>Copy incoming clips automatically</value></data>
+  <data name="Gen_AutoApplyBody" xml:space="preserve"><value>Clips copied on your other devices go straight to this PC's clipboard.</value></data>
+  <data name="Gen_SyncImages" xml:space="preserve"><value>Sync images</value></data>
+  <data name="Gen_SyncImagesBody" xml:space="preserve"><value>Send and receive pictures up to 32 MB.</value></data>
+  <data name="Gen_Toasts" xml:space="preserve"><value>Show a notification when a clip arrives</value></data>
+  <data name="Gen_ToastsBody" xml:space="preserve"><value>A small card appears above the taskbar for a moment.</value></data>
+  <data name="Gen_Paste" xml:space="preserve"><value>Paste after choosing from history</value></data>
+  <data name="Gen_PasteBody" xml:space="preserve"><value>When you open history with the shortcut, Nearclip presses Ctrl+V for you in the app you were using.</value></data>
+  <data name="Gen_Appearance" xml:space="preserve"><value>Appearance</value></data>
+  <data name="Gen_Theme" xml:space="preserve"><value>Theme</value></data>
+  <data name="Gen_ThemeSystem" xml:space="preserve"><value>Use Windows setting</value></data>
+  <data name="Gen_ThemeLight" xml:space="preserve"><value>Light</value></data>
+  <data name="Gen_ThemeDark" xml:space="preserve"><value>Dark</value></data>
+  <data name="Gen_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Gen_LangSystem" xml:space="preserve"><value>Use Windows setting</value></data>
+  <data name="Gen_RestartNeeded" xml:space="preserve"><value>Restart Nearclip to use the new language.</value></data>
+  <data name="Gen_RestartNow" xml:space="preserve"><value>Restart now</value></data>
+  <data name="Gen_ShortcutBody" xml:space="preserve"><value>Opens your history from any app.</value></data>
+  <data name="Gen_ShortcutTaken" xml:space="preserve"><value>Another app already uses this shortcut. Choose a different one.</value></data>
+  <data name="Gen_TypeShortcut" xml:space="preserve"><value>Type a shortcut…</value></data>
+  <data name="Rename_Ellipsis" xml:space="preserve"><value>Rename…</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>Rename this PC</value></data>
+  <data name="Rename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Dev_Address" xml:space="preserve"><value>Address</value></data>
+  <data name="Dev_AddressBody" xml:space="preserve"><value>Your other devices reach this PC here.</value></data>
+  <data name="MyDevices" xml:space="preserve"><value>My devices</value></data>
+  <data name="Advanced" xml:space="preserve"><value>Advanced</value></data>
+  <data name="Dev_LeaveButton" xml:space="preserve"><value>Leave…</value></data>
+  <data name="Dev_LeaveConfirmTitle" xml:space="preserve"><value>Leave your devices?</value></data>
+  <data name="Dev_LeaveConfirmBody" xml:space="preserve"><value>Your other devices will no longer sync with this PC. You can add it again at any time.</value></data>
+  <data name="Dev_Leave" xml:space="preserve"><value>Leave</value></data>
+  <data name="Dev_LeaveTitle" xml:space="preserve"><value>Leave my devices</value></data>
+  <data name="Dev_LeaveBody" xml:space="preserve"><value>This PC stops syncing and starts over with a new, empty group. History stays on this PC.</value></data>
+  <data name="Dev_EmptyTitle" xml:space="preserve"><value>No other devices yet</value></data>
+  <data name="Dev_EmptyBody" xml:space="preserve"><value>Add your phone or another computer to start syncing.</value></data>
+  <data name="Remove_Ellipsis" xml:space="preserve"><value>Remove…</value></data>
+  <data name="Remove_Title" xml:space="preserve"><value>Remove ‘{0}’?</value></data>
+  <data name="Remove_Body" xml:space="preserve"><value>It will stop syncing with your devices.</value></data>
+  <data name="Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Priv_PasswordManagers" xml:space="preserve"><value>Password managers</value></data>
+  <data name="Priv_Skip" xml:space="preserve"><value>Skip passwords and private items</value></data>
+  <data name="Priv_SkipBody" xml:space="preserve"><value>Items that password managers mark as private are never recorded or synced.</value></data>
+  <data name="Priv_Ignore" xml:space="preserve"><value>Ignore copies from these apps</value></data>
+  <data name="Priv_AddApp" xml:space="preserve"><value>Add app…</value></data>
+  <data name="Priv_Encryption" xml:space="preserve"><value>Encryption</value></data>
+  <data name="Priv_EncryptionBody" xml:space="preserve"><value>Your devices talk to each other directly on your local network. Everything is end-to-end encrypted with keys that only your devices hold — there is no server and no account.</value></data>
+  <data name="Hist_1Day" xml:space="preserve"><value>1 day</value></data>
+  <data name="Hist_7Days" xml:space="preserve"><value>7 days</value></data>
+  <data name="Hist_30Days" xml:space="preserve"><value>30 days</value></data>
+  <data name="Hist_Forever" xml:space="preserve"><value>Forever</value></data>
+  <data name="Hist_Keep" xml:space="preserve"><value>Keep history for</value></data>
+  <data name="Hist_KeepBody" xml:space="preserve"><value>Pinned clips are kept until you unpin them. History keeps at most 1,000 clips.</value></data>
+  <data name="Hist_Clips" xml:space="preserve"><value>Clips</value></data>
+  <data name="Hist_ClearSection" xml:space="preserve"><value>Manage</value></data>
+  <data name="Hist_ClearButton" xml:space="preserve"><value>Clear…</value></data>
+  <data name="Hist_ClearConfirmTitle" xml:space="preserve"><value>Clear history on all devices?</value></data>
+  <data name="Hist_ClearConfirmBody" xml:space="preserve"><value>This can't be undone.</value></data>
+  <data name="Hist_ClearConfirm" xml:space="preserve"><value>Clear history</value></data>
+  <data name="Hist_Clear" xml:space="preserve"><value>Clear history</value></data>
+  <data name="Hist_ClearBody" xml:space="preserve"><value>Deletes every clip on all of your devices.</value></data>
+  <data name="About_Version" xml:space="preserve"><value>Version {0}</value></data>
+  <data name="About_OpenSource" xml:space="preserve"><value>Open-source software</value></data>
+</root>

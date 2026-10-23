@@ -1,0 +1,81 @@
+<UserControl
+    x:Class="Nearclip.App.Views.AddDeviceView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:m="using:Nearclip.App.Model">
+    <Grid x:Name="Root">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition x:Name="QrColumn" Width="300" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!--  QR code for phones  -->
+        <StackPanel Padding="18,14,18,12" HorizontalAlignment="Center" VerticalAlignment="Top" Spacing="10">
+            <TextBlock HorizontalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="{m:Str Key=Add_ScanTitle}" />
+            <Grid x:Name="QrHost" Width="210" Height="210" HorizontalAlignment="Center">
+                <Border Background="White" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="16" />
+                <Image x:Name="QrImage" HorizontalAlignment="Center" VerticalAlignment="Center" Stretch="Fill" />
+                <Border x:Name="QrGlyph" Width="52" Height="52" HorizontalAlignment="Center" VerticalAlignment="Center" Background="White" CornerRadius="11" Visibility="Collapsed">
+                    <Image Width="42" Height="42" Source="ms-appx:///Assets/win-96.png" />
+                </Border>
+                <ProgressRing x:Name="QrProgress" Width="28" Height="28" IsActive="True" />
+            </Grid>
+            <TextBlock MaxWidth="240" HorizontalAlignment="Center" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{m:Str Key=Add_ScanBody}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+            <TextBlock x:Name="Countdown" HorizontalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+            <TextBlock x:Name="AddressLine" HorizontalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" IsTextSelectionEnabled="True" />
+            <StackPanel x:Name="SuccessLine" MaxWidth="260" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="6" Visibility="Collapsed">
+                <FontIcon VerticalAlignment="Top" FontFamily="{StaticResource Icons}" FontSize="14" Foreground="{ThemeResource OnlineBrush}" Glyph="&#xEC61;" />
+                <TextBlock x:Name="SuccessText" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource OnlineBrush}" TextWrapping="WrapWholeWords" />
+            </StackPanel>
+            <HyperlinkButton x:Name="FirewallLink" MaxWidth="250" Padding="8,4,8,4" HorizontalAlignment="Center" Click="FirewallLink_Click" Visibility="Collapsed">
+                <TextBlock x:Name="FirewallLinkText" FontSize="12" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+            </HyperlinkButton>
+        </StackPanel>
+
+        <Rectangle Grid.Column="1" Width="1" Margin="0,18,0,18" Fill="{ThemeResource CardStrokeColorDefaultBrush}" />
+
+        <!--  Nearby computers (code pairing) and manual address  -->
+        <Grid Grid.Column="2" Padding="20,14,20,14" RowSpacing="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel Spacing="3">
+                <TextBlock FontSize="15" FontWeight="SemiBold" Text="{m:Str Key=Nearby}" />
+                <TextBlock FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{m:Str Key=Add_NearbyBody}" TextWrapping="WrapWholeWords" />
+            </StackPanel>
+            <ScrollViewer x:Name="NearbyScroll" Grid.Row="1">
+                <StackPanel x:Name="NearbyList" Spacing="6" />
+            </ScrollViewer>
+            <StackPanel x:Name="NearbyEmpty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <ProgressRing Width="20" Height="20" IsActive="True" />
+                <TextBlock HorizontalAlignment="Center" FontSize="13" FontWeight="SemiBold" Text="{m:Str Key=Add_Looking}" />
+                <TextBlock MaxWidth="250" HorizontalAlignment="Center" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{m:Str Key=Add_LookingBody}" TextAlignment="Center" TextWrapping="WrapWholeWords" />
+            </StackPanel>
+            <Expander x:Name="AddressExpander" Grid.Row="2" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="{m:Str Key=Add_ConnectByAddress}">
+                <StackPanel Spacing="10">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="108" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="HostBox" KeyDown="Address_KeyDown" PlaceholderText="{m:Str Key=Add_IpAddress}" TextChanged="Address_TextChanged" />
+                        <TextBox x:Name="PortBox" Grid.Column="1" KeyDown="Address_KeyDown" PlaceholderText="{m:Str Key=Add_Port}" Text="45821" TextChanged="Address_TextChanged" />
+                        <Button x:Name="PairAddressButton" Grid.Column="2" Click="PairAddress_Click" Content="{m:Str Key=Pair}" IsEnabled="False" />
+                    </Grid>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="LinkBox" KeyDown="Link_KeyDown" PlaceholderText="{m:Str Key=Add_PasteLink}" TextChanged="Link_TextChanged" />
+                        <Button x:Name="JoinButton" Grid.Column="1" Click="Join_Click" Content="{m:Str Key=Join}" IsEnabled="False" Style="{StaticResource AccentButtonStyle}" />
+                    </Grid>
+                </StackPanel>
+            </Expander>
+        </Grid>
+    </Grid>
+</UserControl>

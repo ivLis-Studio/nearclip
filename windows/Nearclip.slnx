@@ -1,0 +1,20 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="ARM64" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Nearclip.Core/Nearclip.Core.csproj" />
+    <Project Path="src/Nearclip.Cli/Nearclip.Cli.csproj" />
+    <!-- WinUI 3 app (Windows only): built for the ARM64/x64 solution platforms, skipped for Any CPU (dotnet build/test on macOS). -->
+    <Project Path="src/Nearclip.App/Nearclip.App.csproj">
+      <Platform Solution="*|ARM64" Project="ARM64" />
+      <Platform Solution="*|x64" Project="x64" />
+      <Build Solution="*|Any CPU" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Nearclip.Core.Tests/Nearclip.Core.Tests.csproj" />
+  </Folder>
+</Solution>

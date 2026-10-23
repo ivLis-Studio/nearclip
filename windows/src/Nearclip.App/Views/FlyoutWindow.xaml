@@ -1,0 +1,196 @@
+<Window
+    x:Class="Nearclip.App.Views.FlyoutWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:m="using:Nearclip.App.Model"
+    xmlns:v="using:Nearclip.App.Views">
+    <Grid x:Name="Root" PreviewKeyDown="Root_PreviewKeyDown">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!--  Header: brand, connected devices, more  -->
+        <Grid Padding="14,10,8,8" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Width="22" Height="22" Source="ms-appx:///Assets/win-48.png" />
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold" Text="Nearclip" />
+            <Button x:Name="DevicesButton" Grid.Column="2" Padding="4,3" Click="DevicesButton_Click" Style="{StaticResource SubtleIconButton}">
+                <StackPanel x:Name="DeviceStack" Orientation="Horizontal" Spacing="-6" />
+            </Button>
+            <Button x:Name="MoreButton" Grid.Column="3" Style="{StaticResource SubtleIconButton}">
+                <FontIcon FontFamily="{StaticResource Icons}" FontSize="14" Glyph="&#xE712;" />
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuFlyoutItem x:Name="MenuAddDevice" Click="AddDevice_Click" Text="{m:Str Key=AddDevice_Ellipsis}">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE710;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="MenuPause" Click="Pause_Click">
+                            <MenuFlyoutItem.Icon><FontIcon x:Name="MenuPauseGlyph" Glyph="&#xE769;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Click="Settings_Click" Text="{m:Str Key=Settings_Ellipsis}">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE713;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem Click="Quit_Click" Text="{m:Str Key=Quit}">
+                            <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE7E8;" /></MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </Grid>
+
+        <AutoSuggestBox x:Name="Search"
+                        Grid.Row="1"
+                        Margin="12,0,12,0"
+                        PlaceholderText="{m:Str Key=Search_Placeholder}"
+                        QueryIcon="Find"
+                        TextChanged="Search_TextChanged" />
+
+        <SelectorBar x:Name="Filters" Grid.Row="2" Margin="4,2,4,0" SelectionChanged="Filters_SelectionChanged">
+            <SelectorBarItem x:Name="FilterAll" IsSelected="True" Text="{m:Str Key=Filter_All}" />
+            <SelectorBarItem x:Name="FilterText" Text="{m:Str Key=Filter_Text}" />
+            <SelectorBarItem x:Name="FilterLinks" Text="{m:Str Key=Filter_Links}" />
+            <SelectorBarItem x:Name="FilterImages" Text="{m:Str Key=Filter_Images}" />
+            <SelectorBarItem x:Name="FilterPinned" Text="{m:Str Key=Filter_Pinned}" />
+        </SelectorBar>
+
+        <StackPanel x:Name="Banners" Grid.Row="3" Margin="12,0,12,0" Spacing="6">
+            <InfoBar x:Name="PausedBar" Margin="0,4,0,4" IsClosable="False" IsOpen="False" Severity="Warning">
+                <InfoBar.ActionButton>
+                    <Button x:Name="ResumeButton" Click="Pause_Click" Content="{m:Str Key=Resume}" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+            <InfoBar x:Name="NoticeBar" Margin="0,4,0,4" IsClosable="False" IsOpen="False" />
+        </StackPanel>
+
+        <Border Grid.Row="3" Height="1" VerticalAlignment="Bottom" Background="{ThemeResource FlyoutDividerBrush}" />
+
+        <Grid Grid.Row="4">
+            <ListView x:Name="List"
+                      Padding="4,4,4,8"
+                      IsItemClickEnabled="True"
+                      ItemClick="List_ItemClick"
+                      SelectionMode="Single"
+                      TabIndex="1">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsStackPanel AreStickyGroupHeadersEnabled="False" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemContainerStyle>
+                    <Style BasedOn="{StaticResource DefaultListViewItemStyle}" TargetType="ListViewItem">
+                        <Setter Property="Padding" Value="8,0,4,0" />
+                        <Setter Property="MinHeight" Value="0" />
+                        <Setter Property="Margin" Value="0,1,0,1" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="m:ClipItem">
+                        <v:ClipRowView Item="{x:Bind}" />
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+                <ListView.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderContainerStyle>
+                            <Style TargetType="ListViewHeaderItem">
+                                <Setter Property="Padding" Value="12,10,0,3" />
+                                <Setter Property="MinHeight" Value="0" />
+                                <Setter Property="Margin" Value="0" />
+                                <Setter Property="IsTabStop" Value="False" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListViewHeaderItem">
+                                            <ContentPresenter Padding="{TemplateBinding Padding}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </GroupStyle.HeaderContainerStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate x:DataType="m:ClipGroup">
+                                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="{x:Bind Title}" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListView.GroupStyle>
+            </ListView>
+
+            <StackPanel x:Name="EmptyState"
+                        Padding="28"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="6"
+                        Visibility="Collapsed">
+                <FontIcon x:Name="EmptyGlyph"
+                          Margin="0,0,0,6"
+                          FontFamily="{StaticResource Icons}"
+                          FontSize="32"
+                          Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                          Glyph="&#xE77F;" />
+                <TextBlock x:Name="EmptyTitle" HorizontalAlignment="Center" FontSize="14" FontWeight="SemiBold" />
+                <TextBlock x:Name="EmptyBody"
+                           MaxWidth="250"
+                           HorizontalAlignment="Center"
+                           FontSize="12"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           TextAlignment="Center"
+                           TextWrapping="WrapWholeWords" />
+                <Button x:Name="EmptyAdd" Margin="0,10,0,0" HorizontalAlignment="Center" Click="AddDevice_Click" Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontFamily="{StaticResource Icons}" FontSize="12" Glyph="&#xE710;" />
+                        <TextBlock Text="{m:Str Key=AddDevice}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <Border x:Name="CopiedPill"
+                    Margin="0,0,0,14"
+                    Padding="14,7,16,7"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                    CornerRadius="16"
+                    IsHitTestVisible="False"
+                    Opacity="0">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                    <FontIcon FontFamily="{StaticResource Icons}" FontSize="12" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" Glyph="&#xE73E;" />
+                    <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" Text="{m:Str Key=Copied}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="5" Height="1" VerticalAlignment="Top" Background="{ThemeResource FlyoutDividerBrush}" />
+        <Grid Grid.Row="5" Padding="14,5,6,6" ColumnSpacing="7">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Ellipse x:Name="StatusDot" Width="7" Height="7" VerticalAlignment="Center" />
+            <TextBlock x:Name="StatusText"
+                       Grid.Column="1"
+                       VerticalAlignment="Center"
+                       FontSize="12"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       TextTrimming="CharacterEllipsis" />
+            <Button x:Name="FooterAdd" Grid.Column="2" Click="AddDevice_Click" Style="{StaticResource SubtleIconButton}">
+                <FontIcon FontFamily="{StaticResource Icons}" FontSize="13" Glyph="&#xE710;" />
+            </Button>
+            <Button x:Name="FooterPause" Grid.Column="3" Click="Pause_Click" Style="{StaticResource SubtleIconButton}">
+                <FontIcon x:Name="FooterPauseGlyph" FontFamily="{StaticResource Icons}" FontSize="13" Glyph="&#xE769;" />
+            </Button>
+        </Grid>
+    </Grid>
+</Window>
