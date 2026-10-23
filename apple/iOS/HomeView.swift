@@ -8,7 +8,6 @@ struct RootView: View {
     var body: some View {
         HomeView(env: env)
             .fullScreenCover(isPresented: $env.showOnboarding) { OnboardingView(env: env) }
-            .sheet(isPresented: $env.showDevices) { DevicesView(env: env) }
             .sheet(isPresented: $env.showAddDevice) { AddDeviceView(env: env) }
             .sheet(isPresented: $env.showSettings) { SettingsView(env: env) }
     }
@@ -22,7 +21,7 @@ struct HomeView: View {
     var body: some View {
         let model = env.model
         let items = model.items(filter: filter, query: query)
-        NavigationStack {
+        NavigationStack(path: $env.path) {
             List {
                 Section {
                     StatusCard(env: env)
@@ -46,6 +45,11 @@ struct HomeView: View {
             .listStyle(.insetGrouped)
             .listSectionSpacing(.compact)
             .navigationTitle("Nearclip")
+            .navigationDestination(for: AppRoute.self) { route in
+                switch route {
+                case .devices: DevicesView(env: env, embedded: true)
+                }
+            }
             .searchable(text: $query, prompt: Text("Search history"))
             .refreshable { model.refresh() }
             .overlay {
@@ -115,9 +119,7 @@ struct StatusCard: View {
     var body: some View {
         let model = env.model
         let paused = model.settings.paused
-        Button {
-            env.showDevices = true
-        } label: {
+        NavigationLink(value: AppRoute.devices) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
@@ -150,12 +152,8 @@ struct StatusCard: View {
                             .background(Circle().fill(Brand.iris.opacity(model.isOnline(m.id) ? 0.18 : 0.06)).padding(-2))
                     }
                 }
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
             }
         }
-        .buttonStyle(.plain)
         .accessibilityHint(Text("Shows your devices"))
         .accessibilityIdentifier("home.devices")
     }

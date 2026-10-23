@@ -37,6 +37,8 @@ enum IOSSystem {
 
 enum ClipboardKind { case text, link, image }
 
+enum AppRoute: Hashable { case devices }
+
 struct Toast: Identifiable, Equatable {
     let id = UUID()
     var text: String
@@ -53,7 +55,7 @@ final class AppEnvironment {
     let clipboard = IOSClipboard()
     private(set) var started = false
     var showAddDevice = false
-    var showDevices = false
+    var path: [AppRoute] = []
     var showSettings = false
     var showOnboarding: Bool
     /// The system clipboard has something new that was not sent yet.

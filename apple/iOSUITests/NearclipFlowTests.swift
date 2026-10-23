@@ -76,10 +76,10 @@ final class NearclipFlowTests: XCTestCase {
         shot("08-sent")
 
         app.buttons["home.devices"].tap()
-        XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.collectionViews["devices.list"].waitForExistence(timeout: 5))
         sleep(1)
         shot("09-devices")
-        app.buttons["sheet.done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["home.settings"].tap()
         sleep(1)
         shot("10-settings")
@@ -87,6 +87,25 @@ final class NearclipFlowTests: XCTestCase {
         app.buttons["home.addDevice"].tap()
         sleep(2)
         shot("11-add-device")
+    }
+
+    /// Needs an already onboarded app (run after testOnboardingPairSyncAndSend).
+    func testSheetsOpenFromHome() throws {
+        app.launchArguments = language()
+        app.launch()
+        XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        app.buttons["home.devices"].tap()
+        XCTAssertTrue(app.collectionViews["devices.list"].waitForExistence(timeout: 5), "Devices page did not open")
+        shot("20-devices")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["home.settings"].tap()
+        XCTAssertTrue(app.buttons["sheet.done"].waitForExistence(timeout: 5), "Settings sheet did not open")
+        shot("21-settings")
+        app.buttons["sheet.done"].tap()
+        app.buttons["home.addDevice"].tap()
+        XCTAssertTrue(app.buttons["sheet.done"].waitForExistence(timeout: 5), "Add Device sheet did not open")
+        sleep(2)
+        shot("22-add-device")
     }
 }
 

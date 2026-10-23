@@ -3,15 +3,29 @@ import SwiftUI
 
 struct DevicesView: View {
     let env: AppEnvironment
+    /// Pushed inside the home navigation stack (no own stack / Done button).
+    var embedded = false
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var confirmRemove: MemberRecord?
     @State private var confirmLeave = false
 
     var body: some View {
+        if embedded {
+            content
+        } else {
+            NavigationStack {
+                content
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("sheet.done") }
+                    }
+            }
+        }
+    }
+
+    private var content: some View {
         let model = env.model
-        NavigationStack {
-            List {
+        return List {
                 Section {
                     HStack(spacing: 12) {
                         deviceIcon(DeviceStyle.symbol(platform: "ios", model: model.me?.model), online: true)
@@ -71,9 +85,7 @@ struct DevicesView: View {
             }
             .navigationTitle("Devices")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("sheet.done") }
-            }
+            .accessibilityIdentifier("devices.list")
             .onAppear { name = model.deviceName }
             .onDisappear { model.rename(name) }
             .confirmationDialog(Text("Remove ‘\(confirmRemove?.name ?? "")’?"), isPresented: Binding(get: { confirmRemove != nil }, set: { if !$0 { confirmRemove = nil } }), titleVisibility: .visible) {
@@ -86,7 +98,6 @@ struct DevicesView: View {
             } message: {
                 Text("Your other devices will no longer sync with this one. You can add it again at any time.")
             }
-        }
     }
 
     private func deviceIcon(_ symbol: String, online: Bool) -> some View {
