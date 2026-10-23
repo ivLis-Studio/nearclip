@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_shortcut_send"
+        android:shortcutId="send_clipboard"
+        android:shortcutLongLabel="@string/shortcut_send_long"
+        android:shortcutShortLabel="@string/send_clipboard">
+        <intent
+            android:action="studio.ivlis.nearclip.action.SEND_CLIPBOARD"
+            android:targetClass="studio.ivlis.nearclip.ui.SendActivity"
+            android:targetPackage="studio.ivlis.nearclip" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_shortcut_add"
+        android:shortcutId="add_device"
+        android:shortcutLongLabel="@string/shortcut_add_long"
+        android:shortcutShortLabel="@string/add_device">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetClass="studio.ivlis.nearclip.ui.MainActivity"
+            android:targetPackage="studio.ivlis.nearclip">
+            <extra
+                android:name="studio.ivlis.nearclip.extra.ROUTE"
+                android:value="add_device" />
+        </intent>
+    </shortcut>
+</shortcuts>

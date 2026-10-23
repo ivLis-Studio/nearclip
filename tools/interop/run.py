@@ -197,6 +197,37 @@ def scenario_code(x_impl, x_cmd, y_impl, y_cmd, tmp):
     finally:
         x.quit(); y.quit()
 
+def scenario_readd(impls, tmp):
+    """A removes C; B is offline while C is re-added via A; A goes away; C must stay in the group when it meets B
+    (B still holds C's old tombstone). Found by the Android worker; PROTOCOL §4.3 merges welcomes first."""
+    (ia, ca), (ib, cb), (ic, cc) = impls
+    a = Peer(ia, ca, f"{ia}-A"); b = Peer(ib, cb, f"{ib}-B"); c = Peer(ic, cc, f"{ic}-C")
+    try:
+        pair_qr(a, b)
+        pair_qr(a, c)
+        a.mark(); b.mark(); c.mark()
+        a.send(cmd="remove", peer=c.id)
+        c.expect("left after removal", lambda e: e.get("ev") == "left")
+        b.expect("B stores C's tombstone", lambda e: e.get("ev") == "members" and any(m.get("id") == c.id and m.get("removed") for m in e.get("members", [])))
+        b.quit()
+        pair_qr(a, c)
+        a.quit()
+        b.restart()
+        c.mark(); b.mark()
+        c.send(cmd="connect", host="127.0.0.1", port=b.port)
+        b.expect("B meets the re-added C", lambda e: e.get("ev") == "peer_up" and e.get("id") == c.id, timeout=20)
+        try:
+            ev = c.expect("no second removal", lambda e: e.get("ev") == "left", timeout=3)
+            raise AssertionError("re-added device was removed again: " + json.dumps(ev))
+        except AssertionError as err:
+            if "re-added" in str(err):
+                raise
+        text = f"after re-add {random.randint(0, 1 << 30)}"
+        c.send(cmd="send_text", text=text)
+        b.expect("clip from the re-added device", is_clip(text=text), timeout=15)
+    finally:
+        a.quit(); b.quit(); c.quit()
+
 def scenario_mesh(impls, tmp):
     """A (impl0) <-QR- B (impl1) <-code- C (impl2). A and C have no direct link: clips must be forwarded by B."""
     (ia, ca), (ib, cb), (ic, cc) = impls
@@ -244,10 +275,13 @@ def main():
     if len(names) >= 3:
         for perm in itertools.permutations(names, 3):
             cases.append(("mesh forward  " + " -> ".join(p[0] for p in perm), scenario_mesh, (list(perm), tmp)))
+            cases.append(("re-add        " + " / ".join(p[0] for p in perm), scenario_readd, (list(perm), tmp)))
     elif len(names) == 2:
         cases.append(("mesh forward  " + " -> ".join([names[0][0], names[1][0], names[0][0]]), scenario_mesh, ([names[0], names[1], names[0]], tmp)))
+        cases.append(("re-add        " + " / ".join([names[0][0], names[1][0], names[0][0]]), scenario_readd, ([names[0], names[1], names[0]], tmp)))
     else:
         cases.append(("mesh forward  " + names[0][0] + " x3", scenario_mesh, ([names[0]] * 3, tmp)))
+        cases.append(("re-add        " + names[0][0] + " x3", scenario_readd, ([names[0]] * 3, tmp)))
     failed = 0
     for title, fn, fargs in cases:
         t0 = time.time()

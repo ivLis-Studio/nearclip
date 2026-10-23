@@ -136,7 +136,7 @@ explicit `host:port` endpoints: the addresses in a pairing QR code, the addresse
    * `okm = HKDF-SHA256(ikm = Z, salt = authKey, info = utf8("nearclip-session") || TH, L = 64)`
    * `kC2S = okm[0..32)`, `kS2C = okm[32..64)`
 4. From now on all frames are encrypted. The **first** encrypted message of each side MUST be
-   `welcome` (4.2) — or `bye` (4.3). A device without the group key derives different keys and fails here.
+   `welcome` (4.2). A device without the group key derives different keys and fails here.
 5. A side MUST close the connection if the peer's hello `id` equals its own deviceId.
 
 ### 4.2 welcome
@@ -151,9 +151,13 @@ receiver merges `members` (1.1), remembers `addrs` as the peer's endpoints, then
 
 ### 4.3 Removed devices
 
-If C's record is a tombstone at S, S completes the handshake, sends `{"t":"bye","reason":"removed"}`
-as its first encrypted message instead of `welcome`, and closes. C, on receiving an **encrypted**
-`bye` with reason `removed`, leaves the group (1.1). Only a group member can produce that frame.
+Both sides always exchange `welcome` first and merge the received records (1.1). Only **after** merging the
+peer's `welcome`, a side whose record of the peer is (still) a tombstone sends
+`{"t":"bye","reason":"removed"}` and closes. Merging first matters: a device that was removed and later
+re-added carries a newer record of itself than a member that was offline during the re-add, so the stale
+tombstone loses; a device that was removed while it was offline still loses against the newer tombstone.
+A side that receives an **encrypted** `bye` with reason `removed` leaves the group (1.1). Only a group
+member can produce that frame.
 
 ### 4.4 One session per peer
 

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Image clips (engine blob store) for the clipboard, sharing and saving -->
+    <files-path
+        name="blobs"
+        path="nearclip/blobs/" />
+</paths>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nearclip glyph (white cards, Iris lines), generated from design/make-icons.mjs geometry. Draw on an Iris tile. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+        <group android:translateX="512" android:translateY="512" android:scaleX="1.06" android:scaleY="1.06">
+            <group android:translateX="-558" android:translateY="-478">
+                <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.34" android:pathData="M308,268h200a76,76 0 0 1 76,76v280a76,76 0 0 1 -76,76h-200a76,76 0 0 1 -76,-76v-280a76,76 0 0 1 76,-76z" />
+                <path android:fillColor="#FFFFFFFF" android:pathData="M452,364h200a76,76 0 0 1 76,76v280a76,76 0 0 1 -76,76h-200a76,76 0 0 1 -76,-76v-280a76,76 0 0 1 76,-76z" />
+                <path android:fillColor="#FF4C5BF5" android:fillAlpha="0.30" android:pathData="M460,468h184a20,20 0 0 1 20,20v0a20,20 0 0 1 -20,20h-184a20,20 0 0 1 -20,-20v-0a20,20 0 0 1 20,-20z" />
+                <path android:fillColor="#FF4C5BF5" android:fillAlpha="0.30" android:pathData="M460,548h184a20,20 0 0 1 20,20v0a20,20 0 0 1 -20,20h-184a20,20 0 0 1 -20,-20v-0a20,20 0 0 1 20,-20z" />
+                <path android:fillColor="#FF4C5BF5" android:fillAlpha="0.30" android:pathData="M460,628h100a20,20 0 0 1 20,20v0a20,20 0 0 1 -20,20h-100a20,20 0 0 1 -20,-20v-0a20,20 0 0 1 20,-20z" />
+                <path android:strokeColor="#FFFFFFFF" android:strokeWidth="40" android:strokeLineCap="round" android:pathData="M700,244A104,104 0 0 1 804,348" />
+                <path android:strokeColor="#FFFFFFFF" android:strokeWidth="40" android:strokeLineCap="round" android:strokeAlpha="0.55" android:pathData="M700,164A184,184 0 0 1 884,348" />
+            </group>
+        </group>
+</vector>

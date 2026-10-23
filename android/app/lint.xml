@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Deliberate exceptions only; everything else stays at its default severity. -->
+<lint>
+    <!-- The project brief fixes compileSdk / targetSdk at 36 (Android 16); 37 is out but not the target yet. -->
+    <issue id="OldTargetApi" severity="ignore" />
+    <issue id="GradleDependency">
+        <ignore regexp="compileSdk" />
+    </issue>
+</lint>

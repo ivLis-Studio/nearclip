@@ -539,8 +539,9 @@ public final class NearclipNode: @unchecked Sendable {
     // MARK: - Session callbacks
 
     func sessionEstablished(_ s: PeerSession) {
-        guard let pid = s.peerId else { s.close(); return }
-        if store.members[pid]?.removed == true { s.bye("removed"); return }
+        guard s.peerId != nil else { s.close(); return }
+        // Removal is decided after both welcomes were merged (PROTOCOL §4.3): a re-added device carries a
+        // newer record of itself than a member that was offline when it was re-added.
         s.sendJSON(WelcomeMsg(device: ownRecord, members: memberList(), addrs: ownEndpoints()))
     }
 
