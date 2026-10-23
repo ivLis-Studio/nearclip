@@ -1,0 +1,26 @@
+# Builds
+.build/
+.swiftpm/
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+apple/*.xcodeproj/project.xcworkspace/xcuserdata/
+# Android
+android/.gradle/
+android/**/build/
+android/local.properties
+android/.kotlin/
+*.apk
+*.aab
+# .NET
+windows/**/bin/
+windows/**/obj/
+windows/artifacts/
+*.user
+.vs/
+# Node
+node_modules/
+# OS
+.DS_Store
+
