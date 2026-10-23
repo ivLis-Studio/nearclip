@@ -21,6 +21,8 @@ windows/artifacts/
 .vs/
 # Node
 node_modules/
+# Release artifacts
+dist/
 # OS
 .DS_Store
 

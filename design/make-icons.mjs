@@ -94,5 +94,7 @@ for (const [d, s] of [["mdpi", 48], ["hdpi", 72], ["xhdpi", 96], ["xxhdpi", 144]
 }
 // Store / README art
 await png("icon-macos.svg", 512, "nearclip-512.png");
+// In-app brand mark (full-bleed square; the UI rounds the corners itself)
+for (const s of [64, 128, 192, 256]) await png("icon-ios.svg", s, "brandmark-" + s + ".png");
 console.log("icons written to", out);
 
