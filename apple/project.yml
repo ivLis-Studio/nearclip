@@ -1,0 +1,135 @@
+name: Nearclip
+options:
+  bundleIdPrefix: studio.ivlis
+  createIntermediateGroups: true
+  developmentLanguage: en
+  deploymentTarget:
+    macOS: "14.0"
+    iOS: "17.0"
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+    DEAD_CODE_STRIPPING: YES
+packages:
+  NearclipKit:
+    path: NearclipKit
+targets:
+  Nearclip:
+    type: application
+    platform: macOS
+    sources:
+      - path: macOS
+      - path: Shared
+    dependencies:
+      - package: NearclipKit
+        product: NearclipKit
+    info:
+      path: macOS/Info.plist
+      properties:
+        CFBundleName: Nearclip
+        CFBundleDisplayName: Nearclip
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, ko]
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.productivity
+        NSHumanReadableCopyright: "© 2026 ivLis Studio · MIT License"
+        NSLocalNetworkUsageDescription: Nearclip finds and connects to your other devices on this network.
+        NSBonjourServices: [_nearclip._tcp]
+        CFBundleURLTypes:
+          - CFBundleURLName: studio.ivlis.nearclip.pair
+            CFBundleURLSchemes: [nearclip]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: studio.ivlis.nearclip
+        PRODUCT_NAME: Nearclip
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: NO
+        COMBINE_HIDPI_IMAGES: YES
+  NearclipiOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: iOS
+      - path: Shared
+    dependencies:
+      - package: NearclipKit
+        product: NearclipKit
+    info:
+      path: iOS/Info.plist
+      properties:
+        CFBundleName: Nearclip
+        CFBundleDisplayName: Nearclip
+        CFBundleIdentifier: $(PRODUCT_BUNDLE_IDENTIFIER)
+        CFBundleExecutable: $(EXECUTABLE_NAME)
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, ko]
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: ""
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: Nearclip finds and connects to your other devices on this Wi-Fi.
+        NSBonjourServices: [_nearclip._tcp]
+        NSCameraUsageDescription: Nearclip uses the camera to scan the pairing code shown on your other device.
+        CFBundleURLTypes:
+          - CFBundleURLName: studio.ivlis.nearclip.pair
+            CFBundleURLSchemes: [nearclip]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: studio.ivlis.nearclip
+        PRODUCT_NAME: Nearclip
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+  NearclipiOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: iOSUITests
+    dependencies:
+      - target: NearclipiOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: studio.ivlis.nearclip.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: NearclipiOS
+        TARGETED_DEVICE_FAMILY: "1,2"
+schemes:
+  Nearclip:
+    build:
+      targets:
+        Nearclip: all
+    run:
+      config: Debug
+  NearclipiOS:
+    build:
+      targets:
+        NearclipiOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - NearclipiOSUITests
+

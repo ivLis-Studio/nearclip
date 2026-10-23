@@ -1,0 +1,38 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "NSLocalNetworkUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip finds and connects to your other devices on this Wi-Fi."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip이 이 Wi-Fi에 있는 내 다른 기기를 찾아 연결합니다."
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip uses the camera to scan the pairing code shown on your other device."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기에 표시된 연결 코드를 스캔하는 데 카메라를 사용합니다."
+          }
+        }
+      }
+    }
+  }
+}

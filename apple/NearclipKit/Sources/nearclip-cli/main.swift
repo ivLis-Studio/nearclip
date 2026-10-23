@@ -14,12 +14,14 @@ func usage() -> Never {
 var stateDir: String?
 var name = "Nearclip CLI"
 var port: UInt16 = 0
+var platform = "cli"
 var args = CommandLine.arguments.dropFirst().makeIterator()
 while let a = args.next() {
     switch a {
     case "--state": stateDir = args.next()
     case "--name": name = args.next() ?? name
     case "--port": port = UInt16(args.next() ?? "") ?? 0
+    case "--platform": platform = args.next() ?? platform  // demos only: impersonate mac/win/android/ios
     default: usage()
     }
 }
@@ -54,7 +56,7 @@ func memberJSON(_ m: MemberRecord) -> [String: Any] {
 let stateURL = URL(fileURLWithPath: stateDir)
 let node: NearclipNode
 do {
-    node = try NearclipNode(config: .init(stateDirectory: stateURL, deviceName: name, platform: "cli", appVersion: "1.0.0",
+    node = try NearclipNode(config: .init(stateDirectory: stateURL, deviceName: name, platform: platform, appVersion: "1.0.0",
                                           port: port, bonjour: false,
                                           secretStore: FileSecretStore(directory: stateURL.appendingPathComponent("secrets"))))
 } catch {

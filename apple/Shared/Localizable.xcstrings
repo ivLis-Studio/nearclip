@@ -1,0 +1,2382 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "1 day": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1일"
+          }
+        }
+      }
+    },
+    "30 days": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30일"
+          }
+        }
+      }
+    },
+    "7 days": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7일"
+          }
+        }
+      }
+    },
+    "About": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정보"
+          }
+        }
+      }
+    },
+    "Add": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추가"
+          }
+        }
+      }
+    },
+    "Add App…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 추가…"
+          }
+        }
+      }
+    },
+    "Add Device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 추가"
+          }
+        }
+      }
+    },
+    "Add Device…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 추가…"
+          }
+        }
+      }
+    },
+    "Add a computer or phone to start": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터나 휴대폰을 추가해 시작하세요"
+          }
+        }
+      }
+    },
+    "Add your computer": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터 추가하기"
+          }
+        }
+      }
+    },
+    "Add your devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 추가하기"
+          }
+        }
+      }
+    },
+    "Add ‘%@’?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’ 기기를 추가할까요?"
+          }
+        }
+      }
+    },
+    "Address": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주소"
+          }
+        }
+      }
+    },
+    "Advanced": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고급"
+          }
+        }
+      }
+    },
+    "All": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체"
+          }
+        }
+      }
+    },
+    "Allow clipboard access so Nearclip can sync what you copy.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사한 내용을 동기화하려면 클립보드 접근을 허용하세요."
+          }
+        }
+      }
+    },
+    "Allow “Paste from Other Apps”": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘다른 앱에서 붙여넣기’ 허용하기"
+          }
+        }
+      }
+    },
+    "Allowed": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용됨"
+          }
+        }
+      }
+    },
+    "Allow…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용…"
+          }
+        }
+      }
+    },
+    "Another device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기"
+          }
+        }
+      }
+    },
+    "Another phone or a computer with a camera can scan this code.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 휴대폰이나 카메라가 있는 컴퓨터에서 이 코드를 스캔할 수 있습니다."
+          }
+        }
+      }
+    },
+    "Asked when needed": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필요할 때 요청"
+          }
+        }
+      }
+    },
+    "Back": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤로"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
+          }
+        }
+      }
+    },
+    "Choose Always Allow…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘항상 허용’ 선택…"
+          }
+        }
+      }
+    },
+    "Clear History": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 지우기"
+          }
+        }
+      }
+    },
+    "Clear History…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 지우기…"
+          }
+        }
+      }
+    },
+    "Clear history": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 지우기"
+          }
+        }
+      }
+    },
+    "Clear history on all devices?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 기기에서 기록을 지울까요?"
+          }
+        }
+      }
+    },
+    "Clear search": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색어 지우기"
+          }
+        }
+      }
+    },
+    "Clearing deletes every clip on all of your devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록을 지우면 모든 기기에서 클립이 삭제됩니다."
+          }
+        }
+      }
+    },
+    "Clear…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지우기…"
+          }
+        }
+      }
+    },
+    "Clipboard access": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드 접근"
+          }
+        }
+      }
+    },
+    "Clipboard access is blocked": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드 접근이 차단됨"
+          }
+        }
+      }
+    },
+    "Clips": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립"
+          }
+        }
+      }
+    },
+    "Close": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
+    },
+    "Computers and phones on this network that aren't yours yet.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 네트워크에 있는, 아직 내 기기가 아닌 컴퓨터와 휴대폰입니다."
+          }
+        }
+      }
+    },
+    "Confirm on ‘%@’": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’에서 확인하세요"
+          }
+        }
+      }
+    },
+    "Connect by address": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주소로 연결"
+          }
+        }
+      }
+    },
+    "Connected": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결됨"
+          }
+        }
+      }
+    },
+    "Connected to %lld devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 %lld대에 연결됨"
+          }
+        }
+      }
+    },
+    "Connected to 1 device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 1대에 연결됨"
+          }
+        }
+      }
+    },
+    "Connecting to ‘%@’…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’에 연결하는 중…"
+          }
+        }
+      }
+    },
+    "Continue": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계속"
+          }
+        }
+      }
+    },
+    "Copied": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사됨"
+          }
+        }
+      }
+    },
+    "Copied a nearclip:// link instead? Paste it to connect.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nearclip:// 링크를 복사했나요? 붙여넣어 연결하세요."
+          }
+        }
+      }
+    },
+    "Copied from %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 복사됨"
+          }
+        }
+      }
+    },
+    "Copies to the clipboard": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드에 복사합니다"
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사"
+          }
+        }
+      }
+    },
+    "Copy here.\nPaste there.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기서 복사하고,\n저기서 붙여넣기."
+          }
+        }
+      }
+    },
+    "Copy here. Paste there.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기서 복사하고, 저기서 붙여넣기."
+          }
+        }
+      }
+    },
+    "Copy in any app, then tap Paste": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아무 앱에서나 복사한 뒤 붙여넣기를 누르세요"
+          }
+        }
+      }
+    },
+    "Copy incoming clips automatically": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받은 클립 자동으로 복사"
+          }
+        }
+      }
+    },
+    "Copy something on any of your devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어느 기기에서든 무언가를 복사해 보세요."
+          }
+        }
+      }
+    },
+    "Copy the newest clip": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최신 클립 복사"
+          }
+        }
+      }
+    },
+    "Copy, then tap Paste": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사한 다음 붙여넣기 누르기"
+          }
+        }
+      }
+    },
+    "Couldn't change the login item": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인 항목을 변경할 수 없음"
+          }
+        }
+      }
+    },
+    "Couldn't connect": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결하지 못함"
+          }
+        }
+      }
+    },
+    "Couldn't reach the device. Make sure both devices are on the same Wi-Fi.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기에 연결할 수 없습니다. 두 기기가 같은 Wi-Fi에 있는지 확인하세요."
+          }
+        }
+      }
+    },
+    "Decline": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "거절"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제"
+          }
+        }
+      }
+    },
+    "Delete from All Devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 기기에서 삭제"
+          }
+        }
+      }
+    },
+    "Deletes every clip on all of your devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 기기에서 모든 클립을 삭제합니다."
+          }
+        }
+      }
+    },
+    "Devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        }
+      }
+    },
+    "Encryption": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호화"
+          }
+        }
+      }
+    },
+    "End-to-end encrypted": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종단 간 암호화"
+          }
+        }
+      }
+    },
+    "Find your devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 찾기"
+          }
+        }
+      }
+    },
+    "Fix…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해결…"
+          }
+        }
+      }
+    },
+    "Forever": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영구 보관"
+          }
+        }
+      }
+    },
+    "From another device, if it arrived in the last 10 minutes.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기에서 10분 안에 받은 클립이 있을 때"
+          }
+        }
+      }
+    },
+    "General": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일반"
+          }
+        }
+      }
+    },
+    "Get Started": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작하기"
+          }
+        }
+      }
+    },
+    "Grant…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용…"
+          }
+        }
+      }
+    },
+    "History": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록"
+          }
+        }
+      }
+    },
+    "IP address": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IP 주소"
+          }
+        }
+      }
+    },
+    "Ignore copies from these apps": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 앱에서 복사한 내용 무시"
+          }
+        }
+      }
+    },
+    "Image": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지"
+          }
+        }
+      }
+    },
+    "Image syncing is off": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 동기화가 꺼져 있음"
+          }
+        }
+      }
+    },
+    "Image · %lld×%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Image · %1$lld×%2$lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 · %lld×%lld"
+          }
+        }
+      }
+    },
+    "Images": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지"
+          }
+        }
+      }
+    },
+    "In Settings › Nearclip › Paste from Other Apps, choose Allow — otherwise iOS asks every time.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 › Nearclip › 다른 앱에서 붙여넣기에서 ‘허용’을 선택하세요. 그렇지 않으면 iOS가 매번 묻습니다."
+          }
+        }
+      }
+    },
+    "Install Nearclip on your other devices, then scan the code or pick them below.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기에 Nearclip을 설치한 뒤 코드를 스캔하거나 아래에서 선택하세요."
+          }
+        }
+      }
+    },
+    "It will stop syncing with your devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 이상 내 기기와 동기화되지 않습니다."
+          }
+        }
+      }
+    },
+    "Items that password managers mark as private are never recorded or synced.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호 관리자가 비공개로 표시한 항목은 기록하거나 동기화하지 않습니다."
+          }
+        }
+      }
+    },
+    "Join": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여"
+          }
+        }
+      }
+    },
+    "Just now": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방금"
+          }
+        }
+      }
+    },
+    "Keep history for": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 보관 기간"
+          }
+        }
+      }
+    },
+    "Last seen %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 연결됨"
+          }
+        }
+      }
+    },
+    "Leave": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나가기"
+          }
+        }
+      }
+    },
+    "Leave My Devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 기기에서 나가기"
+          }
+        }
+      }
+    },
+    "Leave my devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 기기에서 나가기"
+          }
+        }
+      }
+    },
+    "Leave your devices?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 기기에서 나갈까요?"
+          }
+        }
+      }
+    },
+    "Leave…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나가기…"
+          }
+        }
+      }
+    },
+    "Lets Nearclip find your devices on this Wi-Fi. macOS may ask once — choose Allow.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Wi-Fi에서 내 기기를 찾을 수 있게 합니다. macOS가 한 번 물어보면 ‘허용’을 선택하세요."
+          }
+        }
+      }
+    },
+    "Links": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크"
+          }
+        }
+      }
+    },
+    "Local network": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로컬 네트워크"
+          }
+        }
+      }
+    },
+    "Local network only": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로컬 네트워크 전용"
+          }
+        }
+      }
+    },
+    "Looking for devices on this Wi-Fi…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Wi-Fi에서 기기를 찾는 중…"
+          }
+        }
+      }
+    },
+    "Looking for devices…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기를 찾는 중…"
+          }
+        }
+      }
+    },
+    "Mac": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac"
+          }
+        }
+      }
+    },
+    "Mac, Windows, Android and iPhone": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac, Windows, Android, iPhone"
+          }
+        }
+      }
+    },
+    "Make sure they're on the same Wi-Fi": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 Wi-Fi에 있는지 확인하세요"
+          }
+        }
+      }
+    },
+    "Make sure ‘%@’ shows the same code, then choose Add there.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’에 같은 코드가 표시되는지 확인한 뒤, 그 기기에서 ‘추가’를 선택하세요."
+          }
+        }
+      }
+    },
+    "Make sure ‘%@’ shows this code.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’에 이 코드가 표시되는지 확인하세요."
+          }
+        }
+      }
+    },
+    "More": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 보기"
+          }
+        }
+      }
+    },
+    "Move Nearclip to the Applications folder and try again.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip을 응용 프로그램 폴더로 옮긴 뒤 다시 시도하세요."
+          }
+        }
+      }
+    },
+    "My devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 기기"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름"
+          }
+        }
+      }
+    },
+    "Nearby": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주변 기기"
+          }
+        }
+      }
+    },
+    "Nearclip": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip"
+          }
+        }
+      }
+    },
+    "Nearclip Settings": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip 설정"
+          }
+        }
+      }
+    },
+    "Nearclip can read what you copy": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip이 복사한 내용을 읽을 수 있음"
+          }
+        }
+      }
+    },
+    "Nearclip couldn't start": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip을 시작할 수 없음"
+          }
+        }
+      }
+    },
+    "Nearclip keeps the clipboard of your devices in sync over your Wi-Fi. Nothing leaves your network.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip은 Wi-Fi로 내 기기들의 클립보드를 동기화합니다. 어떤 데이터도 네트워크 밖으로 나가지 않습니다."
+          }
+        }
+      }
+    },
+    "Nearclip looks for your computers and phones on this Wi-Fi. When iOS asks, choose Allow.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip이 이 Wi-Fi에서 내 컴퓨터와 휴대폰을 찾습니다. iOS가 물어보면 ‘허용’을 선택하세요."
+          }
+        }
+      }
+    },
+    "Nearclip needs the camera to scan the code.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드를 스캔하려면 카메라 접근이 필요합니다."
+          }
+        }
+      }
+    },
+    "Nearclip only asks for what it needs to sync.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip은 동기화에 필요한 권한만 요청합니다."
+          }
+        }
+      }
+    },
+    "Nearclip presses ⌘V for you in the app you were using.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용하던 앱에 Nearclip이 ⌘V를 대신 눌러 줍니다."
+          }
+        }
+      }
+    },
+    "Needs Accessibility permission": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손쉬운 사용 권한이 필요함"
+          }
+        }
+      }
+    },
+    "New code in %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 후 새 코드"
+          }
+        }
+      }
+    },
+    "New image on your clipboard": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드에 새 이미지가 있어요"
+          }
+        }
+      }
+    },
+    "New link on your clipboard": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드에 새 링크가 있어요"
+          }
+        }
+      }
+    },
+    "New text on your clipboard": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드에 새 텍스트가 있어요"
+          }
+        }
+      }
+    },
+    "No matches": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일치하는 항목 없음"
+          }
+        }
+      }
+    },
+    "No other devices yet": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 다른 기기가 없음"
+          }
+        }
+      }
+    },
+    "No other devices yet. Add your computer to start syncing.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 다른 기기가 없습니다. 컴퓨터를 추가해 동기화를 시작하세요."
+          }
+        }
+      }
+    },
+    "No other devices yet. Add your phone or another computer to start syncing.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 다른 기기가 없습니다. 휴대폰이나 다른 컴퓨터를 추가해 동기화를 시작하세요."
+          }
+        }
+      }
+    },
+    "Not Now": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나중에"
+          }
+        }
+      }
+    },
+    "Not nearby": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주변에 없음"
+          }
+        }
+      }
+    },
+    "Not set up yet": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 설정되지 않음"
+          }
+        }
+      }
+    },
+    "Nothing here yet": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 기록이 없어요"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인"
+          }
+        }
+      }
+    },
+    "Only your paired devices can read what you copy.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결된 내 기기만 복사한 내용을 읽을 수 있습니다."
+          }
+        }
+      }
+    },
+    "Open History": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 열기"
+          }
+        }
+      }
+    },
+    "Open Link": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크 열기"
+          }
+        }
+      }
+    },
+    "Open Nearclip on your Mac or Windows PC, choose Add Device, and scan the code it shows.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac이나 Windows PC에서 Nearclip을 열고 ‘기기 추가’를 선택한 뒤 표시된 코드를 스캔하세요."
+          }
+        }
+      }
+    },
+    "Open Nearclip on your other device — it will appear here.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기에서 Nearclip을 열면 여기에 표시됩니다."
+          }
+        }
+      }
+    },
+    "Open Settings": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 열기"
+          }
+        }
+      }
+    },
+    "Open System Settings": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 설정 열기"
+          }
+        }
+      }
+    },
+    "Open at login": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인 시 열기"
+          }
+        }
+      }
+    },
+    "Or paste a nearclip:// link": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "또는 nearclip:// 링크 붙여넣기"
+          }
+        }
+      }
+    },
+    "Otherwise use the Paste button.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끄면 붙여넣기 버튼을 사용하세요."
+          }
+        }
+      }
+    },
+    "Pair": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결"
+          }
+        }
+      }
+    },
+    "Pairing QR code": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 QR 코드"
+          }
+        }
+      }
+    },
+    "Pairing code %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 코드 %@"
+          }
+        }
+      }
+    },
+    "Pairing didn't work. Please try again.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결하지 못했습니다. 다시 시도하세요."
+          }
+        }
+      }
+    },
+    "Pairing with a nearby device shows the same code on both screens.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주변 기기와 연결하면 두 화면에 같은 코드가 표시됩니다."
+          }
+        }
+      }
+    },
+    "Password managers": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호 관리자"
+          }
+        }
+      }
+    },
+    "Paste after choosing from history": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록에서 선택하면 바로 붙여넣기"
+          }
+        }
+      }
+    },
+    "Pause Syncing": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 일시정지"
+          }
+        }
+      }
+    },
+    "Pause syncing": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 일시정지"
+          }
+        }
+      }
+    },
+    "Pin": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고정"
+          }
+        }
+      }
+    },
+    "Pinned": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고정됨"
+          }
+        }
+      }
+    },
+    "Pinned clips are kept until you unpin them. History keeps at most 1,000 clips.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고정한 클립은 고정을 해제할 때까지 보관됩니다. 기록은 최대 1,000개까지 보관합니다."
+          }
+        }
+      }
+    },
+    "Point the camera at the code on your computer.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카메라로 컴퓨터에 표시된 코드를 비추세요."
+          }
+        }
+      }
+    },
+    "Port": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "포트"
+          }
+        }
+      }
+    },
+    "Press %@ anywhere to open your history. You can change it in Settings.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어디서든 %@ 키를 누르면 기록이 열립니다. 설정에서 바꿀 수 있습니다."
+          }
+        }
+      }
+    },
+    "Privacy": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 보호"
+          }
+        }
+      }
+    },
+    "Quit Nearclip": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip 종료"
+          }
+        }
+      }
+    },
+    "Ready to pair": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 대기 중"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제거"
+          }
+        }
+      }
+    },
+    "Remove ‘%@’?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’ 기기를 제거할까요?"
+          }
+        }
+      }
+    },
+    "Remove…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제거…"
+          }
+        }
+      }
+    },
+    "Results": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색 결과"
+          }
+        }
+      }
+    },
+    "Resume Syncing": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 재개"
+          }
+        }
+      }
+    },
+    "Saved — it syncs when your devices are nearby": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장됨 — 기기가 주변에 있으면 동기화됩니다"
+          }
+        }
+      }
+    },
+    "Scan QR Code": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QR 코드 스캔"
+          }
+        }
+      }
+    },
+    "Scan the code shown on your computer": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "컴퓨터에 표시된 코드를 스캔하세요"
+          }
+        }
+      }
+    },
+    "Scan to add a phone": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스캔해서 휴대폰 추가"
+          }
+        }
+      }
+    },
+    "Search history": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 검색"
+          }
+        }
+      }
+    },
+    "Send what you copied": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사한 내용 보내기"
+          }
+        }
+      }
+    },
+    "Send what you copied automatically": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사한 내용 자동으로 보내기"
+          }
+        }
+      }
+    },
+    "Sent to %lld devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 %lld대로 보냄"
+          }
+        }
+      }
+    },
+    "Sent to 1 device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 1대로 보냄"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정"
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정…"
+          }
+        }
+      }
+    },
+    "Share": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공유"
+          }
+        }
+      }
+    },
+    "Shortcut": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키"
+          }
+        }
+      }
+    },
+    "Show a notification when a clip arrives": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립을 받으면 알림 표시"
+          }
+        }
+      }
+    },
+    "Show history": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록 보기"
+          }
+        }
+      }
+    },
+    "Show my code": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 코드 보기"
+          }
+        }
+      }
+    },
+    "Shows your devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 기기를 보여줍니다"
+          }
+        }
+      }
+    },
+    "Skip passwords and private items": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호 및 비공개 항목 건너뛰기"
+          }
+        }
+      }
+    },
+    "Sync": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화"
+          }
+        }
+      }
+    },
+    "Sync images": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 동기화"
+          }
+        }
+      }
+    },
+    "Syncing paused": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 일시정지됨"
+          }
+        }
+      }
+    },
+    "Syncs while Nearclip is open": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip이 열려 있을 때 동기화"
+          }
+        }
+      }
+    },
+    "Tap Paste to send it to your devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "붙여넣기를 누르면 내 기기로 보냅니다"
+          }
+        }
+      }
+    },
+    "Tap to manage your devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "눌러서 기기 관리"
+          }
+        }
+      }
+    },
+    "Text": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트"
+          }
+        }
+      }
+    },
+    "Text and images, with a shared history on every device.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트와 이미지를 모든 기기에서 같은 기록으로 관리합니다."
+          }
+        }
+      }
+    },
+    "That code expired. Show a new one on the other device.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드가 만료되었습니다. 다른 기기에서 새 코드를 표시하세요."
+          }
+        }
+      }
+    },
+    "That isn't a Nearclip pairing code.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip 연결 코드가 아닙니다."
+          }
+        }
+      }
+    },
+    "That's this device.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기입니다."
+          }
+        }
+      }
+    },
+    "The Paste button sends what you copied without any permission prompts.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "붙여넣기 버튼을 쓰면 권한 요청 없이 복사한 내용을 보낼 수 있습니다."
+          }
+        }
+      }
+    },
+    "The other device declined.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상대 기기에서 거절했습니다."
+          }
+        }
+      }
+    },
+    "The other device didn't answer in time.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상대 기기가 제시간에 응답하지 않았습니다."
+          }
+        }
+      }
+    },
+    "The other device is pairing with someone else. Try again in a moment.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상대 기기가 다른 기기와 연결 중입니다. 잠시 후 다시 시도하세요."
+          }
+        }
+      }
+    },
+    "This Mac": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Mac"
+          }
+        }
+      }
+    },
+    "This Mac now syncs with ‘%@’ and your other devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이제 이 Mac이 ‘%@’ 및 다른 기기와 동기화됩니다."
+          }
+        }
+      }
+    },
+    "This Mac stops syncing and starts over with a new, empty group. History stays on this Mac.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Mac은 동기화를 멈추고 새 그룹으로 다시 시작합니다. 기록은 이 Mac에 남습니다."
+          }
+        }
+      }
+    },
+    "This can't be undone.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 작업은 되돌릴 수 없습니다."
+          }
+        }
+      }
+    },
+    "This device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기"
+          }
+        }
+      }
+    },
+    "This device has no camera.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기에는 카메라가 없습니다."
+          }
+        }
+      }
+    },
+    "This device now syncs with ‘%@’ and your other devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이제 이 기기가 ‘%@’ 및 다른 기기와 동기화됩니다."
+          }
+        }
+      }
+    },
+    "This device stops syncing and starts over with a new, empty group. History stays on this device.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기는 동기화를 멈추고 새 그룹으로 다시 시작합니다. 기록은 이 기기에 남습니다."
+          }
+        }
+      }
+    },
+    "This device was removed from your devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기가 내 기기에서 제거되었습니다."
+          }
+        }
+      }
+    },
+    "This iPad": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPad"
+          }
+        }
+      }
+    },
+    "This iPhone": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPhone"
+          }
+        }
+      }
+    },
+    "Today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "Too large to sync": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "너무 커서 동기화할 수 없음"
+          }
+        }
+      }
+    },
+    "Try a different search or filter.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 검색어나 필터를 사용해 보세요."
+          }
+        }
+      }
+    },
+    "Two quick permissions": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "간단한 권한 두 가지"
+          }
+        }
+      }
+    },
+    "Type a shortcut…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키를 누르세요…"
+          }
+        }
+      }
+    },
+    "Unpin": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고정 해제"
+          }
+        }
+      }
+    },
+    "Use your phone's camera or the Nearclip app.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "휴대폰 카메라나 Nearclip 앱으로 스캔하세요."
+          }
+        }
+      }
+    },
+    "Version": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버전"
+          }
+        }
+      }
+    },
+    "Version %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버전 %@"
+          }
+        }
+      }
+    },
+    "Waiting for confirmation…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인을 기다리는 중…"
+          }
+        }
+      }
+    },
+    "Waiting for your devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기를 기다리는 중"
+          }
+        }
+      }
+    },
+    "When Nearclip opens": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip을 열 때"
+          }
+        }
+      }
+    },
+    "Yesterday": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어제"
+          }
+        }
+      }
+    },
+    "You're connected": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결되었습니다"
+          }
+        }
+      }
+    },
+    "Your devices talk to each other directly on your local network. Everything is end-to-end encrypted with keys that only your devices hold — there is no server and no account.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 기기들은 로컬 네트워크에서 서로 직접 통신합니다. 모든 내용은 내 기기만 가진 키로 종단 간 암호화되며, 서버도 계정도 없습니다."
+          }
+        }
+      }
+    },
+    "Your devices talk to each other directly — no servers, no accounts.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기끼리 직접 통신합니다. 서버도, 계정도 필요 없습니다."
+          }
+        }
+      }
+    },
+    "Your other devices see this name.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기에 이 이름이 표시됩니다."
+          }
+        }
+      }
+    },
+    "Your other devices will no longer sync with this Mac. You can add it again at any time.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기가 더 이상 이 Mac과 동기화하지 않습니다. 언제든 다시 추가할 수 있습니다."
+          }
+        }
+      }
+    },
+    "Your other devices will no longer sync with this one. You can add it again at any time.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기가 더 이상 이 기기와 동기화하지 않습니다. 언제든 다시 추가할 수 있습니다."
+          }
+        }
+      }
+    },
+    "iOS pauses apps in the background. Open Nearclip to send and receive — it catches up instantly.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS는 백그라운드 앱을 일시정지합니다. Nearclip을 열면 바로 주고받고, 밀린 내용도 즉시 받아옵니다."
+          }
+        }
+      }
+    },
+    "iPhone and iPad sync while Nearclip is open. Open the app to catch up.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone과 iPad는 Nearclip이 열려 있을 때 동기화됩니다. 앱을 열면 밀린 내용을 받아옵니다."
+          }
+        }
+      }
+    },
+    "macOS asks before apps read the clipboard. Choose Always Allow for Nearclip in System Settings › Privacy & Security › Paste from Other Apps so your copies sync automatically.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS는 앱이 클립보드를 읽기 전에 묻습니다. 시스템 설정 › 개인정보 보호 및 보안 › 다른 앱에서 붙여넣기에서 Nearclip을 ‘항상 허용’으로 설정하면 복사한 내용이 자동으로 동기화됩니다."
+          }
+        }
+      }
+    },
+    "macOS asks before apps read the clipboard. Choose “Always Allow” so what you copy syncs automatically.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS는 앱이 클립보드를 읽기 전에 묻습니다. ‘항상 허용’을 선택하면 복사한 내용이 자동으로 동기화됩니다."
+          }
+        }
+      }
+    },
+    "macOS asks every time": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS가 매번 물어봄"
+          }
+        }
+      }
+    },
+    "port": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "포트"
+          }
+        }
+      }
+    },
+    "‘%@’ is now one of your devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’ 기기가 내 기기에 추가되었습니다."
+          }
+        }
+      }
+    },
+    "…or paste a nearclip:// link.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "…또는 nearclip:// 링크를 붙여넣으세요."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,22 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "NSLocalNetworkUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip finds and connects to your other devices on this network."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip이 이 네트워크에 있는 내 다른 기기를 찾아 연결합니다."
+          }
+        }
+      }
+    }
+  }
+}
