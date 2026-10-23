@@ -9,7 +9,7 @@ implementation pairs, syncs, catches up, deletes and removes with every other.
   python3 tools/interop/run.py --only swift,kotlin  # restrict to some implementations
 """
 import argparse, hashlib, itertools, json, os, queue, random, shlex, shutil, subprocess, sys, tempfile, threading, time
-from urllib.parse import urlsplit, parse_qsl, urlencode, urlunsplit
+from urllib.parse import urlsplit, parse_qsl, urlencode, urlunsplit, quote
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -101,7 +101,7 @@ class Peer:
 def local_uri(uri):
     parts = urlsplit(uri)
     q = [(k, "127.0.0.1" if k == "h" else v) for k, v in parse_qsl(parts.query, keep_blank_values=True)]
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(q), ""))
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(q, quote_via=quote), ""))
 
 def is_clip(cid=None, text=None, live=None):
     def p(e):

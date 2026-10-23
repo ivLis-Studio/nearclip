@@ -89,6 +89,27 @@ final class NearclipFlowTests: XCTestCase {
         shot("11-add-device")
     }
 
+    /// Cross-device acceptance on an already paired app: expects the clips named in NC_EXPECT (comma separated)
+    /// to arrive through catch-up, then sends NC_SEND_TEXT with the system Paste button.
+    func testReceiveThenSend() throws {
+        app.launchArguments = language()
+        app.launch()
+        XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        for expected in (ProcessInfo.processInfo.environment["NC_EXPECT"] ?? "").split(separator: ",").map(String.init) where !expected.isEmpty {
+            let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", expected)).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 20), "missing clip: \(expected)")
+        }
+        shot("30-received")
+        UIPasteboard.general.string = ProcessInfo.processInfo.environment["NC_SEND_TEXT"] ?? "FINAL from iPhone"
+        app.activate()
+        let paste = app.buttons["send.paste"]
+        XCTAssertTrue(paste.waitForExistence(timeout: 5))
+        paste.tap()
+        XCTAssertTrue(app.staticTexts["toast"].waitForExistence(timeout: 8) || app.otherElements["toast"].waitForExistence(timeout: 2))
+        sleep(1)
+        shot("31-sent")
+    }
+
     /// Needs an already onboarded app (run after testOnboardingPairSyncAndSend).
     func testSheetsOpenFromHome() throws {
         app.launchArguments = language()

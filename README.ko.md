@@ -21,6 +21,16 @@
 
 네 앱 모두 네이티브 앱입니다(Electron·웹뷰 없음).
 
+<table>
+<tr>
+<td align="center"><img src="docs/screenshots/macos/ko-dark-panel.png" width="230"><br><sub>macOS · 메뉴 막대 패널 (⌃⌘V)</sub></td>
+<td align="center"><img src="docs/screenshots/windows/ko-dark-flyout.png" width="230"><br><sub>Windows · 트레이 플라이아웃 (Win+Alt+V)</sub></td>
+<td align="center"><img src="docs/screenshots/android/ko-light/01-history.png" width="190"><br><sub>Android · 기록</sub></td>
+<td align="center"><img src="docs/screenshots/ios/ko-06-home-history.png" width="190"><br><sub>iPhone · 기록 + 붙여넣기 막대</sub></td>
+</tr>
+</table>
+
+
 ## 기능
 
 * 텍스트·링크·색상 코드·이미지(최대 32MB) **실시간 동기화**
@@ -76,9 +86,28 @@ scripts/build-release.sh          # 유니버설·ad-hoc 서명된 dist/Nearclip
 | Swift 엔진(검증 데이터 + localhost 연결·동기화 시나리오) | `cd apple/NearclipKit && swift test` |
 | Kotlin 엔진 | `cd android && ./gradlew :core:test` |
 | C# 엔진 | `cd windows && dotnet test --project tests/Nearclip.Core.Tests/Nearclip.Core.Tests.csproj` |
-| **구현 간 상호 운용**(Swift × Kotlin × C#, 24개 시나리오) | `python3 tools/interop/run.py` |
+| **구현 간 상호 운용**(Swift × Kotlin × C#, 30개 시나리오) | `python3 tools/interop/run.py` |
 | iOS UI 흐름(온보딩 → 연결 → 밀린 내용 → 보내기) | `xcodebuild test -scheme NearclipiOS …` (`apple/iOSUITests`) |
 | macOS 실사용 데모(실제 앱 + 가상 기기) | `python3 apple/tools/demo.py` |
+
+## 검증한 내용
+
+* **엔진**: Swift 테스트 10개, Kotlin 22개, C# 26개 — `spec/test-vectors.json`의 모든 값과 실제 localhost 연결·동기화 시나리오
+* **상호 운용**: `tools/interop/run.py` **30/30 통과** (Swift × Kotlin × C#: 모든 방향의 QR·코드 연결, 한글+이모지 실시간 텍스트,
+  여러 조각으로 나뉜 이미지, 모든 기기에서 삭제, 재시작 후 밀린 내용 수신, 기기 제거, 제거된 기기 다시 추가, 모든 순열의 3단 메시 전달)
+* **실제 앱 네 가지를 한 그룹으로**(이 Mac의 macOS 앱, iPhone·iPad 시뮬레이터, Android 16 에뮬레이터, Windows 11 ARM64 VM):
+  각 플랫폼에서 복사한 클립이 나머지 모두에 도착 — Mac → Windows 클립보드·Android·iPhone, Windows → Mac 클립보드·Android·iPhone,
+  Android 공유 → Mac·Windows 클립보드·iPhone, iPhone 붙여넣기 버튼 → Mac·Windows 클립보드·Android
+* Bonjour/mDNS 기기 찾기: Mac끼리, Mac ↔ iOS, Mac ↔ Windows(Parallels 네트워크 경유), Android → Mac. 코드 연결 시 두 화면의 6자리 코드 일치.
+  암호 관리자 항목 제외(macOS concealed 타입, Android `EXTRA_IS_SENSITIVE` 기기 테스트)
+* UI: 모든 주요 화면을 라이트/다크 × 영어/한국어로 캡처 — [docs/screenshots](docs/screenshots)
+
+## 다운로드
+
+`dist/`(로컬 빌드, 저장소에는 미포함): `Nearclip-macOS.zip`(유니버설, ad-hoc 서명), `Nearclip-Windows-arm64.zip` /
+`Nearclip-Windows-x64.zip`(자체 포함, `Nearclip.exe` 실행), `Nearclip-Android.apk`(로컬 디버그 키로 서명한 릴리스 빌드).
+iOS는 Xcode에서 본인 팀으로 빌드해 설치하세요.
+
 
 ## 제한 사항
 
@@ -87,6 +116,9 @@ scripts/build-release.sh          # 유니버설·ad-hoc 서명된 dist/Nearclip
 * iOS는 앱이 열려 있을 때만 동기화합니다(iOS는 백그라운드 클립보드 접근을 허용하지 않음). 열면 즉시 밀린 내용을 받고 최신 클립을 자동으로 복사할 수 있습니다.
 * Android 10 이상은 화면에 떠 있는 앱만 클립보드를 읽을 수 있어서, 보낼 때는 앱·빠른 설정 타일·알림 버튼·공유 시트·텍스트 선택 메뉴를 씁니다. 받기는 백그라운드에서 됩니다.
 * 기기 제거는 협조적으로 이뤄집니다. 키를 완전히 바꾸려면 나머지 기기에서 그룹을 나간 뒤 다시 연결하세요.
+* 아직 공개 배포용 코드 서명은 하지 않았습니다. 내려받은 사본은 macOS Gatekeeper와 Windows SmartScreen이 경고하며,
+  Windows 빌드는 설치 프로그램(MSIX) 없이 폴더째 실행하는 형태입니다. Windows 첫 실행 때 방화벽 허용을 묻는데,
+  Nearclip은 온보딩과 설정에서 방화벽 상태와 *허용…* 버튼을 보여 줍니다.
 
 ## 라이선스
 

@@ -21,6 +21,16 @@ Bonjour/mDNS and talk directly over TCP, and everything is **end-to-end encrypte
 
 All four are native apps (no Electron, no web views).
 
+<table>
+<tr>
+<td align="center"><img src="docs/screenshots/macos/ko-dark-panel.png" width="230"><br><sub>macOS · menu bar panel (⌃⌘V)</sub></td>
+<td align="center"><img src="docs/screenshots/windows/ko-dark-flyout.png" width="230"><br><sub>Windows · tray flyout (Win+Alt+V)</sub></td>
+<td align="center"><img src="docs/screenshots/android/ko-light/01-history.png" width="190"><br><sub>Android · history</sub></td>
+<td align="center"><img src="docs/screenshots/ios/ko-06-home-history.png" width="190"><br><sub>iPhone · history + Paste bar</sub></td>
+</tr>
+</table>
+
+
 ## Features
 
 * **Real-time sync** of text, links, colors and images (up to 32 MB).
@@ -80,9 +90,32 @@ See [android/README.md](android/README.md) and [windows/README.md](windows/READM
 | Swift engine (vectors + localhost pairing/sync scenarios) | `cd apple/NearclipKit && swift test` |
 | Kotlin engine | `cd android && ./gradlew :core:test` |
 | C# engine | `cd windows && dotnet test --project tests/Nearclip.Core.Tests/Nearclip.Core.Tests.csproj` |
-| **Cross-implementation interop** (Swift × Kotlin × C#, 24 scenarios) | `python3 tools/interop/run.py` |
+| **Cross-implementation interop** (Swift × Kotlin × C#, 30 scenarios) | `python3 tools/interop/run.py` |
 | iOS UI flow (onboarding → pair → catch-up → send) | `xcodebuild test -scheme NearclipiOS …` (see `apple/iOSUITests`) |
 | macOS acceptance demo (real app + simulated peers) | `python3 apple/tools/demo.py` |
+
+## What has been verified
+
+* **Engines**: Swift 10 tests, Kotlin 22 tests, C# 26 tests — every value in `spec/test-vectors.json` plus real localhost
+  pairing/sync scenarios.
+* **Interop**: `tools/interop/run.py` passes **30/30** scenarios across Swift × Kotlin × C# (QR and code pairing in every
+  direction, live text in Korean + emoji, multi-chunk images, delete everywhere, catch-up after restart, removal,
+  re-adding a removed device, 3-hop mesh forwarding in every permutation).
+* **Real apps, one group** (macOS app on this Mac, iPhone/iPad simulators, Android 16 emulator, Windows 11 ARM64 VM):
+  a clip copied on each platform arrived on all the others —
+  Mac → Windows clipboard / Android / iPhone, Windows → Mac clipboard / Android / iPhone,
+  Android share → Mac / Windows clipboards / iPhone, iPhone Paste button → Mac / Windows clipboards / Android.
+* Discovery over Bonjour/mDNS between Macs, Mac ↔ iOS, Mac ↔ Windows (across the Parallels network) and Android → Mac;
+  code pairing with matching 6-digit codes on both screens; password-manager items are skipped (macOS concealed type,
+  Android `EXTRA_IS_SENSITIVE` device test).
+* UI: light/dark × English/Korean screenshots of every main screen in [docs/screenshots](docs/screenshots).
+
+## Downloads
+
+`dist/` (built locally, not committed): `Nearclip-macOS.zip` (universal, ad-hoc signed), `Nearclip-Windows-arm64.zip` /
+`Nearclip-Windows-x64.zip` (self-contained, run `Nearclip.exe`), `Nearclip-Android.apk` (release build signed with a local
+debug key). iOS: build and run from Xcode with your own team.
+
 
 ## Limitations
 
@@ -93,6 +126,9 @@ See [android/README.md](android/README.md) and [windows/README.md](windows/READM
 * Android 10+ only lets the foreground app read the clipboard: sending uses the app, the Quick Settings tile, the
   notification action, the share sheet or the text-selection menu. Receiving works in the background.
 * Removing a device is cooperative; for a full key rotation, leave and pair the remaining devices again.
+* Builds are not code-signed for public distribution yet: macOS Gatekeeper and Windows SmartScreen will warn on
+  downloaded copies, and the Windows build is a self-contained folder (no installer/MSIX yet). On first launch Windows
+  asks for firewall access — Nearclip shows the firewall status and an *Allow…* button in onboarding and Settings.
 
 ## License
 
