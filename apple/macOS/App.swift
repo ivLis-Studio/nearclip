@@ -79,6 +79,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else if !settings.onboardingDone {
             windows.showOnboarding()
         }
+        #if DEBUG
+        // NC_DEBUG_PAIR_NEARBY=<name substring>: start code pairing with the first matching nearby device.
+        // NC_DEBUG_AUTO_ACCEPT_AFTER=<seconds>: accept incoming code-pairing prompts after a delay.
+        if let target = env["NC_DEBUG_PAIR_NEARBY"] {
+            var started = false
+            observeChanges { [weak self] in
+                guard let self, !started, let d = self.model.nearby.first(where: { $0.name.contains(target) }) else { return }
+                started = true
+                DispatchQueue.main.async { self.model.pair(with: d) }
+            }
+        }
+        if let delay = env["NC_DEBUG_AUTO_ACCEPT_AFTER"].flatMap(Double.init) {
+            observeChanges { [weak self] in
+                guard let self, self.model.pairPrompt != nil else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { self.model.answerPrompt(true) }
+            }
+        }
+        #endif
     }
 
     private func debugShow(_ what: String) {

@@ -62,10 +62,11 @@ def local(uri):
     q = [(k, "127.0.0.1" if k == "h" else v) for k, v in parse_qsl(p.query, keep_blank_values=True)]
     return urlunsplit((p.scheme, p.netloc, p.path, urlencode(q), ""))
 
-def start_app(show):
+def start_app(show, extra=None):
     env = dict(os.environ, NC_STATE_DIR=os.path.join(BASE, "mac"), NC_PORT="45900",
                NC_DEFAULTS_SUITE="studio.ivlis.nearclip.demo", NC_TICKET_FILE=os.path.join(BASE, "ticket.txt"),
                NC_PASTEBOARD="studio.ivlis.nearclip.demo-pasteboard")
+    env.update(extra or {})
     if show:
         env["NC_SHOW"] = show
     return subprocess.Popen([APP], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -140,7 +141,11 @@ def main():
             by[parts[1]].send(cmd="send_image", path=parts[2], mime="image/png")
         elif parts[0] == "restart":
             app.terminate(); app.wait(5)
-            app = start_app(parts[1] if len(parts) > 1 else None)
+            show, extra = (parts[1] if len(parts) > 1 else None), {}
+            for kv in (parts[2].split() if len(parts) > 2 else []):
+                k, _, v = kv.partition("=")
+                extra[k] = v
+            app = start_app(show, extra)
         print("ok", flush=True)
     for p in peers:
         p.send(cmd="quit")

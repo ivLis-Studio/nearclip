@@ -107,12 +107,16 @@ final class WindowManager: NSObject, NSWindowDelegate {
         p.titlebarAppearsTransparent = true
         p.isMovableByWindowBackground = true
         p.level = .floating
+        // Menu bar apps are usually inactive; the request must still be seen.
+        p.hidesOnDeactivate = false
         p.isReleasedWhenClosed = false
         p.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         p.center()
         promptPanel = p
         NSApp.activate()
         p.makeKeyAndOrderFront(nil)
+        p.orderFrontRegardless()
+        NSSound(named: "Glass")?.play()
     }
 
     private func makeWindow<V: View>(_ view: V, title: String, size: NSSize, resizable: Bool) -> NSWindow {

@@ -942,7 +942,9 @@ public final class NearclipNode: @unchecked Sendable {
                     self.attemptJoin(mode: mode, secret: secret, targets: targets, index: index + 1, lastError: error)
                 } else {
                     self.joining = false
-                    self.emit(.pairFailed(reason: error == .timeout ? "timeout" : error.code))
+                    // A QR inviter silently closes on an expired, used or wrong ticket.
+                    let reason = error == .timeout ? "timeout" : (mode == .pairQR && error.code == "io" ? "no_ticket" : error.code)
+                    self.emit(.pairFailed(reason: reason))
                 }
             }
         }

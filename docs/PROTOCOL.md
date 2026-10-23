@@ -349,7 +349,7 @@ object per line on **stdin** (commands). stderr is free-form logging.
 | `pair_sas` | `sas` (joiner side, 6 digits, no space) |
 | `pair_prompt` | `peer`, `name`, `sas` (inviter side) |
 | `paired` | `group`, `peer` (the other side's id) — emitted by both sides |
-| `pair_failed` | `reason` (`declined`, `no_ticket`, `busy`, `commit`, `timeout`, `io` …) |
+| `pair_failed` | `reason`: `declined`, `no_ticket` (QR ticket expired/used/wrong — the inviter closed after the hellos), `busy`, `commit`, `timeout`, `unreachable` (no address answered), `io` (other connection errors) |
 | `peer_up` / `peer_down` | `id` (+ `name` for `peer_up`) |
 | `clip` | `id`, `src`, `kind`, `live`, `ts` + `text` (text) or `size`, `sha`, `mime` (image) |
 | `deleted` | `id` |

@@ -516,7 +516,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "아무 앱에서나 복사한 뒤 붙여넣기를 누르세요"
+            "value": "복사한 뒤 붙여넣기를 누르세요"
           }
         }
       }
@@ -1222,7 +1222,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "클립보드에 새 이미지가 있어요"
+            "value": "클립보드에 새 이미지"
           }
         }
       }
@@ -1232,7 +1232,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "클립보드에 새 링크가 있어요"
+            "value": "클립보드에 새 링크"
           }
         }
       }
@@ -1242,7 +1242,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "클립보드에 새 텍스트가 있어요"
+            "value": "클립보드에 새 텍스트"
           }
         }
       }
@@ -1892,7 +1892,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "붙여넣기를 누르면 내 기기로 보냅니다"
+            "value": "붙여넣기를 눌러 보내세요"
           }
         }
       }

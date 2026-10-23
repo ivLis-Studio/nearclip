@@ -216,10 +216,12 @@ struct SendBar: View {
                 Text(pending != nil ? title(pending!) : String(localized: "Send what you copied"))
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 Text(pending != nil ? String(localized: "Tap Paste to send it to your devices") : String(localized: "Copy in any app, then tap Paste"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
             Spacer(minLength: 4)
             PasteButton(supportedContentTypes: [.image, .url, .plainText]) { providers in
