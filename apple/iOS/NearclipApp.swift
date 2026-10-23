@@ -109,6 +109,7 @@ final class AppEnvironment {
             endBackgroundTask()
             guard started else { return }
             model.node.setPaused(settings.paused)
+            model.node.nudge()
             model.refresh()
             model.armCopyNewest()
             checkClipboard()

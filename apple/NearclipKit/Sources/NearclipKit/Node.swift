@@ -272,6 +272,20 @@ public final class NearclipNode: @unchecked Sendable {
         }
     }
 
+    /// Call after wake from sleep / network changes: drop sessions that went silent, forget back-off and redial now.
+    public func nudge() {
+        queue.async {
+            guard self.running, !self.paused else { return }
+            let now = Date()
+            for s in self.online.values where now.timeIntervalSince(s.lastReceived) > 20 { s.close() }
+            self.backoff = [:]
+            if self.listener == nil { self.startListener(port: self.config.port) }
+            if self.config.bonjour && self.browser == nil { self.startBrowser() }
+            for s in self.online.values { s.sendJSON(SimpleMsg(t: "ping")) }
+            self.tick()
+        }
+    }
+
     // MARK: - Internal state
 
     var ownRecord: MemberRecord {

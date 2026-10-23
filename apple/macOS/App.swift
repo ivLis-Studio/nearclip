@@ -69,6 +69,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerHotKey()
         model.start()
         monitor.start()
+        // Reconnect quickly after the Mac wakes up or the network changes.
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { self?.model.node.nudge() }
+            }
+        }
         if let file = env["NC_TICKET_FILE"] {
             observeChanges { [weak self] in
                 if let uri = self?.model.ticket?.uri { try? uri.write(toFile: file, atomically: true, encoding: .utf8) }

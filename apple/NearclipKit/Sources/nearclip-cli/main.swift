@@ -35,7 +35,7 @@ func emit(_ obj: [String: Any]) {
     FileHandle.standardOutput.write(line)
 }
 
-func clipJSON(_ c: Clip, live: Bool?) -> [String: Any] {
+@Sendable func clipJSON(_ c: Clip, live: Bool?) -> [String: Any] {
     var o: [String: Any] = ["id": c.id, "src": c.src, "kind": c.kind, "ts": c.ts]
     if let live { o["live"] = live }
     if let t = c.text { o["text"] = t }
@@ -45,7 +45,7 @@ func clipJSON(_ c: Clip, live: Bool?) -> [String: Any] {
     return o
 }
 
-func memberJSON(_ m: MemberRecord) -> [String: Any] {
+@Sendable func memberJSON(_ m: MemberRecord) -> [String: Any] {
     var o: [String: Any] = ["id": m.id, "name": m.name, "platform": m.platform, "addedAt": m.addedAt,
                             "updatedAt": m.updatedAt, "removed": m.removed]
     if let v = m.model { o["model"] = v }
