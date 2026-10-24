@@ -2,37 +2,74 @@ import AppKit
 import NearclipKit
 import SwiftUI
 
-/// "Copied from iPhone" — a small, non-activating capsule under the menu bar.
+/// The small, non-activating capsule under the menu bar. "Copied from iPhone" when a clip arrives; for a large image,
+/// "Receiving an image from iPhone…" with a progress bar first (PROTOCOL.md §6.6), which turns into "Copied from iPhone"
+/// in place when the image is in.
 @MainActor
 final class ToastController {
+    private enum Shown: Equatable {
+        case copied(StoredClip)
+        case received(StoredClip)
+        case transfer(IncomingTransfer)
+        case failed(IncomingTransfer)
+    }
+
     private let model: AppModel
     private var panel: NSPanel?
+    private var host: NSHostingView<ToastView>?
     private var hideWork: DispatchWorkItem?
+    private var shown: Shown?
+    /// A transfer the user clicked away: its progress no longer brings the capsule back (its arrival still does).
+    private var dismissedTransfer: String?
+    /// Bumped on every show and hide, so a fade-out that finishes after a newer show leaves the panel up.
+    private var token = 0
+    /// Bumped when the capsule appears from hidden, so it shows the new content at once instead of animating from
+    /// whatever it showed last.
+    private var epoch = 0
     var onClick: (() -> Void)?
 
     init(model: AppModel) { self.model = model }
 
-    func show(_ sc: StoredClip) {
+    /// A clip from another device was copied to the clipboard.
+    func show(_ sc: StoredClip) { present(.copied(sc), hideAfter: 2.5) }
+
+    /// An image that was shown arriving is in history but was not copied (auto-copy off, or an older clip).
+    func received(_ sc: StoredClip) { present(.received(sc), hideAfter: 2.5) }
+
+    /// The image shown arriving did not make it.
+    func failed(_ t: IncomingTransfer) { present(.failed(t), hideAfter: 3.5) }
+
+    /// The image shown arriving changed; nil when none is arriving any more.
+    func transfer(_ t: IncomingTransfer?) {
+        if let t {
+            guard t.id != dismissedTransfer else { return }
+            present(.transfer(t), hideAfter: nil)
+        } else if case .transfer = shown {
+            hide()
+        }
+    }
+
+    private func present(_ s: Shown, hideAfter: TimeInterval?) {
         guard model.settings.showToasts else { return }
-        let view = ToastView(symbol: model.sourceSymbol(sc), source: model.sourceName(sc), clip: sc,
-                             thumbnail: sc.clip.isImage ? Thumbnails.shared.image(id: sc.id, url: model.node.blobURL(for: sc.id)) : nil,
-                             onClick: { [weak self] in
-                                 self?.hideWork?.cancel()
-                                 self?.panel?.orderOut(nil)
-                                 self?.onClick?()
-                             })
-        let host = NSHostingView(rootView: view)
-        host.layoutSubtreeIfNeeded()
-        let size = host.fittingSize
+        shown = s
+        token += 1
         let p = panel ?? makePanel()
-        host.frame = NSRect(origin: .zero, size: size)
-        let surface = HistoryPanelController.surface(for: host, cornerRadius: 16)
-        surface.frame = host.frame
-        p.contentView = surface
+        panel = p
+        if !p.isVisible { epoch += 1 }
+        let view = ToastView(content: content(s), epoch: epoch, onClick: { [weak self] in self?.clicked() })
+        if let host {
+            host.rootView = view
+        } else {
+            let h = NSHostingView(rootView: view)
+            host = h
+            p.contentView = HistoryPanelController.surface(for: h, cornerRadius: 16)
+        }
+        // Measured off-screen: the hosted view is pinned to the panel, which still has the old size.
+        let size = NSHostingView(rootView: view).fittingSize
         let screen = NSScreen.main ?? NSScreen.screens.first
         guard let vf = screen?.visibleFrame else { return }
-        let origin = NSPoint(x: vf.maxX - size.width - 14, y: vf.maxY - size.height - 10)
-        p.setFrame(NSRect(origin: origin, size: size), display: true)
+        p.setFrame(NSRect(x: vf.maxX - size.width - 14, y: vf.maxY - size.height - 10, width: size.width, height: size.height),
+                   display: true)
         if !p.isVisible {
             p.alphaValue = 0
             p.orderFrontRegardless()
@@ -41,28 +78,105 @@ final class ToastController {
             ctx.duration = 0.18
             p.animator().alphaValue = 1
         }
-        panel = p
-        scheduleHide(after: 2.5)
+        hideWork?.cancel()
+        hideWork = nil
+        if let hideAfter { scheduleHide(after: hideAfter) }
+    }
+
+    private func content(_ s: Shown) -> ToastContent {
+        switch s {
+        case .copied(let sc):
+            return clipContent(sc, title: String(localized: "Copied from \(model.sourceName(sc))"), detail: preview(sc))
+        case .received(let sc):
+            return clipContent(sc, title: String(localized: "Image from \(model.sourceName(sc))"),
+                               detail: String(localized: "Saved to history"))
+        case .transfer(let t):
+            let name = model.deviceName(t.from)
+            return ToastContent(
+                id: t.id, symbol: model.deviceSymbol(t.from), tint: Brand.iris,
+                title: String(localized: "Receiving an image from \(name)…"),
+                detail: t.total > 0 ? ToastContent.progressText(t.received, of: t.total) : String(localized: "Preparing…"),
+                progress: t.fraction.map { .value($0) } ?? .indeterminate, image: true)
+        case .failed(let t):
+            return ToastContent(
+                id: t.id, symbol: "exclamationmark", tint: Brand.warning,
+                title: String(localized: "Couldn't receive the image"),
+                detail: String(localized: "Copy it again on \(model.deviceName(t.from))."), progress: .none, image: false)
+        }
+    }
+
+    private func clipContent(_ sc: StoredClip, title: String, detail: String) -> ToastContent {
+        let image = sc.clip.isImage
+        // Made off the main thread and filled in when ready, so "Copied from …" shows the moment the image is in.
+        let thumbnail = image ? Thumbnails.shared.cached(id: sc.id) : nil
+        if image, thumbnail == nil { loadThumbnail(sc) }
+        return ToastContent(id: sc.id, symbol: model.sourceSymbol(sc), tint: Brand.iris, title: title, detail: detail,
+                            progress: .none, image: image, thumbnail: thumbnail)
+    }
+
+    private func loadThumbnail(_ sc: StoredClip) {
+        let url = model.node.blobURL(for: sc.id)
+        Task { [weak self] in
+            guard await Thumbnails.shared.load(id: sc.id, url: url) != nil, let self, let s = self.shown else { return }
+            switch s {
+            case .copied(let shownClip) where shownClip.id == sc.id, .received(let shownClip) where shownClip.id == sc.id:
+                // Same size: the slot is already there.
+                self.host?.rootView = ToastView(content: self.content(s), epoch: self.epoch,
+                                                onClick: { [weak self] in self?.clicked() })
+            default:
+                break
+            }
+        }
+    }
+
+    private func preview(_ sc: StoredClip) -> String {
+        if sc.clip.isImage {
+            let w = sc.clip.w ?? 0, h = sc.clip.h ?? 0
+            return w > 0 ? String(localized: "Image · \(w)×\(h)") : String(localized: "Image")
+        }
+        return Format.preview(sc.clip.text ?? "", maxLines: 1)
+    }
+
+    private func clicked() {
+        if case .transfer(let t) = shown { dismissedTransfer = t.id }
+        hideWork?.cancel()
+        token += 1
+        shown = nil
+        panel?.orderOut(nil)
+        onClick?()
     }
 
     private func scheduleHide(after seconds: TimeInterval) {
         hideWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.hide() }
+        let work = DispatchWorkItem { [weak self] in self?.hideIfIdle() }
         hideWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
     }
 
-    private func hide() {
+    private func hideIfIdle() {
         guard let p = panel else { return }
         if NSMouseInRect(NSEvent.mouseLocation, p.frame, false) {
             scheduleHide(after: 1)
             return
         }
+        hide()
+    }
+
+    private func hide() {
+        hideWork?.cancel()
+        hideWork = nil
+        shown = nil
+        guard let p = panel, p.isVisible else { return }
+        token += 1
+        let t = token
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.25
             p.animator().alphaValue = 0
         }, completionHandler: {
-            MainActor.assumeIsolated { p.orderOut(nil) }
+            MainActor.assumeIsolated { [weak self] in
+                guard self?.token == t else { return }
+                p.orderOut(nil)
+            }
         })
     }
 
@@ -80,36 +194,88 @@ final class ToastController {
     }
 }
 
+struct ToastContent: Equatable {
+    enum Progress: Equatable {
+        case none
+        /// Size not known yet: the other device is still encoding the image.
+        case indeterminate
+        case value(Double)
+    }
+
+    var id: String
+    var symbol: String
+    var tint: Color
+    var title: String
+    var detail: String
+    var progress: Progress
+    /// Keeps a thumbnail slot, so the capsule keeps its size when "Receiving…" turns into "Copied from…".
+    var image: Bool
+    var thumbnail: NSImage? = nil
+
+    /// "3.1 / 8.4 MB": both in the unit of the total, so the numbers don't jump between units.
+    static func progressText(_ received: Int, of total: Int) -> String {
+        if total >= 1_000_000 {
+            return String(format: "%.1f / %.1f MB", Double(received) / 1_000_000, Double(total) / 1_000_000)
+        }
+        return String(format: "%d / %d KB", received / 1000, max(1, total / 1000))
+    }
+}
+
 struct ToastView: View {
-    let symbol: String
-    let source: String
-    let clip: StoredClip
-    let thumbnail: NSImage?
+    let content: ToastContent
+    /// A new value starts over without animating from the previous content (the capsule just appeared).
+    var epoch = 0
     var onClick: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: symbol)
+            Image(systemName: content.symbol)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 30, height: 30)
-                .background(Circle().fill(Brand.iris))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Copied from \(source)")
+                .background(Circle().fill(content.tint))
+                .contentTransition(.symbolEffect(.replace))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(verbatim: content.title)
                     .font(.system(size: 12.5, weight: .semibold))
                     .lineLimit(1)
-                Text(verbatim: preview)
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if content.progress == .none {
+                    Text(verbatim: content.detail)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else {
+                    HStack(spacing: 8) {
+                        ToastProgressBar(fraction: content.fraction)
+                            .frame(height: 4)
+                        Text(verbatim: content.detail)
+                            .font(.system(size: 11).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .frame(height: 15)
+                }
             }
+            .frame(width: content.image ? 230 : nil, alignment: .leading)
             .frame(maxWidth: 230, alignment: .leading)
-            if let thumbnail {
-                Image(nsImage: thumbnail)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 34, height: 34)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            if content.image {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.primary.opacity(0.08))
+                    if let thumbnail = content.thumbnail {
+                        Image(nsImage: thumbnail)
+                            .resizable()
+                            .scaledToFill()
+                            .transition(.opacity)
+                    } else {
+                        Image(systemName: "photo")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 34, height: 34)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .animation(.easeOut(duration: 0.2), value: content.thumbnail != nil)
             }
         }
         .padding(.leading, 10)
@@ -117,15 +283,55 @@ struct ToastView: View {
         .padding(.vertical, 9)
         .contentShape(Rectangle())
         .onTapGesture(perform: onClick)
+        .animation(.snappy(duration: 0.25), value: content.title)
         .accessibilityElement(children: .combine)
+        .accessibilityValue(content.accessibilityProgress)
+        .id(epoch)
+    }
+}
+
+private extension ToastContent {
+    var fraction: Double? {
+        if case .value(let f) = progress { return f }
+        return nil
     }
 
-    private var preview: String {
-        if clip.clip.isImage {
-            let w = clip.clip.w ?? 0, h = clip.clip.h ?? 0
-            return w > 0 ? String(localized: "Image · \(w)×\(h)") : String(localized: "Image")
+    var accessibilityProgress: Text {
+        guard let f = fraction else { return Text(verbatim: "") }
+        return Text(f, format: .percent.precision(.fractionLength(0)))
+    }
+}
+
+/// A thin capsule bar; without a fraction a short segment sweeps across (a still segment with Reduce Motion).
+struct ToastProgressBar: View {
+    let fraction: Double?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GeometryReader { g in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.primary.opacity(0.12))
+                if let fraction {
+                    Capsule()
+                        .fill(Brand.iris)
+                        .frame(width: max(4, g.size.width * fraction))
+                        .animation(.easeOut(duration: 0.3), value: fraction)
+                } else if reduceMotion {
+                    Capsule().fill(Brand.iris.opacity(0.55)).frame(width: g.size.width * 0.3)
+                } else {
+                    TimelineView(.animation) { timeline in
+                        let period = 1.3
+                        let phase = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
+                        let w = g.size.width * 0.32
+                        Capsule()
+                            .fill(Brand.iris)
+                            .frame(width: w)
+                            .offset(x: -w + (g.size.width + w) * phase)
+                    }
+                }
+            }
+            .clipShape(Capsule())
         }
-        return Format.preview(clip.clip.text ?? "", maxLines: 1)
     }
 }
 
@@ -146,4 +352,3 @@ struct VisualEffect: NSViewRepresentable {
         v.blendingMode = blending
     }
 }
-

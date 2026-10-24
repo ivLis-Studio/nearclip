@@ -147,6 +147,34 @@ public struct PairingTicket: Hashable, Sendable {
     public var uri: String { invite.uri }
 }
 
+/// A live image arriving from another device (PROTOCOL.md §6.6), for progress UI. A transfer ends with the clip's
+/// `clipAdded` event, or with `state == .failed`.
+public struct IncomingTransfer: Hashable, Sendable {
+    public enum State: String, Sendable {
+        /// Announced: the other device is still encoding the image (`total` is 0).
+        case preparing
+        case receiving
+        /// Ended without the clip: `reason` is cancelled, disconnected, corrupt or timeout.
+        case failed
+    }
+
+    /// Id of the clip being transferred.
+    public var id: String
+    /// The device the image was copied on.
+    public var from: String
+    public var state: State
+    public var received: Int
+    public var total: Int
+    public var reason: String?
+
+    public init(id: String, from: String, state: State, received: Int, total: Int, reason: String? = nil) {
+        self.id = id; self.from = from; self.state = state; self.received = received; self.total = total; self.reason = reason
+    }
+
+    /// 0…1, or nil while the size is unknown.
+    public var fraction: Double? { total > 0 ? min(1, Double(received) / Double(total)) : nil }
+}
+
 public enum NodeEvent: Sendable {
     case ready(port: UInt16, groupId: String, groupTag: String)
     case ticket(PairingTicket)
@@ -162,6 +190,8 @@ public enum NodeEvent: Sendable {
     case peerDown(String)
     /// `local`: produced on this device. `apply`: a live clip from another device that should go to the system clipboard.
     case clipAdded(StoredClip, live: Bool, apply: Bool, local: Bool)
+    /// Progress of a live image from another device (PROTOCOL.md §6.6).
+    case transfer(IncomingTransfer)
     case clipsDeleted([String])
     case clipUpdated(StoredClip)
     case membersChanged([MemberRecord])

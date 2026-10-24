@@ -127,6 +127,13 @@ class NearclipEngine(
     private val codeAttempts = ArrayDeque<Long>()
     private var join: JoinOp? = null
     private val pendingLive = LinkedHashMap<String, Long>()
+    /**
+     * Live images arriving from other devices (PROTOCOL §6.6), by clip id. The same clip can come through several
+     * sessions (forwarding); a transfer ends when one of them delivers it or all of them are gone.
+     */
+    private val transfers = HashMap<String, Transfer>()
+    /** Images this device announced and has not sent or cancelled yet. */
+    private val announced = HashMap<String, Long>()
     private var tickTask: ScheduledFuture<*>? = null
     private var saveTask: ScheduledFuture<*>? = null
     private var persistDirty = false
@@ -250,31 +257,69 @@ class NearclipEngine(
     }
 
     /** Adds an image clip from encoded PNG/JPEG bytes. Heavy work (hashing, writing the blob) runs on the caller's thread. */
-    fun sendImage(bytes: ByteArray, mime: String, width: Int? = null, height: Int? = null): SendResult {
-        if (bytes.isEmpty()) return SendResult(null, 0)
-        if (paused) return SendResult(null, 0, paused = true)
+    fun sendImage(bytes: ByteArray, mime: String, width: Int? = null, height: Int? = null, id: String? = null): SendResult {
+        // [id]: from announceImage (PROTOCOL §6.6). Never reuse an id that already names a blob here.
+        val announcedId = normalizeId(id)
+        if (bytes.isEmpty() || paused) {
+            if (announcedId != null) post { if (announced.remove(announcedId) != null) sendCancel(announcedId) }
+            return SendResult(null, 0, paused = paused)
+        }
         val normalizedMime = if (mime.lowercase() == "image/jpeg" || mime.lowercase() == "image/jpg") "image/jpeg" else "image/png"
         val draft = Clip(
             id = newId(), ts = 0, src = deviceId, kind = ClipKind.IMAGE, mime = normalizedMime, size = bytes.size.toLong(),
             sha = Hex.encode(Crypto.sha256(bytes)), w = width?.takeIf { it > 0 }, h = height?.takeIf { it > 0 }, groupId = "",
-        )
+        ).let { d -> if (announcedId != null && !blobFile(d.copy(id = announcedId)).exists()) d.copy(id = announcedId) else d }
         val file = blobFile(draft)
         file.writeBytes(bytes)
         return call {
+            val wasAnnounced = announcedId != null && announced.remove(announcedId) != null
             if (paused) {
                 file.delete()
+                if (wasAnnounced) sendCancel(announcedId!!)
                 return@call SendResult(null, 0, paused = true)
             }
             val tooLarge = bytes.size > Clip.MAX_IMAGE_BYTES
-            if (tooLarge) emit(EngineEvent.TooLarge(ClipKind.IMAGE))
+            if (tooLarge) {
+                emit(EngineEvent.TooLarge(ClipKind.IMAGE))
+                if (wasAnnounced) sendCancel(announcedId!!)
+            }
             val now = clock()
+            var c = draft
+            if (index.containsKey(c.id) || st.tombstones.containsKey(c.id)) {
+                c = c.copy(id = newId())
+                if (!file.renameTo(blobFile(c))) file.copyTo(blobFile(c), overwrite = true).also { file.delete() }
+            }
             produce(
-                draft.copy(
+                c.copy(
                     ts = max(now, st.newestLocalTs + 1), groupId = group.id, receivedAt = now,
                     sourceName = st.deviceName, sourcePlatform = config.platform, localOnly = tooLarge,
                 ),
             )
         }
+    }
+
+    /**
+     * Tells the other devices that an image was just copied here, before it is encoded (PROTOCOL §6.6), so they can
+     * show it arriving right away. Pass the returned id to [sendImage], or to [cancelImage] if it is not sent.
+     */
+    fun announceImage(): String {
+        val id = newId()
+        post {
+            if (!running || paused) return@post
+            announced[id] = clock()
+            for (s in online.values) s.sendJson(Msg.incoming(id))
+        }
+        return id
+    }
+
+    /** The announced image will not be sent after all (unreadable, too large, replaced by a newer copy). */
+    fun cancelImage(id: String) = post {
+        val key = normalizeId(id) ?: return@post
+        if (announced.remove(key) != null) sendCancel(key)
+    }
+
+    private fun sendCancel(id: String) {
+        for (s in online.values) s.sendJson(Msg.incomingCancel(id))
     }
 
     fun delete(ids: Collection<String>) = post {
@@ -886,6 +931,7 @@ class NearclipEngine(
                 emit(EngineEvent.TicketExpired)
             }
         }
+        expireTransfers(now)
         for (s in sessions.toList()) {
             if (s.closed) continue
             if (now - s.lastSent >= config.keepAliveMs) s.sendJson(Msg.PING)
@@ -1099,6 +1145,7 @@ class NearclipEngine(
                     "want" -> { handleWant(s, obj); null }
                     "del" -> { applyDeletes(parseIdTs(obj, "items"), s); null }
                     "members" -> { mergeMembers(parseMembers(obj), s); null }
+                    "incoming" -> { handleIncoming(s, obj); null }
                     "error" -> { log("peer ${s.shortPeer} error: ${obj.str("code")} ${obj.str("msg") ?: ""}"); null }
                     else -> null
                 }
@@ -1112,6 +1159,7 @@ class NearclipEngine(
                 val id = asm.clip.id
                 if (index.containsKey(id) || st.tombstones.containsKey(id) || s.groupId != group.id) {
                     asm.file.delete()
+                    dropTransfer(id, s, "cancelled")
                     return@call
                 }
                 val target = blobFile(asm.clip)
@@ -1127,8 +1175,15 @@ class NearclipEngine(
         }
     }
 
+    /** Reader thread: another chunk of a live image arrived (PROTOCOL §6.6). */
+    internal fun onBlobProgress(s: MemberSession, clipId: String, received: Long) = post { noteProgress(clipId, received, s) }
+
+    /** Reader thread: the session dropped an image transfer (bad chunk, checksum mismatch, too many at once). */
+    internal fun onBlobDropped(s: MemberSession, clipId: String, reason: String) = post { dropTransfer(clipId, s, reason) }
+
     internal fun onSessionClosed(s: MemberSession) = post {
         sessions.remove(s)
+        for (id in transfers.filterValues { s.sid in it.sessions }.keys.toList()) dropTransfer(id, s, "disconnected")
         if (online[s.peerId] === s) {
             online.remove(s.peerId)
             st.lastSeen[s.peerId] = clock()
@@ -1259,7 +1314,7 @@ class NearclipEngine(
             return null
         }
         return try {
-            BlobAssembly(c, live, store.newTempFile())
+            BlobAssembly(c, live, store.newTempFile()).also { if (live) startTransfer(it.clip, s) }
         } catch (e: IOException) {
             log("cannot receive image: ${e.message}")
             null
@@ -1267,6 +1322,7 @@ class NearclipEngine(
     }
 
     private fun acceptClip(c: Clip, live: Boolean, from: MemberSession?) {
+        transfers.remove(c.id)
         val src = st.members[c.src]
         val stored = c.copy(
             groupId = group.id, receivedAt = clock(), pinned = false,
@@ -1281,6 +1337,64 @@ class NearclipEngine(
         }
         emit(EngineEvent.ClipAdded(stored, live, apply, local = false, sentTo = 0))
         prune()
+    }
+
+    // ---- transfers in progress (PROTOCOL §6.6) ----
+
+    private class Transfer(var from: String, var total: Long, var received: Long, val sessions: HashSet<Long>, var updated: Long)
+
+    private fun handleIncoming(s: MemberSession, obj: JsonObject) {
+        val id = normalizeId(obj.str("id")) ?: return
+        if (obj.bool("cancel") == true) {
+            // Only an announcement can be cancelled; once the clip message came, the chunks decide.
+            if (transfers[id]?.total == 0L) dropTransfer(id, s, "cancelled")
+            return
+        }
+        if (obj.str("kind") != ClipKind.IMAGE || !syncImages) return
+        if (transfers.containsKey(id) || index.containsKey(id) || st.tombstones.containsKey(id)) return
+        transfers[id] = Transfer(s.peerId, 0, 0, hashSetOf(s.sid), clock())
+        emitTransfer(id, IncomingTransfer.State.PREPARING)
+    }
+
+    private fun startTransfer(c: Clip, s: MemberSession) {
+        val size = c.size ?: return
+        val t = transfers.getOrPut(c.id) { Transfer(c.src, size, 0, HashSet(), clock()) }
+        t.from = c.src
+        t.total = size
+        t.sessions.add(s.sid)
+        t.updated = clock()
+        emitTransfer(c.id, IncomingTransfer.State.RECEIVING)
+    }
+
+    private fun noteProgress(id: String, received: Long, s: MemberSession) {
+        val t = transfers[id] ?: return
+        if (s.sid !in t.sessions || received <= t.received) return
+        t.received = received
+        t.updated = clock()
+        emitTransfer(id, IncomingTransfer.State.RECEIVING)
+    }
+
+    /** The session will not deliver the clip; the transfer fails once no other session is bringing it. */
+    private fun dropTransfer(id: String, s: MemberSession, reason: String) {
+        val t = transfers[id] ?: return
+        if (!t.sessions.remove(s.sid)) return
+        if (t.sessions.isNotEmpty()) return
+        transfers.remove(id)
+        emit(EngineEvent.Transfer(IncomingTransfer(id, t.from, IncomingTransfer.State.FAILED, t.received, t.total, reason)))
+    }
+
+    private fun emitTransfer(id: String, state: IncomingTransfer.State) {
+        val t = transfers[id] ?: return
+        emit(EngineEvent.Transfer(IncomingTransfer(id, t.from, state, t.received, t.total)))
+    }
+
+    private fun expireTransfers(now: Long) {
+        val stale = transfers.filterValues { now - it.updated > TRANSFER_TIMEOUT_MS }
+        for ((id, t) in stale) {
+            transfers.remove(id)
+            emit(EngineEvent.Transfer(IncomingTransfer(id, t.from, IncomingTransfer.State.FAILED, t.received, t.total, "timeout")))
+        }
+        announced.values.removeAll { now - it > 5 * 60_000L }
     }
 
     private fun sendInventory(s: MemberSession) {
@@ -1696,5 +1810,7 @@ class NearclipEngine(
         const val DAY = 86_400_000L
         const val HOUR = 3_600_000L
         const val SESSION_READ_TIMEOUT_MS = 60_000
+        /** A transfer that makes no progress for this long is reported as failed (PROTOCOL §6.6). */
+        const val TRANSFER_TIMEOUT_MS = 60_000L
     }
 }

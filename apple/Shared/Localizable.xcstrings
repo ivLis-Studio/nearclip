@@ -1,6 +1,66 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Copy it again on %@.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 다시 복사해 보세요."
+          }
+        }
+      }
+    },
+    "Couldn't receive the image": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지를 받지 못했습니다"
+          }
+        }
+      }
+    },
+    "Image from %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 받은 이미지"
+          }
+        }
+      }
+    },
+    "Preparing…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "준비 중…"
+          }
+        }
+      }
+    },
+    "Receiving an image from %@…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 이미지 받는 중…"
+          }
+        }
+      }
+    },
+    "Saved to history": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록에 저장됨"
+          }
+        }
+      }
+    },
     "%lld characters": {
       "localizations": {
         "ko": {

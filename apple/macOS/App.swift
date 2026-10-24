@@ -56,9 +56,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             switch content {
             case .text(let t): self.model.localCopy(text: t)
-            case .image(let data, let mime, let w, let h): self.model.localCopy(image: data, mime: mime, width: w, height: h)
+            case .image(let data, let mime, let w, let h, let announced):
+                self.model.localCopy(image: data, mime: mime, width: w, height: h, announced: announced)
             }
         }
+        // Large images: the other devices show "Receiving…" while this Mac is still encoding (PROTOCOL.md §6.6).
+        monitor.onImageStart = { [weak self] in self?.model.announceImage() }
+        monitor.onImageCancel = { [weak self] id in self?.model.cancelImage(id) }
         monitor.onTooLarge = { [weak self] in
             self?.model.show(String(localized: "Too large to sync"), symbol: "exclamationmark.triangle.fill", tone: .warning)
         }
@@ -68,6 +72,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         status = StatusItemController(model: model, panel: panel, windows: windows)
         windows.onShortcutChange = { [weak self] in self?.registerHotKey() }
         model.onReceive = { [weak self] sc in self?.toast.show(sc) }
+        model.onShownTransfer = { [weak self] t in self?.toast.transfer(t) }
+        model.onReceivedQuietly = { [weak self] sc in self?.toast.received(sc) }
+        model.onTransferFailed = { [weak self] t in self?.toast.failed(t) }
         toast.onClick = { [weak self] in self?.panel.show(anchor: self?.status.anchorView) }
         model.onActivity = { [weak self] in self?.status.pulse() }
         model.onPairPrompt = { [weak self] prompt in self?.windows.showPairPrompt(prompt) }

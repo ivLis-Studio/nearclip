@@ -110,6 +110,40 @@ final class NearclipFlowTests: XCTestCase {
         shot("31-sent")
     }
 
+    /// A large image from another device (PROTOCOL.md §6.6), driven by apple/tools/ios_transfer.py: pairs through
+    /// NC_PAIR_LINK, then the peer announces an image and sends it slowly. The card above the send bar shows
+    /// "Receiving an image from …" (first "Preparing…", then "3.1 / 10.6 MB"), then "Copied from …" takes its place.
+    func testIncomingImageProgress() throws {
+        let link = try XCTUnwrap(ProcessInfo.processInfo.environment["NC_PAIR_LINK"], "set TEST_RUNNER_NC_PAIR_LINK")
+        app.launchArguments = language()
+        app.launch()
+        if app.buttons["onboarding.next"].waitForExistence(timeout: 4) {
+            app.buttons["onboarding.next"].tap()
+            app.buttons["onboarding.next"].tap()
+            app.tap()
+            if app.buttons["onboarding.later"].waitForExistence(timeout: 5) { app.buttons["onboarding.later"].tap() }
+        }
+        XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        app.open(URL(string: link)!)
+        XCTAssertTrue(app.staticTexts["join.success"].waitForExistence(timeout: 30))
+        app.buttons["join.done"].tap()
+        tapIfExists(app.buttons["sheet.done"])
+
+        let card = app.descendants(matching: .any)["transfer"]
+        XCTAssertTrue(card.waitForExistence(timeout: 60), "no card for the announced image")
+        shot("40-transfer-preparing")
+        let sized = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS ' MB'"), object: card)
+        XCTAssertEqual(XCTWaiter().wait(for: [sized], timeout: 30), .completed, "no progress: \(card.label)")
+        sleep(3)
+        shot("41-transfer-receiving")
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: card)
+        XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 60), .completed, "the card did not go away")
+        let toast = app.descendants(matching: .any)["toast"]
+        XCTAssertTrue(toast.waitForExistence(timeout: 3), "no toast when the image came in")
+        shot("42-transfer-copied")
+        XCTAssertTrue(app.buttons.matching(identifier: "clip.row").firstMatch.exists)
+    }
+
     /// Needs an already onboarded app (run after testOnboardingPairSyncAndSend).
     func testSheetsOpenFromHome() throws {
         app.launchArguments = language()

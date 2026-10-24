@@ -63,10 +63,12 @@ public sealed partial class NearclipNode
         {
             if (!_syncImages) _declinedImages.Add(c.Id);
             s.SkipBlobs.Add(c.Id);
+            DropTransfer(c.Id, s, "corrupt");
             return;
         }
         if (s.PendingBlobs.ContainsKey(c.Id)) return;
         s.PendingBlobs[c.Id] = new PendingBlob(c, live);
+        if (live) StartTransfer(c, size, s);
     }
 
     internal void SessionChunk(PeerSession s, string clipId, uint index, ReadOnlyMemory<byte> data)
@@ -79,10 +81,12 @@ public sealed partial class NearclipNode
             p.Data.Dispose();
             s.SkipBlobs.Add(clipId);
             LogMessage("bad chunk for " + clipId);
+            DropTransfer(clipId, s, "corrupt");
             return;
         }
         p.Data.Write(data.Span);
         p.Next++;
+        NoteProgress(clipId, p.Data.Length, s);
         if (p.Data.Length < size) return;
         s.PendingBlobs.Remove(clipId);
         var blob = p.Data.ToArray();
@@ -90,14 +94,20 @@ public sealed partial class NearclipNode
         if (Hex.Encode(SHA256.HashData(blob)) != p.Clip.Sha)
         {
             LogMessage("checksum mismatch for " + clipId);
+            DropTransfer(clipId, s, "corrupt");
             return;
         }
-        if (_store.Has(clipId) || _store.State.Tombstones.ContainsKey(clipId)) return;
+        if (_store.Has(clipId) || _store.State.Tombstones.ContainsKey(clipId))
+        {
+            DropTransfer(clipId, s, "cancelled");
+            return;
+        }
         AcceptClip(p.Clip, blob, p.Live, s);
     }
 
     void AcceptClip(Clip c, byte[]? blob, bool live, PeerSession? from)
     {
+        _transfers.Remove(c.Id);
         _store.Members.TryGetValue(c.Src, out var src);
         var sc = new StoredClip(c, GroupId, false, Clock.NowMs(), src?.Name, src?.Platform);
         _store.Add(sc, blob);
@@ -112,6 +122,81 @@ public sealed partial class NearclipNode
         }
         Emit(new NodeEvent.ClipAdded(sc, live, apply, false));
         Prune();
+    }
+
+    // ================================================================ transfers in progress (§6.6)
+
+    sealed class Transfer(string from, long total)
+    {
+        public string From { get; set; } = from;
+        public long Total { get; set; } = total;
+        public long Received { get; set; }
+        public HashSet<PeerSession> Sessions { get; } = new();
+        public DateTime Updated { get; set; } = DateTime.UtcNow;
+    }
+
+    /// <summary>A transfer that makes no progress for this long is reported as failed.</summary>
+    static readonly TimeSpan TransferTimeout = TimeSpan.FromSeconds(60);
+
+    void HandleIncoming(JsonElement o, PeerSession s)
+    {
+        var id = Ids.Norm(Str(o, "id"));
+        if (s.PeerId is not { } pid || !Guid.TryParseExact(id, "D", out _)) return;
+        if (Bool(o, "cancel") == true)
+        {
+            // Only an announcement can be cancelled; once the clip message came, the chunks decide.
+            if (_transfers.TryGetValue(id, out var pending) && pending.Total == 0) DropTransfer(id, s, "cancelled");
+            return;
+        }
+        if (Str(o, "kind") != "image" || !_syncImages) return;
+        if (_transfers.ContainsKey(id) || _store.Has(id) || _store.State.Tombstones.ContainsKey(id)) return;
+        var t = new Transfer(pid, 0);
+        t.Sessions.Add(s);
+        _transfers[id] = t;
+        EmitTransfer(id, TransferState.Preparing);
+    }
+
+    void StartTransfer(Clip c, long size, PeerSession s)
+    {
+        if (!_transfers.TryGetValue(c.Id, out var t)) _transfers[c.Id] = t = new Transfer(c.Src, size);
+        t.From = c.Src;
+        t.Total = size;
+        t.Sessions.Add(s);
+        t.Updated = DateTime.UtcNow;
+        EmitTransfer(c.Id, TransferState.Receiving);
+    }
+
+    void NoteProgress(string id, long received, PeerSession s)
+    {
+        if (!_transfers.TryGetValue(id, out var t) || !t.Sessions.Contains(s) || received <= t.Received) return;
+        t.Received = received;
+        t.Updated = DateTime.UtcNow;
+        EmitTransfer(id, TransferState.Receiving);
+    }
+
+    /// <summary>The session will not deliver the clip; the transfer fails once no other session is bringing it.</summary>
+    void DropTransfer(string id, PeerSession s, string reason)
+    {
+        if (!_transfers.TryGetValue(id, out var t) || !t.Sessions.Remove(s) || t.Sessions.Count > 0) return;
+        _transfers.Remove(id);
+        Emit(new NodeEvent.TransferChanged(new IncomingTransfer(id, t.From, TransferState.Failed, t.Received, t.Total, reason)));
+    }
+
+    void EmitTransfer(string id, TransferState state)
+    {
+        if (_transfers.TryGetValue(id, out var t))
+            Emit(new NodeEvent.TransferChanged(new IncomingTransfer(id, t.From, state, t.Received, t.Total)));
+    }
+
+    void ExpireTransfers(DateTime now)
+    {
+        foreach (var (id, t) in _transfers.Where(kv => now - kv.Value.Updated > TransferTimeout).ToList())
+        {
+            _transfers.Remove(id);
+            Emit(new NodeEvent.TransferChanged(new IncomingTransfer(id, t.From, TransferState.Failed, t.Received, t.Total, "timeout")));
+        }
+        foreach (var id in _announced.Where(kv => now - kv.Value > TimeSpan.FromMinutes(5)).Select(kv => kv.Key).ToList())
+            _announced.Remove(id);
     }
 
     void Prune()

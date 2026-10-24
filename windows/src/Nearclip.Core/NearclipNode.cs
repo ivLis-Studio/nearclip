@@ -45,6 +45,11 @@ public sealed partial class NearclipNode : IDisposable
     readonly Dictionary<string, (DateTime Next, double Delay)> _backoff = new();
     readonly List<DateTime> _codeAttempts = new();
     readonly HashSet<string> _declinedImages = new();
+    /// <summary>Live images arriving from other devices (PROTOCOL.md §6.6), by clip id. The same clip can come through
+    /// several sessions (forwarding); a transfer ends when one of them delivers it or all of them are gone.</summary>
+    readonly Dictionary<string, Transfer> _transfers = new();
+    /// <summary>Images this device announced and has not sent or cancelled yet.</summary>
+    readonly Dictionary<string, DateTime> _announced = new();
     Dictionary<string, Discovered> _discovered = new();
     Socket? _listener;
     CancellationTokenSource? _listenCts;
@@ -175,18 +180,57 @@ public sealed partial class NearclipNode : IDisposable
         return Produce(c, null);
     });
 
-    public StoredClip? SendImage(byte[] data, string mime, int? width = null, int? height = null) => Q.Invoke(() =>
+    /// <param name="id">From <see cref="AnnounceImage"/> (PROTOCOL.md §6.6), or null.</param>
+    public StoredClip? SendImage(byte[] data, string mime, int? width = null, int? height = null, string? id = null) => Q.Invoke(() =>
     {
-        if (data.Length == 0) return null;
+        var announcedId = id is null ? null : Ids.Norm(id);
+        var wasAnnounced = announcedId is not null && _announced.Remove(announcedId);
+        if (data.Length == 0)
+        {
+            if (wasAnnounced) SendCancel(announcedId!);
+            return null;
+        }
         if (data.Length > Wire.MaxImage)
         {
+            if (wasAnnounced) SendCancel(announcedId!);
             Emit(new NodeEvent.TooLarge("image"));
             return null;
         }
-        var c = new Clip(Ids.New(), NextLocalTs(), DeviceId, "image", Mime: mime, Size: data.Length,
+        var cid = announcedId is not null && Guid.TryParseExact(announcedId, "D", out _) && !_store.Has(announcedId)
+            && !_store.State.Tombstones.ContainsKey(announcedId) ? announcedId : Ids.New();
+        var c = new Clip(cid, NextLocalTs(), DeviceId, "image", Mime: mime, Size: data.Length,
             Sha: Hex.Encode(SHA256.HashData(data)), W: width, H: height);
         return Produce(c, data);
     });
+
+    /// <summary>Tells the other devices that an image was just copied here, before it is encoded (PROTOCOL.md §6.6), so
+    /// they can show it arriving right away. Pass the returned id to <see cref="SendImage"/>, or to
+    /// <see cref="CancelImage"/> if it is not sent after all.</summary>
+    public string AnnounceImage()
+    {
+        var id = Ids.New();
+        Q.Post(() =>
+        {
+            if (!_running || _paused || !_syncImages) return;
+            _announced[id] = DateTime.UtcNow;
+            foreach (var s in _online.Values.ToList())
+                if (s.IsMember) s.SendJson(WireJson.Incoming(id));
+        });
+        return id;
+    }
+
+    /// <summary>The announced image will not be sent after all (unreadable, too large, replaced by a newer copy).</summary>
+    public void CancelImage(string id) => Q.Post(() =>
+    {
+        var key = Ids.Norm(id);
+        if (_announced.Remove(key)) SendCancel(key);
+    });
+
+    void SendCancel(string id)
+    {
+        foreach (var s in _online.Values.ToList())
+            if (s.IsMember) s.SendJson(WireJson.IncomingCancel(id));
+    }
 
     /// <summary>Records a clip that stays on this device (too large to sync). Shown in history, never advertised.</summary>
     public StoredClip? AddLocalOnly(string kind, string? text, byte[]? blob, string? mime, int? width = null, int? height = null) => Q.Invoke(() =>
@@ -856,6 +900,7 @@ public sealed partial class NearclipNode : IDisposable
             _ticket = null;
             Emit(new NodeEvent.TicketExpired());
         }
+        ExpireTransfers(now);
         if (_tick++ % 5 != 0 || _paused) return;
         RedialDisconnected(now);
     }
@@ -959,6 +1004,9 @@ public sealed partial class NearclipNode : IDisposable
             case "members":
                 MergeMembers(ReadMembers(o, "members"), s);
                 break;
+            case "incoming":
+                HandleIncoming(o, s);
+                break;
             case "error":
                 LogMessage($"peer error {Str(o, "code")} {Str(o, "msg")}");
                 break;
@@ -973,6 +1021,8 @@ public sealed partial class NearclipNode : IDisposable
     internal void SessionClosed(PeerSession s)
     {
         _sessions.Remove(s);
+        foreach (var id in _transfers.Where(kv => kv.Value.Sessions.Contains(s)).Select(kv => kv.Key).ToList())
+            DropTransfer(id, s, "disconnected");
         if (s.Role == PeerSession.SessionRole.Client && s.Mode == PeerSession.SessionMode.Member)
         {
             if (s.ExpectedPeerId is { } e) _dialing.Remove(e);

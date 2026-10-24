@@ -8,7 +8,8 @@ namespace Nearclip.App.Platform;
 internal abstract record CopiedContent
 {
     public sealed record Text(string Value) : CopiedContent;
-    public sealed record Image(byte[] Data, string Mime, int Width, int Height, bool TooLarge) : CopiedContent;
+    /// <param name="Announced">The id from <see cref="ClipboardService.ImageStarting"/> (PROTOCOL.md §6.6), if announced.</param>
+    public sealed record Image(byte[] Data, string Mime, int Width, int Height, bool TooLarge, string? Announced = null) : CopiedContent;
 }
 
 /// <summary>Watches the Windows clipboard (AddClipboardFormatListener) and writes clips that arrive from other devices.
@@ -28,9 +29,16 @@ internal sealed class ClipboardService
     readonly DispatcherQueueTimer _debounce;
     uint _lastSeq;
     uint _ownSeq;
+    /// <summary>Bumped on every clipboard change: an image still being encoded when a newer copy comes is dropped, so the
+    /// newest copy always wins.</summary>
+    int _generation;
 
     public Func<bool> IsPaused { get; set; } = () => false;
     public Func<IReadOnlyCollection<string>> IgnoredApps { get; set; } = () => [];
+    /// <summary>An image copy is about to be encoded: returns an announcement id (PROTOCOL.md §6.6) or null.</summary>
+    public Func<string?> ImageStarting { get; set; } = () => null;
+    /// <summary>The announced image will not be sent (unreadable, or replaced by a newer copy).</summary>
+    public Action<string?> ImageCancelled { get; set; } = _ => { };
     public event Action<CopiedContent>? Copied;
 
     public ClipboardService(MessageWindow window, DispatcherQueue ui)
@@ -92,6 +100,7 @@ internal sealed class ClipboardService
         var seq = Native.GetClipboardSequenceNumber();
         if (seq == _lastSeq || seq == _ownSeq) return;
         _lastSeq = seq;
+        var generation = ++_generation;
         if (IsPaused()) return;
         var owner = OwnerProcessName();
         if (owner is not null && IgnoredApps().Any(a => string.Equals(a, owner, StringComparison.OrdinalIgnoreCase)))
@@ -140,6 +149,7 @@ internal sealed class ClipboardService
         }
         finally { Native.CloseClipboard(); }
 
+        string? announced = null;
         try
         {
             if (text is { Length: > 0 })
@@ -147,22 +157,35 @@ internal sealed class ClipboardService
                 Copied?.Invoke(new CopiedContent.Text(text));
                 return;
             }
+            if (png is null && dib is null) return;
+            // Large images: the other devices show "Receiving…" while this PC is still encoding.
+            announced = ImageStarting();
             if (png is null && dib is not null && ImageCodec.DibToBgra(dib) is { } bmp)
                 png = await ImageCodec.EncodeAsync(bmp.Bgra, bmp.W, bmp.H, jpeg: false);
-            if (png is null) return;
+            if (png is null || generation != _generation)
+            {
+                ImageCancelled(announced);
+                return;
+            }
             var (w, h) = ImageCodec.PngSize(png) ?? (0, 0);
             if (png.Length <= Wire.MaxImage)
             {
-                Copied?.Invoke(new CopiedContent.Image(png, "image/png", w, h, false));
+                Copied?.Invoke(new CopiedContent.Image(png, "image/png", w, h, false, announced));
                 return;
             }
             // Too big as PNG: send a JPEG (quality 0.9) when that fits (PROTOCOL.md §7).
             var decoded = await ImageCodec.DecodeAsync(png);
             var jpeg = await ImageCodec.EncodeAsync(decoded.Bgra, decoded.W, decoded.H, jpeg: true, 0.9);
-            Copied?.Invoke(new CopiedContent.Image(jpeg, "image/jpeg", decoded.W, decoded.H, jpeg.Length > Wire.MaxImage));
+            if (generation != _generation)
+            {
+                ImageCancelled(announced);
+                return;
+            }
+            Copied?.Invoke(new CopiedContent.Image(jpeg, "image/jpeg", decoded.W, decoded.H, jpeg.Length > Wire.MaxImage, announced));
         }
         catch (Exception e)
         {
+            ImageCancelled(announced);
             Log.Write("clipboard: image conversion failed: " + e.Message);
         }
     }
@@ -201,6 +224,7 @@ internal sealed class ClipboardService
             Native.CloseClipboard();
             _ownSeq = Native.GetClipboardSequenceNumber();
             _lastSeq = _ownSeq;
+            _generation++;
         }
     }
 

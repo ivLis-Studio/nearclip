@@ -238,8 +238,14 @@ internal class MemberSession(
                             break
                         }
                         val expect = engine.onSessionMessage(this, obj) ?: continue
-                        if (assemblies.containsKey(expect.clip.id) || assemblies.size >= MAX_PARALLEL_BLOBS) expect.discard()
-                        else assemblies[expect.clip.id] = expect
+                        when {
+                            assemblies.containsKey(expect.clip.id) -> expect.discard() // the first one keeps going
+                            assemblies.size >= MAX_PARALLEL_BLOBS -> {
+                                expect.discard()
+                                engine.onBlobDropped(this, expect.clip.id, "corrupt")
+                            }
+                            else -> assemblies[expect.clip.id] = expect
+                        }
                     }
                     Plain.TYPE_CHUNK -> onChunk(plain)
                     else -> Unit // unknown type bytes MUST be ignored
@@ -264,9 +270,11 @@ internal class MemberSession(
             assemblies.remove(clipId)
             asm.discard()
             engine.log("unexpected chunk ${index} for ${clipId.take(8)}; transfer dropped")
+            engine.onBlobDropped(this, clipId, "corrupt")
             return
         }
         asm.append(p, Plain.CHUNK_HEADER, length)
+        if (asm.live) engine.onBlobProgress(this, clipId, asm.received)
         if (asm.received == asm.size) {
             assemblies.remove(clipId)
             if (asm.finish()) {
@@ -274,6 +282,7 @@ internal class MemberSession(
             } else {
                 engine.log("checksum mismatch for ${clipId.take(8)}; transfer dropped")
                 asm.discard()
+                engine.onBlobDropped(this, clipId, "corrupt")
             }
         }
     }

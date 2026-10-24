@@ -2,6 +2,7 @@ package studio.ivlis.nearclip.ui.home
 
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -39,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +51,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalConfiguration
@@ -63,8 +67,10 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import studio.ivlis.nearclip.R
 import studio.ivlis.nearclip.core.engine.EngineSnapshot
+import studio.ivlis.nearclip.core.engine.IncomingTransfer
 import studio.ivlis.nearclip.core.model.Clip
 import studio.ivlis.nearclip.runtime.AppSettings
+import studio.ivlis.nearclip.runtime.Notifications
 import studio.ivlis.nearclip.ui.ClipLook
 import studio.ivlis.nearclip.ui.Format
 import studio.ivlis.nearclip.ui.components.AvatarStack
@@ -117,6 +123,8 @@ fun HomeScreen(
     onShare: (Clip) -> Unit,
     onOpenLink: (String) -> Unit,
     onSaveImage: (Clip) -> Unit,
+    incoming: IncomingTransfer? = null,
+    incomingName: String = "",
 ) {
     val context = LocalContext.current
     var query by rememberSaveable { mutableStateOf("") }
@@ -162,6 +170,10 @@ fun HomeScreen(
     )
     val fabExpanded by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
     val sendLabel = stringResource(R.string.send_clipboard)
+    // A new card on top of the list sits above the viewport while the list keeps its first item: bring it in.
+    LaunchedEffect(incoming?.id) {
+        if (incoming != null && listState.firstVisibleItemIndex <= 1) listState.animateScrollToItem(0)
+    }
 
     Scaffold(
         topBar = {
@@ -223,6 +235,16 @@ fun HomeScreen(
         ) {
             if (settings.paused) item("paused") { PausedBanner(onResume, Modifier.animateItem()) }
             if (snapshot.otherMembers.isEmpty()) item("no-devices") { NoDevicesCard(onAddDevice, Modifier.animateItem()) }
+            if (incoming != null) {
+                item("incoming") {
+                    IncomingCard(
+                        incoming, incomingName,
+                        Modifier
+                            .animateItem()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+            }
             if (sections.isEmpty()) {
                 item("empty") {
                     when {
@@ -378,6 +400,50 @@ private fun NoDevicesCard(onAddDevice: () -> Unit, modifier: Modifier = Modifier
                 Sym(R.drawable.ic_add, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.add_device))
+            }
+        }
+    }
+}
+
+/**
+ * A large image on its way from another device (PROTOCOL §6.6): where the clip will appear, with its progress. The clip
+ * row takes its place when the image is in.
+ */
+@Composable
+private fun IncomingCard(t: IncomingTransfer, name: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val title = stringResource(R.string.receiving_image_from, name)
+    val detail = Notifications.progressText(context, t)
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) { contentDescription = "$title, $detail" },
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                Sym(R.drawable.ic_image, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(10.dp))
+                val fraction = t.fraction
+                if (fraction == null) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                } else {
+                    val shown by animateFloatAsState(fraction, label = "progress")
+                    LinearProgressIndicator(progress = { shown }, modifier = Modifier.fillMaxWidth())
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

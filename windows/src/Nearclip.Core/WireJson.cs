@@ -99,6 +99,22 @@ public static class WireJson
         w.WritePropertyName("clip"); WriteClip(w, c);
     });
 
+    /// <summary>A live image is on its way (PROTOCOL.md §6.6).</summary>
+    public static byte[] Incoming(string id) => Object(w =>
+    {
+        w.WriteString("t", "incoming");
+        w.WriteString("id", id);
+        w.WriteString("kind", "image");
+    });
+
+    /// <summary>The announced image will not be sent after all.</summary>
+    public static byte[] IncomingCancel(string id) => Object(w =>
+    {
+        w.WriteString("t", "incoming");
+        w.WriteString("id", id);
+        w.WriteBoolean("cancel", true);
+    });
+
     public static byte[] Delete(IEnumerable<IdTs> items) => Object(w =>
     {
         w.WriteString("t", "del");

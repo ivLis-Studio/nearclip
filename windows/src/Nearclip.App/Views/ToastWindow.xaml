@@ -15,15 +15,31 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
         <Grid Width="32" Height="32" VerticalAlignment="Center">
-            <Ellipse Fill="{ThemeResource AccentFillColorDefaultBrush}" />
+            <Ellipse x:Name="AccentCircle" Fill="{ThemeResource AccentFillColorDefaultBrush}" />
+            <Ellipse x:Name="WarningCircle" Fill="{ThemeResource SystemFillColorCautionBrush}" Visibility="Collapsed" />
             <FontIcon x:Name="DeviceGlyph" FontFamily="{StaticResource Icons}" FontSize="14" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
         </Grid>
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
             <TextBlock x:Name="TitleText" FontSize="13" FontWeight="SemiBold" MaxLines="1" TextTrimming="CharacterEllipsis" />
             <TextBlock x:Name="PreviewText" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" MaxLines="1" TextTrimming="CharacterEllipsis" />
+            <!-- A large image on its way (PROTOCOL.md §6.6): bar and "3.1 / 8.0 MB" in place of the preview line -->
+            <Grid x:Name="ProgressRow" ColumnSpacing="8" Margin="0,4,0,0" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ProgressBar x:Name="Progress" VerticalAlignment="Center" Minimum="0" Maximum="1000" />
+                <TextBlock x:Name="ProgressText" Grid.Column="1" FontSize="12" VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
         </StackPanel>
-        <Border x:Name="ThumbBorder" Grid.Column="2" Width="38" Height="38" CornerRadius="6" Visibility="Collapsed">
-            <Image x:Name="Thumb" Stretch="UniformToFill" />
+        <Border x:Name="ThumbBorder" Grid.Column="2" Width="38" Height="38" CornerRadius="6" Visibility="Collapsed"
+                Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+            <Grid>
+                <FontIcon x:Name="ThumbPlaceholder" FontFamily="{StaticResource Icons}" Glyph="&#xE91B;" FontSize="16"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <Image x:Name="Thumb" Stretch="UniformToFill" />
+            </Grid>
         </Border>
     </Grid>
 </Window>

@@ -132,6 +132,19 @@ node.Event += ev =>
         case NodeEvent.ClipAdded { Local: false } a:
             Emit(w => { w.WriteString("ev", "clip"); WriteClip(w, a.Clip.Clip, a.Live); });
             break;
+        case NodeEvent.TransferChanged tc:
+            Emit(w =>
+            {
+                var t = tc.Transfer;
+                w.WriteString("ev", "transfer");
+                w.WriteString("id", t.Id);
+                w.WriteString("from", t.From);
+                w.WriteString("state", t.StateName);
+                w.WriteNumber("received", t.Received);
+                w.WriteNumber("total", t.Total);
+                if (t.Reason is { } r) w.WriteString("reason", r);
+            });
+            break;
         case NodeEvent.ClipsDeleted d:
             foreach (var id in d.Ids) Emit(w => { w.WriteString("ev", "deleted"); w.WriteString("id", id); });
             break;
@@ -207,9 +220,18 @@ void Handle(string cmd, JsonElement o)
             byte[]? data = null;
             try { if (path is not null) data = File.ReadAllBytes(path); } catch (Exception) { }
             if (data is null) { Emit(w => { w.WriteString("ev", "error"); w.WriteString("msg", "cannot read image"); }); break; }
-            node.SendImage(data, WireJson.Str(o, "mime") ?? "image/png");
+            node.SendImage(data, WireJson.Str(o, "mime") ?? "image/png", id: WireJson.Str(o, "id"));
             break;
         }
+        case "announce_image":
+        {
+            var id = node.AnnounceImage();
+            Emit(w => { w.WriteString("ev", "announced"); w.WriteString("id", id); });
+            break;
+        }
+        case "cancel_image":
+            if (WireJson.Str(o, "id") is { } cancelId) node.CancelImage(cancelId);
+            break;
         case "delete":
             if (WireJson.Str(o, "id") is { } did) node.Delete([did]);
             break;

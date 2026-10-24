@@ -139,6 +139,8 @@ public abstract record NodeEvent
     /// <summary><paramref name="Local"/>: produced on this device. <paramref name="Apply"/>: a live clip from another device
     /// that is newer than anything copied here, i.e. it should go to the system clipboard.</summary>
     public sealed record ClipAdded(StoredClip Clip, bool Live, bool Apply, bool Local) : NodeEvent;
+    /// <summary>Progress of a live image from another device (PROTOCOL.md §6.6).</summary>
+    public sealed record TransferChanged(IncomingTransfer Transfer) : NodeEvent;
     public sealed record ClipsDeleted(IReadOnlyList<string> Ids) : NodeEvent;
     public sealed record ClipUpdated(StoredClip Clip) : NodeEvent;
     /// <summary>A clip made on this device went out to <paramref name="Devices"/> connected devices.</summary>
@@ -151,6 +153,32 @@ public abstract record NodeEvent
     /// <summary>The embedded Tailscale node changed state (remote connection).</summary>
     public sealed record TailnetChanged(TailnetStatus Status) : NodeEvent;
     public sealed record Log(string Message) : NodeEvent;
+}
+
+public enum TransferState
+{
+    /// <summary>Announced: the other device is still encoding the image (<c>Total</c> is 0).</summary>
+    Preparing,
+    Receiving,
+    /// <summary>Ended without the clip: <c>Reason</c> is cancelled, disconnected, corrupt or timeout.</summary>
+    Failed,
+}
+
+/// <summary>A live image arriving from another device (PROTOCOL.md §6.6), for progress UI. A transfer ends with the clip's
+/// <see cref="NodeEvent.ClipAdded"/> or with <see cref="TransferState.Failed"/>.</summary>
+/// <param name="Id">Id of the clip being transferred.</param>
+/// <param name="From">The device the image was copied on.</param>
+public sealed record IncomingTransfer(string Id, string From, TransferState State, long Received, long Total, string? Reason = null)
+{
+    /// <summary>0…1, or null while the size is unknown.</summary>
+    public double? Fraction => Total > 0 ? Math.Min(1.0, (double)Received / Total) : null;
+
+    public string StateName => State switch
+    {
+        TransferState.Preparing => "preparing",
+        TransferState.Receiving => "receiving",
+        _ => "failed",
+    };
 }
 
 public sealed record NodeSnapshot(

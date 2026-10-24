@@ -44,6 +44,8 @@
     <string name="channel_sync_description">Nearclip이 내 기기와 연결되어 있음을 표시합니다.</string>
     <string name="channel_pairing">기기 연결 요청</string>
     <string name="channel_pairing_description">새 기기가 추가되려고 할 때 확인을 요청합니다.</string>
+    <string name="channel_transfers">받는 이미지</string>
+    <string name="channel_transfers_description">다른 기기에서 큰 이미지를 받는 동안 진행률을 표시합니다.</string>
     <string name="syncing_paused">동기화 일시정지됨</string>
     <string name="notification_no_devices">아직 기기가 없습니다</string>
     <string name="notification_looking">내 기기를 찾는 중</string>
@@ -76,6 +78,12 @@
     <string name="no_devices_body">같은 Wi-Fi에 있는 컴퓨터, 휴대폰, 태블릿을 연결하면 동기화가 시작됩니다.</string>
     <string name="copied">복사됨</string>
     <string name="copied_from">%s에서 복사됨</string>
+    <string name="receiving_image_from">%s에서 이미지 받는 중…</string>
+    <string name="transfer_preparing">준비 중…</string>
+    <string name="image_from">%s에서 받은 이미지</string>
+    <string name="saved_to_history">기록에 저장됨</string>
+    <string name="transfer_failed">이미지를 받지 못했습니다</string>
+    <string name="transfer_failed_body">%s에서 다시 복사해 보세요.</string>
     <string name="too_large_to_sync">너무 커서 동기화할 수 없음</string>
     <string name="image_title">이미지</string>
     <string name="image_title_size">이미지 · %1$d × %2$d</string>

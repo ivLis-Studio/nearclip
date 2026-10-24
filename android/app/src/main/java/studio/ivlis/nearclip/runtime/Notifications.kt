@@ -7,22 +7,32 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import studio.ivlis.nearclip.R
 import studio.ivlis.nearclip.core.engine.EngineSnapshot
+import studio.ivlis.nearclip.core.engine.IncomingTransfer
 import studio.ivlis.nearclip.core.engine.PairPromptInfo
 import studio.ivlis.nearclip.core.engine.Sas
 import studio.ivlis.nearclip.service.NotificationActionReceiver
 import studio.ivlis.nearclip.ui.MainActivity
 import studio.ivlis.nearclip.ui.SendActivity
+import java.util.Locale
 
 object Notifications {
     const val CHANNEL_SYNC = "sync"
     const val CHANNEL_PAIRING = "pairing"
+    const val CHANNEL_TRANSFERS = "incoming_images"
     const val ID_SYNC = 7
     const val ID_PAIRING = 8
+    const val ID_TRANSFER = 9
     private const val IRIS = 0xFF4C5BF5.toInt()
+    /** The transfer notification currently shows progress (not "Copied from …" or a failure). */
+    @Volatile private var transferProgressShown = false
+    /** The clip the transfer notification shows as arrived, so its thumbnail can be filled in later. */
+    @Volatile var transferDoneFor: String? = null
+        private set
 
     fun ensureChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
@@ -34,6 +44,13 @@ object Notifications {
                 },
                 NotificationChannel(CHANNEL_PAIRING, context.getString(R.string.channel_pairing), NotificationManager.IMPORTANCE_HIGH).apply {
                     description = context.getString(R.string.channel_pairing_description)
+                },
+                // A quiet banner, like the toast on a computer: once when an image starts coming, once when it is in.
+                NotificationChannel(CHANNEL_TRANSFERS, context.getString(R.string.channel_transfers), NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = context.getString(R.string.channel_transfers_description)
+                    setShowBadge(false)
+                    setSound(null, null)
+                    enableVibration(false)
                 },
             ),
         )
@@ -129,4 +146,99 @@ object Notifications {
 
     fun shizukuStopped(settings: AppSettings, capture: CaptureStatus?): Boolean =
         settings.instantCapture && capture?.setup == CaptureSetup.NOT_RUNNING
+
+    // ---------------------------------------------------------------- images on their way (PROTOCOL §6.6)
+
+    /** "3.1 / 8.4 MB": both in the unit of the total, so the numbers don't jump between units. */
+    fun progressText(context: Context, t: IncomingTransfer): String = when {
+        t.total <= 0 -> context.getString(R.string.transfer_preparing)
+        t.total >= 1_000_000 -> String.format(Locale.ROOT, "%.1f / %.1f MB", t.received / 1e6, t.total / 1e6)
+        else -> String.format(Locale.ROOT, "%d / %d KB", t.received / 1000, maxOf(1L, t.total / 1000))
+    }
+
+    /**
+     * "Receiving an image from MacBook Pro…" with a progress bar, while Nearclip is not on screen. Only the first post
+     * shows the banner; progress updates are quiet. No setSilent: it would put these in one bundle with the sync
+     * notification (NotificationCompat's "silent" group), hiding the bar. The channel itself makes no sound.
+     */
+    @SuppressLint("MissingPermission")
+    fun transfer(context: Context, name: String, t: IncomingTransfer) {
+        val nm = NotificationManagerCompat.from(context)
+        if (!nm.areNotificationsEnabled()) return
+        val percent = ((t.fraction ?: 0f) * 100).toInt()
+        val n = NotificationCompat.Builder(context, CHANNEL_TRANSFERS)
+            .setSmallIcon(R.drawable.ic_stat_nearclip)
+            .setColor(IRIS)
+            .setContentTitle(context.getString(R.string.receiving_image_from, name))
+            .setContentText(progressText(context, t))
+            .setProgress(100, percent, t.total <= 0)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openApp(context, 5))
+            .build()
+        transferProgressShown = true
+        transferDoneFor = null
+        try { nm.notify(ID_TRANSFER, n) } catch (_: SecurityException) {}
+    }
+
+    /** The image is in: "Copied from MacBook Pro" (or "Image from …" when it was not copied) for a few seconds. It
+     *  replaces the progress notification at once with a banner; the thumbnail comes in a quiet second call. */
+    @SuppressLint("MissingPermission")
+    fun transferDone(context: Context, clipId: String, title: String, text: String, thumb: Bitmap?) {
+        val nm = NotificationManagerCompat.from(context)
+        if (!nm.areNotificationsEnabled()) return
+        val update = transferDoneFor == clipId
+        val n = NotificationCompat.Builder(context, CHANNEL_TRANSFERS)
+            .setSmallIcon(R.drawable.ic_stat_nearclip)
+            .setColor(IRIS)
+            .setContentTitle(title)
+            .setContentText(text)
+            .apply { if (thumb != null) setLargeIcon(thumb) }
+            .setOnlyAlertOnce(update)
+            .setAutoCancel(true)
+            .setTimeoutAfter(4_000)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openApp(context, 5))
+            .build()
+        transferProgressShown = false
+        transferDoneFor = clipId
+        try { nm.notify(ID_TRANSFER, n) } catch (_: SecurityException) {}
+    }
+
+    @SuppressLint("MissingPermission")
+    fun transferFailed(context: Context, name: String) {
+        val nm = NotificationManagerCompat.from(context)
+        if (!nm.areNotificationsEnabled()) return
+        val n = NotificationCompat.Builder(context, CHANNEL_TRANSFERS)
+            .setSmallIcon(R.drawable.ic_stat_nearclip)
+            .setColor(IRIS)
+            .setContentTitle(context.getString(R.string.transfer_failed))
+            .setContentText(context.getString(R.string.transfer_failed_body, name))
+            .setAutoCancel(true)
+            .setTimeoutAfter(8_000)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openApp(context, 5))
+            .build()
+        transferProgressShown = false
+        transferDoneFor = null
+        try { nm.notify(ID_TRANSFER, n) } catch (_: SecurityException) {}
+    }
+
+    /** Removes the progress notification (a "Copied from …" one stays until it times out). */
+    fun cancelTransferProgress(context: Context) {
+        if (!transferProgressShown) return
+        transferProgressShown = false
+        NotificationManagerCompat.from(context).cancel(ID_TRANSFER)
+    }
+
+    fun cancelTransfer(context: Context) {
+        transferProgressShown = false
+        transferDoneFor = null
+        NotificationManagerCompat.from(context).cancel(ID_TRANSFER)
+    }
 }

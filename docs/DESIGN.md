@@ -55,6 +55,8 @@ resource system (String Catalog, `strings.xml`, `.resw`). Device-platform words 
 | Device not reachable | Last seen 5 min ago / Not nearby | 5분 전 연결됨 / 주변에 없음 |
 | Global pause | Pause syncing / Syncing paused | 동기화 일시정지 / 동기화 일시정지됨 |
 | Receive feedback | Copied from iPhone | iPhone에서 복사됨 |
+| Large image on its way | Receiving an image from iPhone… · 3.1 / 8.4 MB | iPhone에서 이미지 받는 중… · 3.1 / 8.4 MB |
+| Image that did not arrive | Couldn't receive the image · Copy it again on iPhone. | 이미지를 받지 못했습니다 · iPhone에서 다시 복사해 보세요. |
 | Send feedback | Sent to 3 devices | 기기 3대로 보냄 |
 | Pairing number | Pairing code | 연결 코드 |
 | Cross-network mode | Remote connection | 원격 연결 |
@@ -107,6 +109,14 @@ resource system (String Catalog, `strings.xml`, `.resw`). Device-platform words 
 * Android receives (connected) → clipboard updated in the background (Android ≥ 13 shows its own
   confirmation; the app adds nothing outside the app). In the app: snackbar.
 * iOS receives (app open) → clipboard updated, in-app banner "Copied from MacBook Pro".
+* Large images (PROTOCOL.md §6.6): the device that copies one announces it before encoding, so the others can show
+  it coming. A transfer still running after 0.3 s shows "Receiving an image from iPhone…" with a progress bar and
+  "3.1 / 8.4 MB" (indeterminate with "Preparing…" until the size is known) — in the computer toast (stays up while it
+  runs), as a card on top of the history in the phone apps, and as a notification on Android when Nearclip is not
+  open. When the image is in, the same surface turns into "Copied from iPhone" with the thumbnail (or "Image from
+  iPhone · Saved to history" when auto-copy is off). If it does not arrive: "Couldn't receive the image · Copy it
+  again on iPhone." A cancelled announcement just disappears. Clicking the computer toast while it shows progress
+  opens the history and keeps the toast away until the image is in.
 * Phones send:
   * Android: auto-send when the app opens and the clipboard changed (setting), **Send clipboard**
     FAB, Quick Settings tile, action button on the persistent notification, share sheet target,
@@ -210,7 +220,9 @@ section). Copy (EN / KO):
   history list, footer status ("Connected to 2 devices" with green dot · Pause).
 * **Global shortcut** (⌃⌘V) opens the same panel centered on the active screen (Spotlight-style).
   Enter copies; optional "Paste after choosing" uses Accessibility to send ⌘V to the previous app.
-* Receive toast: small capsule window under the menu bar icon (non-activating NSPanel).
+* Receive toast: small capsule window under the menu bar icon (non-activating NSPanel); for a large image a thin
+  progress bar with "3.1 / 8.4 MB" and a thumbnail slot, so the capsule keeps its size when it turns into "Copied
+  from …". Reduce Motion: a still segment instead of the sweeping one.
 * Settings window (SwiftUI `Settings` scene, toolbar tabs General / Devices / Privacy / History /
   About). Add-device window as in 4.2. Onboarding window on first launch.
 * No Dock icon (LSUIElement) — the app lives in the menu bar; launch at login via SMAppService.
@@ -223,7 +235,8 @@ section). Copy (EN / KO):
   (Acrylic fallback), 8 px radius, positioned above the taskbar near the tray; closes on deactivate.
   Same content as the macOS panel. Right click → menu (Open, Add device…, Pause syncing, Settings, Quit).
 * **Global hotkey** Win+Alt+V (configurable) opens the flyout near the cursor/center.
-* Receive toast: small borderless Mica window above the tray, 2.5 s.
+* Receive toast: small borderless Mica window above the tray, 2.5 s; for a large image a ProgressBar with
+  "3.1 / 8.4 MB" and a thumbnail slot, turning into "Copied from …" in place.
 * **Settings window**: NavigationView (General, Devices, Privacy, History, About) with Windows 11
   settings-card rows. Add-device dialog as in 4.2. Onboarding window on first launch.
 * Clipboard: `AddClipboardFormatListener`; honour the exclusion formats in PROTOCOL.md §8.
@@ -239,6 +252,10 @@ section). Copy (EN / KO):
 * Quick Settings tile "Send clipboard"; share target (text, images); `PROCESS_TEXT` action
   "Send to my devices". Sending from background surfaces uses a transparent, focus-taking activity
   that reads the clipboard, sends, and finishes instantly with a toast.
+* Incoming large image while Nearclip is not open: a quiet banner (channel "Incoming images", high importance, no
+  sound or vibration) with a progress bar; progress updates don't alert again; it turns into "Copied from …" with the
+  thumbnail for 4 s (a second banner), or "Couldn't receive the image". Users can tone the channel down in system
+  settings. Not bundled with the persistent notification (no `setSilent`, which groups notifications).
 * Optional "Bring copies into Nearclip instantly" ("복사한 항목 바로 Nearclip에 불러오기") in Sync settings.
   Tapping opens a sheet explaining Shizuku, with install → start → allow steps. The main button follows the missing
   step; only granting permission from this flow or explicitly tapping Turn on enables it. On Android ≤9 the sheet

@@ -327,6 +327,39 @@ on the remaining devices and pair them again.
 * `{"t":"error","code":"…","msg":"…"}` — plaintext before the handshake, encrypted after it. Codes:
   `group_mismatch`, `no_ticket`, `busy`, `bad_request`, `version`.
 
+### 6.6 Images on their way
+
+A large image takes a moment to encode on the device that copied it and to arrive. So that the other devices can show
+it coming ("Receiving an image from iPhone…" with a progress bar) instead of nothing, the sender MAY announce it:
+
+```json
+{"t":"incoming","id":"<uuid>","kind":"image"}
+{"t":"incoming","id":"<uuid>","cancel":true}
+```
+
+* Right after a live image is copied, before reading or encoding it, the sender sends `incoming` on its member
+  sessions and then sends the clip (6.1) with the **same** `id`. If the image is not sent after all (unreadable, too
+  large, replaced by a newer copy, syncing paused, images turned off) it sends the `cancel` form. Announcements are
+  not forwarded; a sender forgets ids it has not used after 5 minutes.
+* Receivers take the progress from the `clip` message (`size`) and the chunks that follow it. Only `live` image clips
+  report progress, catch-up does not. Implementations that do not know `incoming` ignore it and just receive the clip.
+
+One transfer per clip id, on the receiving device:
+
+| State | When |
+|---|---|
+| `preparing` | `incoming` arrived; the size is not known yet |
+| `receiving` | the `clip` message arrived (`total` = `size`), then after every chunk (`received`) |
+| (done) | the clip is accepted (6.1): the transfer ends with the clip itself |
+| `failed` | `cancelled` (the announcement was cancelled before the clip message, or the clip was already known), `disconnected` (every session bringing it closed), `corrupt` (bad chunk or checksum), `timeout` (no progress for 60 s) |
+
+A cancel only counts before the clip message; after it the chunks decide. When the same clip comes over several
+sessions (forwarding), the transfer fails only when none of them is bringing it any more.
+
+The apps (DESIGN.md) show a transfer only if it is still running 0.3 s after it started, so quick images go straight to
+"Copied from …"; when the image is in, the same toast, card or notification turns into "Copied from …" (or "Image from
+… · Saved to history" when it was not copied), and failures other than `cancelled` say where to copy it again.
+
 ## 7. Limits
 
 | Limit | Value |
@@ -359,6 +392,10 @@ Every implementation ships a headless peer that `tools/interop/run.py` drives:
       [--tailnet <dir> [--tailnet-control <url>]]  # remote connection (section 10) with its own state dir
 ```
 
+The Swift CLI also takes demo flags: `--platform <mac|win|android|ios>` (look like that device),
+`--remote-only` (neither dial nor advertise LAN endpoints, like a phone on mobile data) and `--pace <bytes/s>`
+(send image chunks at that rate, like a slow network, so the receiving side's progress can be seen).
+
 It prints one JSON object per line on **stdout** (events, flushed immediately) and reads one JSON
 object per line on **stdin** (commands). stderr is free-form logging.
 
@@ -373,6 +410,8 @@ object per line on **stdin** (commands). stderr is free-form logging.
 | `peer_up` / `peer_down` | `id` (+ `name` and `route`: `lan` or `remote` for `peer_up`) |
 | `tailnet` | `state`, `ip`, `peers` (number of Nearclip nodes seen in the tailnet) — whenever one of them changes |
 | `clip` | `id`, `src`, `kind`, `live`, `ts` + `text` (text) or `size`, `sha`, `mime` (image) |
+| `transfer` | `id`, `from`, `state` (`preparing`, `receiving`, `failed`), `received`, `total` (+ `reason` when failed) — a live image on its way (6.6); it ends with `clip` |
+| `announced` | `id` — answer to `announce_image` |
 | `deleted` | `id` |
 | `members` | `members` (the full current list) |
 | `history` | `clips`: `[{id,ts,src,kind,text?,sha?,size?}]`, newest first |
@@ -387,7 +426,9 @@ object per line on **stdin** (commands). stderr is free-form logging.
 | `accept` / `decline` | `peer` | answer a `pair_prompt` |
 | `connect` | `host`, `port` | dial a member session |
 | `send_text` | `text` | new live text clip from this device |
-| `send_image` | `path`, `mime` | new live image clip (the file bytes are the blob) |
+| `send_image` | `path`, `mime` (+ `id` from `announce_image`) | new live image clip (the file bytes are the blob) |
+| `announce_image` | | announce a live image (6.6), emit `announced` |
+| `cancel_image` | `id` | cancel an announcement |
 | `delete` | `id` | delete a clip everywhere |
 | `remove` | `peer` | tombstone a member |
 | `rename` | `name` | rename this device (bumps its record, broadcasts `members`) |

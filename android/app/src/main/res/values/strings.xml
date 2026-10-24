@@ -45,6 +45,8 @@
     <string name="channel_sync_description">Shows that Nearclip is connected to your devices.</string>
     <string name="channel_pairing">Pairing requests</string>
     <string name="channel_pairing_description">Asks you to confirm a device that wants to join.</string>
+    <string name="channel_transfers">Incoming images</string>
+    <string name="channel_transfers_description">Shows progress while a large image arrives from another device.</string>
     <string name="syncing_paused">Syncing paused</string>
     <string name="notification_no_devices">No devices yet</string>
     <string name="notification_looking">Looking for your devices</string>
@@ -77,6 +79,12 @@
     <string name="no_devices_body">Pair a computer, phone or tablet on the same Wi-Fi to start syncing.</string>
     <string name="copied">Copied</string>
     <string name="copied_from">Copied from %s</string>
+    <string name="receiving_image_from">Receiving an image from %s…</string>
+    <string name="transfer_preparing">Preparing…</string>
+    <string name="image_from">Image from %s</string>
+    <string name="saved_to_history">Saved to history</string>
+    <string name="transfer_failed">Couldn’t receive the image</string>
+    <string name="transfer_failed_body">Copy it again on %s.</string>
     <string name="too_large_to_sync">Too large to sync</string>
     <string name="image_title">Image</string>
     <string name="image_title_size">Image · %1$d × %2$d</string>

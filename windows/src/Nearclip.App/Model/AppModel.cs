@@ -43,6 +43,12 @@ internal sealed class AppModel
     /// <summary>Something was sent or received (tray pulse).</summary>
     public Action? OnActivity { get; set; }
     public Action<string, bool>? OnPaired { get; set; }
+    /// <summary>The live image shown as "Receiving…" changed (null: none). See <see cref="ShownTransfer"/>.</summary>
+    public Action<IncomingTransfer?>? OnShownTransfer { get; set; }
+    /// <summary>A shown transfer arrived but was not copied to the clipboard (auto-copy off, or an older clip).</summary>
+    public Action<StoredClip>? OnReceivedQuietly { get; set; }
+    /// <summary>A shown transfer ended without the image (the sender cancelling it is not reported).</summary>
+    public Action<IncomingTransfer>? OnTransferFailed { get; set; }
 
     public string DeviceId { get; }
     public string DeviceName { get; private set; } = "";
@@ -66,6 +72,12 @@ internal sealed class AppModel
     public TailnetStatus Tailnet { get; private set; } = TailnetStatus.Off;
     /// <summary>The Tailscale sign-in page was opened and the node is not running yet.</summary>
     public bool TailnetSigningIn { get; private set; }
+    /// <summary>A live image on its way from another device (PROTOCOL.md §6.6): the newest transfer still running 0.3 s
+    /// after it started, so quick ones go straight to "Copied from …".</summary>
+    public IncomingTransfer? ShownTransfer { get; private set; }
+    readonly Dictionary<string, IncomingTransfer> _transfers = new();
+    readonly List<string> _transferOrder = new();
+    readonly HashSet<string> _visibleTransfers = new();
 
     public AppModel(NearclipNode node, AppSettings settings, DispatcherQueue ui)
     {
@@ -221,6 +233,16 @@ internal sealed class AppModel
         return Format.PlatformGlyph(m?.Platform ?? sc.SrcPlatform ?? "", m?.Model);
     }
 
+    /// <summary>Name and glyph of the device an image is coming from.</summary>
+    public string DeviceNameOf(string id) =>
+        Members.FirstOrDefault(x => x.Id == id) is { Name.Length: > 0 } m ? m.Name : Loc.S("AnotherDevice");
+
+    public string DeviceGlyphOf(string id)
+    {
+        var m = Members.FirstOrDefault(x => x.Id == id);
+        return Format.PlatformGlyph(m?.Platform ?? "", m?.Model);
+    }
+
     public List<ClipItem> Filtered(HistoryFilter filter, string query)
     {
         var q = query.Trim();
@@ -273,7 +295,11 @@ internal sealed class AppModel
     /// <summary>Something was copied on this PC.</summary>
     public void LocalCopy(CopiedContent content)
     {
-        if (Settings.Paused) return;
+        if (Settings.Paused)
+        {
+            if (content is CopiedContent.Image { Announced: { } a }) _node.CancelImage(a);
+            return;
+        }
         switch (content)
         {
             case CopiedContent.Text t:
@@ -286,16 +312,31 @@ internal sealed class AppModel
                 if (_node.SendText(t.Value) is not null) OnActivity?.Invoke();
                 break;
             case CopiedContent.Image img:
-                if (!Settings.SyncImages) return;
+                if (!Settings.SyncImages)
+                {
+                    CancelImage(img.Announced);
+                    return;
+                }
                 if (img.TooLarge)
                 {
+                    CancelImage(img.Announced);
                     _node.AddLocalOnly("image", null, img.Data, img.Mime, img.Width, img.Height);
                     Show(Loc.S("TooLarge"), NoticeTone.Warning);
                     return;
                 }
-                if (_node.SendImage(img.Data, img.Mime, img.Width, img.Height) is not null) OnActivity?.Invoke();
+                if (_node.SendImage(img.Data, img.Mime, img.Width, img.Height, img.Announced) is not null) OnActivity?.Invoke();
                 break;
         }
+    }
+
+    /// <summary>An image was just copied here and is about to be encoded: lets the other devices show it arriving right
+    /// away (PROTOCOL.md §6.6). Returns the id to pass along, or null.</summary>
+    public string? AnnounceImage() =>
+        Settings.Paused || !Settings.SyncImages || ConnectedCount == 0 ? null : _node.AnnounceImage();
+
+    public void CancelImage(string? id)
+    {
+        if (id is not null) _node.CancelImage(id);
     }
 
     public void TogglePin(ClipItem item)
@@ -532,8 +573,10 @@ internal sealed class AppModel
                 Insert(a.Clip);
                 Raise(ModelChange.History);
                 if (a.Local) break;
+                var wasShown = _transfers.ContainsKey(a.Clip.Id) && EndTransfer(a.Clip.Id);
                 OnActivity?.Invoke();
                 var clip = a.Clip.Clip;
+                var copied = false;
                 if (a.Apply && Settings.AutoApply && !Settings.Paused && !(clip.IsImage && !Settings.SyncImages))
                 {
                     var blob = clip.IsImage ? _node.ReadBlob(clip.Id) : null;
@@ -541,8 +584,14 @@ internal sealed class AppModel
                     {
                         if (WriteClipboard is { } write) await write(clip, blob);
                         OnReceive?.Invoke(a.Clip);
+                        copied = true;
                     }
                 }
+                if (wasShown && !copied) OnReceivedQuietly?.Invoke(a.Clip);
+                UpdateShownTransfer();
+                break;
+            case NodeEvent.TransferChanged tc:
+                HandleTransfer(tc.Transfer);
                 break;
             case NodeEvent.ClipsDeleted d:
                 var set = d.Ids.ToHashSet();
@@ -586,5 +635,57 @@ internal sealed class AppModel
                 Log.Write("engine: " + l.Message);
                 break;
         }
+    }
+
+    // ------------------------------------------------------------------ images on their way (PROTOCOL.md §6.6)
+
+    void HandleTransfer(IncomingTransfer t)
+    {
+        if (!Settings.SyncImages) return;
+        if (t.State == TransferState.Failed)
+        {
+            var wasShown = EndTransfer(t.Id);
+            if (wasShown && t.Reason != "cancelled") OnTransferFailed?.Invoke(t);
+            UpdateShownTransfer();
+            return;
+        }
+        var isNew = !_transfers.ContainsKey(t.Id);
+        _transfers[t.Id] = t;
+        if (!isNew)
+        {
+            UpdateShownTransfer();
+            return;
+        }
+        _transferOrder.Add(t.Id);
+        var timer = _ui.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(300);
+        timer.IsRepeating = false;
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (!_transfers.ContainsKey(t.Id)) return;
+            _visibleTransfers.Add(t.Id);
+            UpdateShownTransfer();
+        };
+        timer.Start();
+    }
+
+    /// <summary>Forgets a transfer; returns whether it was the one shown.</summary>
+    bool EndTransfer(string id)
+    {
+        var wasShown = ShownTransfer?.Id == id;
+        _transfers.Remove(id);
+        _transferOrder.Remove(id);
+        _visibleTransfers.Remove(id);
+        return wasShown;
+    }
+
+    void UpdateShownTransfer()
+    {
+        var id = _transferOrder.LastOrDefault(x => _visibleTransfers.Contains(x));
+        var next = id is not null && _transfers.TryGetValue(id, out var t) ? t : null;
+        if (next == ShownTransfer) return;
+        ShownTransfer = next;
+        OnShownTransfer?.Invoke(next);
     }
 }

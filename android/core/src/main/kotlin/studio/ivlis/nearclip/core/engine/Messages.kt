@@ -56,6 +56,20 @@ internal object Msg {
         putJsonArray("items") { items.forEach { add(it.toJson()) } }
     }
 
+    /** A live image is on its way (PROTOCOL §6.6). */
+    fun incoming(id: String) = buildJsonObject {
+        put("t", "incoming")
+        put("id", id)
+        put("kind", "image")
+    }
+
+    /** The announced image will not be sent after all. */
+    fun incomingCancel(id: String) = buildJsonObject {
+        put("t", "incoming")
+        put("id", id)
+        put("cancel", true)
+    }
+
     fun pairRequest(device: MemberRecord) = buildJsonObject {
         put("t", "pair_request")
         put("device", device.toJson())

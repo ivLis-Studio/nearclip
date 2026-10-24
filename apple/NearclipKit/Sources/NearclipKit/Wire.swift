@@ -39,6 +39,8 @@ struct InvMsg: Codable { var t = "inv"; var clips: [IdTs]?; var dels: [IdTs]? }
 struct WantMsg: Codable { var t = "want"; var ids: [String]? }
 struct DelMsg: Codable { var t = "del"; var items: [IdTs]? }
 struct MembersMsg: Codable { var t = "members"; var members: [MemberRecord]? }
+/// A live image is on its way (PROTOCOL.md §6.6); `cancel`: it will not be sent after all.
+struct IncomingMsg: Codable { var t = "incoming"; var id: String; var kind: String? = nil; var cancel: Bool? = nil }
 struct PairRequestMsg: Codable { var t = "pair_request"; var device: MemberRecord }
 struct PairAcceptMsg: Codable { var t = "pair_accept"; var group: GroupWire; var device: MemberRecord; var members: [MemberRecord]? }
 struct SimpleMsg: Codable { var t: String }

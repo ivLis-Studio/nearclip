@@ -23,6 +23,28 @@ data class DiscoveredService(
 /** Result of a local send. [peers] is the number of member sessions the clip was sent to right away. */
 data class SendResult(val clip: Clip?, val peers: Int, val tooLarge: Boolean = false, val paused: Boolean = false)
 
+/**
+ * A live image arriving from another device (PROTOCOL §6.6), for progress UI. A transfer ends with the clip's
+ * [EngineEvent.ClipAdded] or with [State.FAILED].
+ */
+data class IncomingTransfer(
+    /** Id of the clip being transferred. */
+    val id: String,
+    /** The device the image was copied on. */
+    val from: String,
+    val state: State,
+    val received: Long,
+    /** 0 while the other device is still encoding the image. */
+    val total: Long,
+    /** [State.FAILED]: cancelled, disconnected, corrupt or timeout. */
+    val reason: String? = null,
+) {
+    enum class State(val wire: String) { PREPARING("preparing"), RECEIVING("receiving"), FAILED("failed") }
+
+    /** 0…1, or null while the size is unknown. */
+    val fraction: Float? get() = if (total > 0) minOf(1f, received.toFloat() / total) else null
+}
+
 sealed class EngineEvent {
     data class Ready(val port: Int, val groupId: String, val groupTag: String) : EngineEvent()
     data class TicketCreated(val ticket: TicketInfo) : EngineEvent()
@@ -41,6 +63,8 @@ sealed class EngineEvent {
      * that is newer than anything produced or applied here, so it should go to the system clipboard.
      */
     data class ClipAdded(val clip: Clip, val live: Boolean, val apply: Boolean, val local: Boolean, val sentTo: Int) : EngineEvent()
+    /** Progress of a live image from another device (PROTOCOL §6.6). */
+    data class Transfer(val transfer: IncomingTransfer) : EngineEvent()
     data class ClipsDeleted(val ids: List<String>) : EngineEvent()
     data class MembersChanged(val members: List<MemberRecord>) : EngineEvent()
     data class Left(val reason: String) : EngineEvent()

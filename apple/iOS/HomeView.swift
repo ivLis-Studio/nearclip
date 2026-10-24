@@ -82,9 +82,13 @@ struct HomeView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 10) {
+                    if env.toast == nil, let t = env.model.shownTransfer {
+                        TransferOverlay(transfer: t, name: env.model.deviceName(t.from), symbol: env.model.deviceSymbol(t.from))
+                    }
                     ToastOverlay(toast: env.toast)
                     SendBar(env: env)
                 }
+                .animation(.spring(duration: 0.35), value: env.model.shownTransfer?.id)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 6)
             }
@@ -314,6 +318,76 @@ struct ToastOverlay: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("toast")
             .sensoryFeedback(.success, trigger: t.id)
+        }
+    }
+}
+
+/// "Receiving an image from MacBook Pro…" with a progress bar while a large image comes in (PROTOCOL.md §6.6). The
+/// "Copied from MacBook Pro" toast takes its place when the image is in.
+struct TransferOverlay: View {
+    let transfer: IncomingTransfer
+    let name: String
+    let symbol: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(Brand.iris))
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Receiving an image from \(name)…")
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                HStack(spacing: 8) {
+                    bar
+                        .frame(height: 4)
+                    Text(verbatim: detail)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .frame(maxWidth: 420)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(.regularMaterial).shadow(color: .black.opacity(0.15), radius: 12, y: 4))
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(transfer.fraction.map { Text($0, format: .percent.precision(.fractionLength(0))) } ?? Text(verbatim: ""))
+        .accessibilityIdentifier("transfer")
+    }
+
+    private var detail: String {
+        guard transfer.total > 0 else { return String(localized: "Preparing…") }
+        if transfer.total >= 1_000_000 {
+            return String(format: "%.1f / %.1f MB", Double(transfer.received) / 1_000_000, Double(transfer.total) / 1_000_000)
+        }
+        return String(format: "%d / %d KB", transfer.received / 1000, max(1, transfer.total / 1000))
+    }
+
+    private var bar: some View {
+        GeometryReader { g in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.primary.opacity(0.12))
+                if let f = transfer.fraction {
+                    Capsule().fill(Brand.iris)
+                        .frame(width: max(4, g.size.width * f))
+                        .animation(.easeOut(duration: 0.3), value: f)
+                } else if reduceMotion {
+                    Capsule().fill(Brand.iris.opacity(0.55)).frame(width: g.size.width * 0.3)
+                } else {
+                    TimelineView(.animation) { timeline in
+                        let phase = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.3) / 1.3
+                        let w = g.size.width * 0.32
+                        Capsule().fill(Brand.iris).frame(width: w).offset(x: -w + (g.size.width + w) * phase)
+                    }
+                }
+            }
+            .clipShape(Capsule())
         }
     }
 }

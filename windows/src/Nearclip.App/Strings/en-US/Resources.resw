@@ -83,6 +83,12 @@
   <data name="Menu_Open" xml:space="preserve"><value>Open history</value></data>
   <data name="Toast_CopiedFrom" xml:space="preserve"><value>Copied from {0}</value></data>
   <data name="Toast_ImageSize" xml:space="preserve"><value>Image · {0}×{1}</value></data>
+  <data name="Toast_Receiving" xml:space="preserve"><value>Receiving an image from {0}…</value></data>
+  <data name="Toast_Preparing" xml:space="preserve"><value>Preparing…</value></data>
+  <data name="Toast_ImageFrom" xml:space="preserve"><value>Image from {0}</value></data>
+  <data name="Toast_SavedToHistory" xml:space="preserve"><value>Saved to history</value></data>
+  <data name="Toast_ReceiveFailed" xml:space="preserve"><value>Couldn't receive the image</value></data>
+  <data name="Toast_CopyAgain" xml:space="preserve"><value>Copy it again on {0}.</value></data>
   <data name="Add_QrAccessible" xml:space="preserve"><value>Pairing QR code</value></data>
   <data name="Add_ScanTitle" xml:space="preserve"><value>Scan to add a phone</value></data>
   <data name="Add_ScanBody" xml:space="preserve"><value>Use your phone's camera or the Nearclip app.</value></data>

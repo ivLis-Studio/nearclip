@@ -295,11 +295,79 @@ def scenario_remote(x_impl, x_cmd, y_impl, y_cmd, tmp):
     finally:
         x.quit(); y.quit()
 
+def transfer_events(peer, cid):
+    """Transfer events for one clip since the last mark, in arrival order."""
+    with peer.cond:
+        return [e for e in peer.events[peer.cursor:] if e.get("ev") == "transfer" and e.get("id") == cid]
+
+def check_progress(events, size):
+    """receiving events: total = size, received starts at 0, never goes back, ends at size; nothing failed."""
+    rec = [e for e in events if e.get("state") == "receiving"]
+    assert rec, f"no receiving events: {events}"
+    assert all(e.get("total") == size for e in rec), f"total != {size}: {rec}"
+    got = [e.get("received") for e in rec]
+    assert got[0] == 0 and got == sorted(got) and got[-1] == size, f"progress {got}"
+    assert not any(e.get("state") == "failed" for e in events), f"failed: {events}"
+
+def scenario_transfer(x_impl, x_cmd, y_impl, y_cmd, tmp):
+    """PROTOCOL §6.6: announced image (preparing -> receiving progress -> clip), image without a notice, cancel,
+    sender gone mid-announcement; catch-up images report no progress."""
+    x = Peer(x_impl, x_cmd, f"{x_impl}-sender"); y = Peer(y_impl, y_cmd, f"{y_impl}-receiver")
+    try:
+        pair_qr(x, y)
+        img = os.urandom(3 * 1_048_576 + 524_288 + 77)  # 4 chunks
+        path = os.path.join(tmp, f"xfer-{x_impl}-{y_impl}.png"); open(path, "wb").write(img)
+        sha = hashlib.sha256(img).hexdigest()
+        # 1. announced, then sent with the announced id
+        y.mark(); x.mark()
+        x.send(cmd="announce_image")
+        cid = x.expect("announced", lambda e: e.get("ev") == "announced")["id"]
+        prep = y.expect("preparing", lambda e: e.get("ev") == "transfer" and e.get("id") == cid)
+        assert prep.get("state") == "preparing" and prep.get("from") == x.id and prep.get("total") == 0, prep
+        x.send(cmd="send_image", path=path, mime="image/png", id=cid)
+        clip = y.expect("announced image", is_clip(cid=cid), timeout=30)
+        assert clip.get("sha") == sha and clip.get("live") is True and clip.get("src") == x.id, clip
+        events = transfer_events(y, cid)
+        assert events[0].get("state") == "preparing", events
+        check_progress(events, len(img))
+        # 2. no notice (older senders, or a clip message that came first): progress starts at the clip message
+        y.mark()
+        img2 = os.urandom(2 * 1_048_576 + 5); path2 = path + ".2"; open(path2, "wb").write(img2)
+        x.send(cmd="send_image", path=path2, mime="image/png")
+        clip2 = y.expect("image without notice", lambda e: e.get("ev") == "clip" and e.get("sha") == hashlib.sha256(img2).hexdigest(), timeout=30)
+        check_progress(transfer_events(y, clip2["id"]), len(img2))
+        # 3. cancelled announcement
+        y.mark(); x.mark()
+        x.send(cmd="announce_image")
+        gone = x.expect("announced", lambda e: e.get("ev") == "announced")["id"]
+        y.expect("preparing", lambda e: e.get("ev") == "transfer" and e.get("id") == gone and e.get("state") == "preparing")
+        x.send(cmd="cancel_image", id=gone)
+        end = y.expect("cancelled", lambda e: e.get("ev") == "transfer" and e.get("id") == gone and e.get("state") == "failed")
+        assert end.get("reason") == "cancelled", end
+        # 4. catch-up images carry no progress
+        y.quit()
+        img3 = os.urandom(1_048_576 + 9); path3 = path + ".3"; open(path3, "wb").write(img3)
+        x.send(cmd="send_image", path=path3, mime="image/png")
+        y.restart()
+        late = y.expect("catch-up image", lambda e: e.get("ev") == "clip" and e.get("sha") == hashlib.sha256(img3).hexdigest(), timeout=60)
+        assert late.get("live") is False and not transfer_events(y, late["id"]), late
+        # 5. the sender goes away while the receiver waits for the image
+        x.expect("peer back", lambda e: e.get("ev") == "peer_up" and e.get("id") == y.id, timeout=60)
+        y.mark(); x.mark()
+        x.send(cmd="announce_image")
+        lost = x.expect("announced", lambda e: e.get("ev") == "announced")["id"]
+        y.expect("preparing", lambda e: e.get("ev") == "transfer" and e.get("id") == lost and e.get("state") == "preparing")
+        x.quit()
+        end = y.expect("disconnected", lambda e: e.get("ev") == "transfer" and e.get("id") == lost and e.get("state") == "failed", timeout=30)
+        assert end.get("reason") == "disconnected", end
+    finally:
+        x.quit(); y.quit()
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--impl", action="append", default=[], help="name=command")
     ap.add_argument("--only", default="")
-    ap.add_argument("--scenarios", default="", help="comma-separated subset: pair,code,mesh,readd,remote")
+    ap.add_argument("--scenarios", default="", help="comma-separated subset: pair,code,transfer,mesh,readd,remote")
     ap.add_argument("--keep", action="store_true", help="keep temp state dirs")
     args = ap.parse_args()
     impls = detect()
@@ -318,6 +386,7 @@ def main():
     for (xi, xc), (yi, yc) in itertools.product(names, names):
         cases.append((f"pair-qr+sync  {xi:>6} invites {yi:<6}", scenario_pair, (xi, xc, yi, yc, tmp)))
         cases.append((f"pair-code     {xi:>6} invites {yi:<6}", scenario_code, (xi, xc, yi, yc, tmp)))
+        cases.append((f"transfer      {xi:>6} sends   {yi:<6}", scenario_transfer, (xi, xc, yi, yc, tmp)))
         cases.append((f"remote        {xi:>6} meets   {yi:<6}", scenario_remote, (xi, xc, yi, yc, tmp)))
     if len(names) >= 3:
         for perm in itertools.permutations(names, 3):
@@ -330,8 +399,8 @@ def main():
         cases.append(("mesh forward  " + names[0][0] + " x3", scenario_mesh, ([names[0]] * 3, tmp)))
         cases.append(("re-add        " + names[0][0] + " x3", scenario_readd, ([names[0]] * 3, tmp)))
     if args.scenarios:
-        wanted = {"pair": scenario_pair, "code": scenario_code, "mesh": scenario_mesh, "readd": scenario_readd,
-                  "remote": scenario_remote}
+        wanted = {"pair": scenario_pair, "code": scenario_code, "transfer": scenario_transfer, "mesh": scenario_mesh,
+                  "readd": scenario_readd, "remote": scenario_remote}
         keep = {wanted[s] for s in args.scenarios.split(",") if s in wanted}
         cases = [c for c in cases if c[1] in keep]
     failed = 0

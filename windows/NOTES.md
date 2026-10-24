@@ -150,3 +150,23 @@ Nearclip.slnx includes the app only for the ARM64/x64 solution platforms (Any CP
   ZipFile writes backslash separators, so dist/ gets copies with `/` (rewritten on the Mac, CRCs checked).
 - The published exe is a new path, so its first start shows the Windows Defender Firewall prompt (left unanswered in
   the test VM). About › "View license texts" checked with UI Automation: Notepad opened THIRD_PARTY_NOTICES.txt.
+
+## Large-image progress (2026-10-24, PROTOCOL §6.6)
+
+- Core: `incoming` messages, `NodeEvent.TransferChanged` (preparing / receiving / failed), transfers per session set,
+  `AnnounceImage` / `CancelImage`, `SendImage(…, id)`; CLI `transfer` / `announced` events, `announce_image` /
+  `cancel_image`. Tests 28/28.
+- App: ClipboardService announces an image before encoding it; a generation counter drops an encode that a newer copy
+  replaced (and cancels its announcement). AppModel shows a transfer still running after 0.3 s. ToastWindow: device
+  glyph, "…에서 이미지 받는 중…", ProgressBar with "3.1 / 10.6 MB" (indeterminate with "준비 중…" first) and a thumbnail
+  slot; stays up while it runs and turns into "…에서 복사됨" in place ("…에서 받은 이미지 · 기록에 저장됨" with
+  auto-copy off); failures get a caution circle and "이미지를 받지 못했습니다 · …에서 다시 복사해 보세요." Clicking it
+  during a transfer opens the history and keeps the progress away until the image is in. Sizes in the units of the
+  history list and File Explorer (1 MB = 1024 KB), so the toast and the flyout agree.
+- Verified in the guest with `tools/acceptance/windows_transfer.py` (Swift peer "Galaxy S25" at `--pace 900000`):
+  "준비 중…", cancel → toast gone without a message, 3.0 → 7.0 / 10.1 MB (same size as the flyout row), "Galaxy S25에서
+  복사됨" with the thumbnail and a 3200×3200 image on the guest clipboard after 14.4 s, peer killed mid-transfer →
+  warning, auto-copy off → "기록에 저장됨". A real click (SendInput) on the toast mid-transfer opened the flyout and the
+  toast stayed away until "Galaxy S25에서 복사됨".
+- Release (17:20, from this source): Debug ARM64 0 warnings / 0 errors; publish win-arm64 533 files, win-x64 537 files;
+  dist zips rewritten with `/` separators (earlier zips in ~/.Trash/nearclip-windows-zips-*).

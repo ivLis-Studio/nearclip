@@ -33,6 +33,7 @@ import studio.ivlis.nearclip.core.engine.DiscoveredService
 import studio.ivlis.nearclip.core.engine.EngineConfig
 import studio.ivlis.nearclip.core.engine.EngineEvent
 import studio.ivlis.nearclip.core.engine.EngineSnapshot
+import studio.ivlis.nearclip.core.engine.IncomingTransfer
 import studio.ivlis.nearclip.core.engine.NearclipEngine
 import studio.ivlis.nearclip.core.engine.SendResult
 import studio.ivlis.nearclip.core.engine.TicketInfo
@@ -64,6 +65,8 @@ sealed interface UiMessage {
     data class Deleted(val ids: Set<String>) : UiMessage
     data object Removed : UiMessage
     data class ImageSaved(val ok: Boolean) : UiMessage
+    /** A large image that was shown arriving did not make it (PROTOCOL §6.6). */
+    data class TransferFailed(val name: String) : UiMessage
 }
 
 sealed interface PairingUi {
@@ -105,6 +108,14 @@ class Nearclip private constructor(val app: Application) {
     private var captureWait: Job? = null
     /** "Allow" was tapped in the setup sheet: turn the feature on once Shizuku grants it. */
     private var enableWhenAllowed = false
+
+    /** Live images arriving from other devices (PROTOCOL §6.6), oldest first; main thread. */
+    private val transfers = LinkedHashMap<String, IncomingTransfer>()
+    /** Transfers still running 0.3 s after they started: quick ones go straight to "Copied from …". */
+    private val visibleTransfers = HashSet<String>()
+    private val _incoming = MutableStateFlow<IncomingTransfer?>(null)
+    /** The image shown arriving: a card on top of history, or a progress notification while Nearclip is closed. */
+    val incoming: StateFlow<IncomingTransfer?> = _incoming.asStateFlow()
 
     /** Started MainActivity instances; a counter, because an old instance can stop after a new one started. */
     private var visibleActivities = 0
@@ -220,6 +231,9 @@ class Nearclip private constructor(val app: Application) {
         visibleActivities = (visibleActivities + if (visible) 1 else -1).coerceAtLeast(0)
         updateCaptureWanted()
         if (visible) Notifications.cancelPairPrompt(app) else if (!uiVisible) flushDeletes()
+        // The card in the app and the notification outside it show the same transfer.
+        val shown = _incoming.value
+        if (uiVisible) Notifications.cancelTransfer(app) else if (shown != null) Notifications.transfer(app, deviceName(shown.from), shown)
     }
 
     // ---------------------------------------------------------------- engine events
@@ -227,6 +241,7 @@ class Nearclip private constructor(val app: Application) {
     private fun onEvent(e: EngineEvent) {
         when (e) {
             is EngineEvent.ClipAdded -> if (!e.local) onIncoming(e)
+            is EngineEvent.Transfer -> onTransfer(e.transfer)
             is EngineEvent.PairPrompt -> if (!uiVisible) Notifications.showPairPrompt(app, e.prompt)
             is EngineEvent.PairPromptDismissed -> Notifications.cancelPairPrompt(app)
             is EngineEvent.PairSas -> {
@@ -254,22 +269,97 @@ class Nearclip private constructor(val app: Application) {
     }
 
     private fun onIncoming(e: EngineEvent.ClipAdded) {
-        val s = settings.value
-        if (s.paused) return
-        if (e.apply && s.autoApply) {
-            applyToClipboard(e.clip, announce = true)
-            return
+        val wasShown = transfers.containsKey(e.clip.id) && endTransfer(e.clip.id)
+        val copied = applyIncoming(e)
+        if (wasShown && !uiVisible) notifyArrived(e.clip, copied)
+        updateIncoming()
+    }
+
+    /** Turns the progress notification into "Copied from …" right away; the thumbnail follows once it is decoded. */
+    private fun notifyArrived(clip: Clip, copied: Boolean) {
+        val name = sourceName(clip)
+        val title = app.getString(if (copied) R.string.copied_from else R.string.image_from, name)
+        val text = if (copied) imageLine(clip) else app.getString(R.string.saved_to_history)
+        Notifications.transferDone(app, clip.id, title, text, null)
+        val file = engine.blobFile(clip)
+        scope.launch {
+            val thumb = withContext(Dispatchers.IO) { ImageTools.thumbnail(file, 256) } ?: return@launch
+            if (Notifications.transferDoneFor == clip.id && !uiVisible) Notifications.transferDone(app, clip.id, title, text, thumb)
         }
+    }
+
+    /** Applies a clip from another device to the clipboard when the settings say so; true when it was copied. */
+    private fun applyIncoming(e: EngineEvent.ClipAdded): Boolean {
+        val s = settings.value
+        if (s.paused) return false
+        if (e.apply && s.autoApply) return applyToClipboard(e.clip, announce = true)
         // "Copy the newest clip when Nearclip opens": catch-up that arrives right after opening counts too.
         if (!e.live && s.copyNewestOnOpen && System.currentTimeMillis() < openWindowUntil) {
             val snap = engine.state.value
             val clip = e.clip
-            if (clip.src == snap.deviceId || clip.localOnly) return
-            if (System.currentTimeMillis() - clip.ts > NEWEST_WINDOW_MS) return
-            if (clip.ts <= maxOf(settings.lastAppliedTs, newestLocalTs(snap), openSentStamp)) return
-            applyToClipboard(clip, announce = true)
+            if (clip.src == snap.deviceId || clip.localOnly) return false
+            if (System.currentTimeMillis() - clip.ts > NEWEST_WINDOW_MS) return false
+            if (clip.ts <= maxOf(settings.lastAppliedTs, newestLocalTs(snap), openSentStamp)) return false
+            return applyToClipboard(clip, announce = true)
+        }
+        return false
+    }
+
+    private fun imageLine(c: Clip): String {
+        val w = c.w ?: 0
+        val h = c.h ?: 0
+        return if (w > 0 && h > 0) app.getString(R.string.image_title_size, w, h) else app.getString(R.string.image_title)
+    }
+
+    // ---------------------------------------------------------------- images on their way (PROTOCOL §6.6)
+
+    private fun onTransfer(t: IncomingTransfer) {
+        if (!settings.value.syncImages) return
+        if (t.state == IncomingTransfer.State.FAILED) {
+            val wasShown = endTransfer(t.id)
+            if (wasShown && t.reason != "cancelled") {
+                val name = deviceName(t.from)
+                if (uiVisible) _messages.tryEmit(UiMessage.TransferFailed(name))
+                else Notifications.transferFailed(app, name)
+            }
+            updateIncoming()
+            return
+        }
+        val isNew = !transfers.containsKey(t.id)
+        transfers[t.id] = t
+        if (!isNew) {
+            updateIncoming()
+            return
+        }
+        scope.launch {
+            delay(300)
+            if (transfers.containsKey(t.id)) {
+                visibleTransfers.add(t.id)
+                updateIncoming()
+            }
         }
     }
+
+    /** Forgets a transfer; returns whether it was the one shown. */
+    private fun endTransfer(id: String): Boolean {
+        val wasShown = _incoming.value?.id == id
+        transfers.remove(id)
+        visibleTransfers.remove(id)
+        return wasShown
+    }
+
+    private fun updateIncoming() {
+        val next = transfers.keys.lastOrNull { it in visibleTransfers }?.let { transfers[it] }
+        val before = _incoming.value
+        if (next == before) return
+        _incoming.value = next
+        if (uiVisible) return
+        if (next != null) Notifications.transfer(app, deviceName(next.from), next)
+        else if (before != null && transfers.isEmpty()) Notifications.cancelTransferProgress(app)
+    }
+
+    private fun deviceName(id: String): String =
+        engine.state.value.members.firstOrNull { it.id == id }?.name?.takeIf { it.isNotBlank() } ?: app.getString(R.string.unknown_device)
 
     private fun newestLocalTs(snap: EngineSnapshot): Long =
         snap.history.firstOrNull { it.src == snap.deviceId }?.ts ?: 0L
@@ -400,10 +490,16 @@ class Nearclip private constructor(val app: Application) {
     suspend fun sendImage(uri: Uri): SendOutcome = withContext(Dispatchers.IO) {
         if (settings.value.paused) return@withContext SendOutcome.Paused
         if (!settings.value.syncImages) return@withContext SendOutcome.ImagesOff
-        val img = ImageTools.prepare(app, uri) ?: return@withContext SendOutcome.Unreadable
         engine.start()
+        // The other devices show "Receiving…" while the image is read and encoded (PROTOCOL §6.6).
+        val announced = if (engine.state.value.onlineCount > 0) engine.announceImage() else null
+        val img = ImageTools.prepare(app, uri)
+        if (img == null) {
+            announced?.let { engine.cancelImage(it) }
+            return@withContext SendOutcome.Unreadable
+        }
         awaitPeers()
-        outcome(engine.sendImage(img.bytes, img.mime, img.width, img.height))
+        outcome(engine.sendImage(img.bytes, img.mime, img.width, img.height, id = announced))
     }
 
     private suspend fun awaitPeers() {

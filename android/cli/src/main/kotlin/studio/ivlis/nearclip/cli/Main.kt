@@ -127,6 +127,12 @@ fun main(args: Array<String>) {
             })
             is EngineEvent.PeerDown -> emit(buildJsonObject { put("ev", "peer_down"); put("id", ev.id) })
             is EngineEvent.ClipAdded -> if (!ev.local) emit(clipJson(ev.clip, ev.live, "clip"))
+            is EngineEvent.Transfer -> emit(buildJsonObject {
+                val t = ev.transfer
+                put("ev", "transfer"); put("id", t.id); put("from", t.from); put("state", t.state.wire)
+                put("received", t.received); put("total", t.total)
+                t.reason?.let { put("reason", it) }
+            })
             is EngineEvent.ClipsDeleted -> ev.ids.forEach { id -> emit(buildJsonObject { put("ev", "deleted"); put("id", id) }) }
             is EngineEvent.MembersChanged -> emit(membersJson(ev.members))
             is EngineEvent.Left -> emit(buildJsonObject { put("ev", "left"); put("reason", ev.reason) })
@@ -194,8 +200,13 @@ fun main(args: Array<String>) {
                     val path = o.str("path")
                     val bytes = path?.let { runCatching { File(it).readBytes() }.getOrNull() }
                     if (bytes == null) emit(buildJsonObject { put("ev", "error"); put("msg", "cannot read image") })
-                    else engine.sendImage(bytes, o.str("mime") ?: "image/png")
+                    else engine.sendImage(bytes, o.str("mime") ?: "image/png", id = o.str("id"))
                 }
+                "announce_image" -> {
+                    val id = engine.announceImage()
+                    emit(buildJsonObject { put("ev", "announced"); put("id", id) })
+                }
+                "cancel_image" -> o.str("id")?.let { engine.cancelImage(it) }
                 "delete" -> o.str("id")?.let { engine.delete(listOf(it)) }
                 "remove" -> o.str("peer")?.let { engine.removeMember(it) }
                 "rename" -> o.str("name")?.let { engine.rename(it) }

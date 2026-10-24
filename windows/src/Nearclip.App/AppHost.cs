@@ -77,10 +77,20 @@ internal sealed class AppHost
         {
             IsPaused = () => Settings.Paused,
             IgnoredApps = () => Settings.IgnoredApps,
+            // Large images: the other devices show "Receiving…" while this PC encodes (PROTOCOL.md §6.6).
+            ImageStarting = () => Model?.AnnounceImage(),
+            ImageCancelled = id => Model?.CancelImage(id),
         };
         _clipboard.Copied += c => Model.LocalCopy(c);
         Model.WriteClipboard = (clip, blob) => _clipboard.WriteAsync(clip, blob);
         Model.OnReceive = ShowToast;
+        Model.OnShownTransfer = t =>
+        {
+            if (t is not null) Toast()?.ShowTransfer(t);
+            else _toast?.HideTransfer();
+        };
+        Model.OnReceivedQuietly = sc => Toast()?.ShowReceived(sc);
+        Model.OnTransferFailed = t => Toast()?.ShowFailed(t);
         Model.OnActivity = () => _tray?.Pulse();
         Model.OnPairPrompt = ShowPairPrompt;
         Model.Changed += OnModelChanged;
@@ -267,13 +277,19 @@ internal sealed class AppHost
 
     void ShowToast(StoredClip sc, bool force)
     {
-        if (!Settings.ShowToasts && !force) return;
+        Toast(force)?.Show(sc);
+    }
+
+    /// <summary>The toast window, created on first use; null when toasts are turned off.</summary>
+    ToastWindow? Toast(bool force = false)
+    {
+        if (!Settings.ShowToasts && !force) return null;
         if (_toast is null)
         {
             _toast = new ToastWindow();
             WindowHelper.ApplyTheme(_toast, Theme);
         }
-        _toast.Show(sc);
+        return _toast;
     }
 
     public void ToastClicked()

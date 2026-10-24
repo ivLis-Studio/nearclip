@@ -138,4 +138,27 @@ welcome + member LWW merge before deciding on bye removed.
 - `dist/Nearclip-Android.apk` replaced with the signed release. Prior APK is recoverable from
   ~/.Trash/Nearclip-Android-previous.Nm6hF0/Nearclip-Android.apk. macOS installed app and pairing window left untouched.
 
+## Large-image progress (2026-10-24, PROTOCOL §6.6)
+
+- Android 1.0.2, versionCode 3. Engine: `incoming` announcements, one transfer per clip id (preparing / receiving /
+  failed: cancelled, disconnected, corrupt, timeout after 60 s without progress), failing only when no session still
+  brings the clip. CLI: `transfer` / `announced` events, `announce_image` / `cancel_image`, `send_image` with `id`.
+- Sending: `sendImage(uri)` announces before reading and encoding, and cancels when the image cannot be read.
+- Receiving in the app: a card on top of the history ("MacBook Pro에서 이미지 받는 중…", indeterminate with "준비 중…",
+  then "3.1 / 10.6 MB"), only for transfers still running after 0.3 s; the clip takes its place. Failures: snackbar.
+- Outside the app: channel `incoming_images` (high importance, no sound or vibration): a banner when it starts, quiet
+  progress updates, then a "…에서 복사됨" banner with the thumbnail (decoded off the main thread) for 4 s, or
+  "이미지를 받지 못했습니다 · …에서 다시 복사해 보세요."
+- Found while testing: NotificationCompat's setSilent puts notifications into a "silent" group, which bundled the
+  progress notification with the persistent one and hid the bar. The channel is silent instead, and the transfer
+  notifications do not call setSilent. (The first channel id, `transfers`, only ever existed in debug builds.)
+- `tools/acceptance/android_transfer.py` on emulator-5584 with a Swift peer at `--pace 900000`: announce and cancel
+  in the app, card progress 5.2 / 10.6 MB then the clip, background start banner + progress in the shade + "Copied
+  from" banner with the thumbnail, background failure banner, in-app failure snackbar, and an image shared into
+  SendActivity announced first (the peer saw `preparing`, the size 0.2 s later, then the clip with the same id). The
+  shell cannot grant MediaStore or document URIs to the app, so the test serves the image from the debug app's own
+  FileProvider (run-as). lintRelease: no issues; core tests 24/24.
+- `dist/Nearclip-Android.apk`: signed release 1.0.2 (sha256 39e14649…), same signer; the 1.0.1 APK is in
+  ~/.Trash/nearclip-apk-1.0.1.Nq8oXJ/.
+
 

@@ -18,6 +18,9 @@ public final class NearclipNode: @unchecked Sendable {
         /// Tests and demos: never dial or advertise LAN endpoints, so sessions must go through the tailnet
         /// (what a phone on mobile data looks like to the other devices).
         public var lanDial = true
+        /// Tests and demos: send image chunks at about this many bytes per second, like a slow network, so the
+        /// receiving side's progress can be seen (PROTOCOL.md §6.6). 0: as fast as the connection takes them.
+        public var blobPace = 0
 
         public init(stateDirectory: URL, deviceName: String, platform: String, model: String? = nil,
                     appVersion: String? = nil, port: UInt16 = 45821, bonjour: Bool = true, secretStore: SecretStore,
@@ -74,6 +77,21 @@ public final class NearclipNode: @unchecked Sendable {
     private var running = false
     private var timer: DispatchSourceTimer?
     private var newestLocalTs: Int64 = 0
+
+    /// A live image arriving from another device (PROTOCOL.md §6.6). The same clip can come through several
+    /// sessions (forwarding); the transfer ends when one of them delivers it or all of them are gone.
+    private struct Transfer {
+        var from: String
+        var total: Int
+        var received: Int
+        var sessions: Set<ObjectIdentifier>
+        var updated: Date
+    }
+    private var transfers: [String: Transfer] = [:]
+    /// Images this device announced and has not sent or cancelled yet.
+    private var announced: [String: Date] = [:]
+    /// A transfer that makes no progress for this long is reported as failed (§6.6).
+    static let transferTimeout: TimeInterval = 60
 
     // Remote connection (embedded Tailscale node, PROTOCOL.md §10).
     /// Tailnet port every Nearclip node accepts connections on.
@@ -154,14 +172,48 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     @discardableResult
-    public func sendImage(_ data: Data, mime: String, width: Int? = nil, height: Int? = nil) -> StoredClip? {
+    public func sendImage(_ data: Data, mime: String, width: Int? = nil, height: Int? = nil, id: String? = nil) -> StoredClip? {
         queue.sync {
-            guard !data.isEmpty else { return nil }
-            guard data.count <= Wire.maxImage else { emit(.tooLarge(kind: "image")); return nil }
-            let c = Clip(id: newNearclipId(), ts: max(nowMs(), newestLocalTs + 1), src: deviceId, kind: "image",
+            let announcedId = id?.lowercased()
+            if let a = announcedId { announced[a] = nil }
+            guard !data.isEmpty else { cancelAnnouncement(announcedId); return nil }
+            guard data.count <= Wire.maxImage else {
+                cancelAnnouncement(announcedId)
+                emit(.tooLarge(kind: "image"))
+                return nil
+            }
+            var cid = newNearclipId()
+            if let a = announcedId, UUID(uuidString: a) != nil, !store.has(a), store.state.tombstones[a] == nil { cid = a }
+            let c = Clip(id: cid, ts: max(nowMs(), newestLocalTs + 1), src: deviceId, kind: "image",
                          mime: mime, size: data.count, sha: Hex.encode(NCCrypto.sha256(data)), w: width, h: height)
             return produce(c, blob: data)
         }
+    }
+
+    /// Tells the other devices that an image was just copied here, before it is encoded (PROTOCOL.md §6.6), so they
+    /// can show it arriving right away. Pass the returned id to `sendImage`, or to `cancelImage` if it is not sent.
+    public func announceImage() -> String {
+        let id = newNearclipId()
+        queue.async {
+            guard self.running, !self.paused else { return }
+            self.announced[id] = Date()
+            for s in self.online.values where s.isMember { s.sendJSON(IncomingMsg(id: id, kind: "image")) }
+        }
+        return id
+    }
+
+    /// The announced image will not be sent after all (unreadable, too large, replaced by a newer copy).
+    public func cancelImage(_ id: String) {
+        queue.async {
+            let id = id.lowercased()
+            guard self.announced.removeValue(forKey: id) != nil else { return }
+            self.cancelAnnouncement(id)
+        }
+    }
+
+    private func cancelAnnouncement(_ id: String?) {
+        guard let id else { return }
+        for s in online.values where s.isMember { s.sendJSON(IncomingMsg(id: id, cancel: true)) }
     }
 
     /// Tells the engine that a clip was written to the system clipboard by the app (keeps "newest" ordering right).
@@ -626,6 +678,7 @@ public final class NearclipNode: @unchecked Sendable {
             ticket = nil
             emit(.ticketExpired)
         }
+        expireTransfers(now: now)
         guard !paused else { return }
         for (id, rec) in store.members where id != deviceId && !rec.removed && online[id] == nil && dialing[id] == nil {
             let b = backoff[id] ?? (next: .distantPast, delay: 10)
@@ -844,6 +897,8 @@ public final class NearclipNode: @unchecked Sendable {
             if let m = try? dec.decode(DelMsg.self, from: json) { applyDeletes(m.items ?? [], from: s) }
         case "members":
             if let m = try? dec.decode(MembersMsg.self, from: json) { mergeMembers(m.members ?? [], from: s) }
+        case "incoming":
+            if let m = try? dec.decode(IncomingMsg.self, from: json) { handleIncoming(m, from: s) }
         case "error":
             if let m = try? dec.decode(ErrorMsg.self, from: json) { log("peer error \(m.code ?? "") \(m.msg ?? "")") }
         default:
@@ -857,6 +912,8 @@ public final class NearclipNode: @unchecked Sendable {
 
     func sessionClosed(_ s: PeerSession) {
         sessions.remove(s)
+        let key = ObjectIdentifier(s)
+        for (id, t) in transfers where t.sessions.contains(key) { dropTransfer(id, session: s, reason: "disconnected") }
         if s.role == .client, s.mode == .member {
             if let pid = s.expectedPeerId { dialing[pid] = nil }
             if let pid = s.peerId { dialing[pid] = nil }
@@ -893,6 +950,10 @@ public final class NearclipNode: @unchecked Sendable {
         if c.isImage {
             guard let blob else { return }
             s.sendJSON(ClipMsg(live: live, clip: c))
+            if config.blobPace > 0 {
+                sendChunksPaced(clipId: c.id, blob: blob, offset: 0, index: 0, to: s)
+                return
+            }
             var index: UInt32 = 0
             var offset = 0
             while offset < blob.count {
@@ -903,6 +964,17 @@ public final class NearclipNode: @unchecked Sendable {
             }
         } else {
             s.sendJSON(ClipMsg(live: live, clip: c))
+        }
+    }
+
+    /// One chunk now and the next one when it would have gone out at `config.blobPace` (demos and tests).
+    private func sendChunksPaced(clipId: String, blob: Data, offset: Int, index: UInt32, to s: PeerSession) {
+        guard offset < blob.count, sessions.contains(s), !s.conn.isClosed else { return }
+        let end = min(offset + Wire.chunkSize, blob.count)
+        s.sendChunk(clipId: clipId, index: index, data: blob.subdata(in: offset..<end))
+        let delay = Double(end - offset) / Double(max(1, config.blobPace))
+        queue.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.sendChunksPaced(clipId: clipId, blob: blob, offset: end, index: index + 1, to: s)
         }
     }
 
@@ -922,12 +994,14 @@ public final class NearclipNode: @unchecked Sendable {
         } else {
             guard let size = c.size, size > 0, size <= Wire.maxImage, let sha = c.sha, sha.count == 64 else {
                 s.skipBlobs.insert(c.id)
+                dropTransfer(c.id, session: s, reason: "corrupt")
                 return
             }
             guard s.pendingBlobs[c.id] == nil else { return }
             var data = Data()
             data.reserveCapacity(size)
             s.pendingBlobs[c.id] = PendingBlob(clip: c, live: live, data: data, next: 0)
+            if live { startTransfer(c, size: size, session: s) }
         }
     }
 
@@ -938,23 +1012,30 @@ public final class NearclipNode: @unchecked Sendable {
         guard index == p.next, p.data.count + data.count <= size else {
             s.skipBlobs.insert(clipId)
             log("bad chunk for \(clipId)")
+            dropTransfer(clipId, session: s, reason: "corrupt")
             return
         }
         p.data.append(data)
         p.next += 1
+        noteProgress(clipId, received: p.data.count, session: s)
         guard p.data.count == size else {
             s.pendingBlobs[clipId] = p
             return
         }
         guard Hex.encode(NCCrypto.sha256(p.data)) == p.clip.sha?.lowercased() else {
             log("checksum mismatch for \(clipId)")
+            dropTransfer(clipId, session: s, reason: "corrupt")
             return
         }
-        if store.has(clipId) || store.state.tombstones[clipId] != nil { return }
+        if store.has(clipId) || store.state.tombstones[clipId] != nil {
+            dropTransfer(clipId, session: s, reason: "cancelled")
+            return
+        }
         acceptClip(p.clip, blob: p.data, live: p.live, from: s)
     }
 
     private func acceptClip(_ c: Clip, blob: Data?, live: Bool, from s: PeerSession?) {
+        transfers[c.id] = nil
         let src = store.members[c.src]
         let sc = StoredClip(clip: c, groupId: store.state.groupId, pinned: false, receivedAt: nowMs(),
                             srcName: src?.name, srcPlatform: src?.platform, textFile: nil)
@@ -967,6 +1048,64 @@ public final class NearclipNode: @unchecked Sendable {
         }
         emit(.clipAdded(sc, live: live, apply: apply, local: false))
         prune()
+    }
+
+    // MARK: - Transfers in progress (PROTOCOL.md §6.6)
+
+    private func handleIncoming(_ m: IncomingMsg, from s: PeerSession) {
+        guard let pid = s.peerId, UUID(uuidString: m.id) != nil else { return }
+        let id = m.id.lowercased()
+        if m.cancel == true {
+            // Only an announcement can be cancelled; once the clip message came, the chunks decide.
+            if let t = transfers[id], t.total == 0 { dropTransfer(id, session: s, reason: "cancelled") }
+            return
+        }
+        guard m.kind == "image", transfers[id] == nil, !store.has(id), store.state.tombstones[id] == nil else { return }
+        transfers[id] = Transfer(from: pid, total: 0, received: 0, sessions: [ObjectIdentifier(s)], updated: Date())
+        emitTransfer(id, .preparing)
+    }
+
+    private func startTransfer(_ c: Clip, size: Int, session s: PeerSession) {
+        var t = transfers[c.id] ?? Transfer(from: c.src, total: size, received: 0, sessions: [], updated: Date())
+        t.from = c.src
+        t.total = size
+        t.sessions.insert(ObjectIdentifier(s))
+        t.updated = Date()
+        transfers[c.id] = t
+        emitTransfer(c.id, .receiving)
+    }
+
+    private func noteProgress(_ id: String, received: Int, session s: PeerSession) {
+        guard var t = transfers[id], t.sessions.contains(ObjectIdentifier(s)), received > t.received else { return }
+        t.received = received
+        t.updated = Date()
+        transfers[id] = t
+        emitTransfer(id, .receiving)
+    }
+
+    /// The session will not deliver the clip; the transfer fails once no other session is bringing it.
+    private func dropTransfer(_ id: String, session s: PeerSession, reason: String) {
+        guard var t = transfers[id] else { return }
+        guard t.sessions.remove(ObjectIdentifier(s)) != nil else { return }
+        if t.sessions.isEmpty {
+            transfers[id] = nil
+            emit(.transfer(IncomingTransfer(id: id, from: t.from, state: .failed, received: t.received, total: t.total, reason: reason)))
+        } else {
+            transfers[id] = t
+        }
+    }
+
+    private func emitTransfer(_ id: String, _ state: IncomingTransfer.State) {
+        guard let t = transfers[id] else { return }
+        emit(.transfer(IncomingTransfer(id: id, from: t.from, state: state, received: t.received, total: t.total)))
+    }
+
+    private func expireTransfers(now: Date) {
+        for (id, t) in transfers where now.timeIntervalSince(t.updated) > Self.transferTimeout {
+            transfers[id] = nil
+            emit(.transfer(IncomingTransfer(id: id, from: t.from, state: .failed, received: t.received, total: t.total, reason: "timeout")))
+        }
+        announced = announced.filter { now.timeIntervalSince($0.value) < 300 }
     }
 
     private func prune() {

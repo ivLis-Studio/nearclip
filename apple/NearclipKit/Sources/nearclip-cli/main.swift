@@ -18,6 +18,7 @@ var platform = "cli"
 var tailnetDir: String?
 var tailnetControl: String?
 var lanDial = true
+var blobPace = 0
 var args = CommandLine.arguments.dropFirst().makeIterator()
 while let a = args.next() {
     switch a {
@@ -28,6 +29,7 @@ while let a = args.next() {
     case "--tailnet": tailnetDir = args.next()
     case "--tailnet-control": tailnetControl = args.next()
     case "--remote-only": lanDial = false  // demos: neither dial nor advertise LAN endpoints (like a phone on LTE)
+    case "--pace": blobPace = Int(args.next() ?? "") ?? 0  // demos: send image chunks at this many bytes per second
     default: usage()
     }
 }
@@ -73,6 +75,7 @@ do {
                                      secretStore: FileSecretStore(directory: stateURL.appendingPathComponent("secrets")),
                                      tailnet: tailnetOptions)
     config.lanDial = lanDial
+    config.blobPace = blobPace
     node = try NearclipNode(config: config)
 } catch {
     errlog("init failed: \(error)")
@@ -116,6 +119,11 @@ node.onEvent = { ev in
         }
     case .clipsDeleted(let ids):
         for id in ids { emit(["ev": "deleted", "id": id]) }
+    case .transfer(let t):
+        var o: [String: Any] = ["ev": "transfer", "id": t.id, "from": t.from, "state": t.state.rawValue,
+                                "received": t.received, "total": t.total]
+        if let r = t.reason { o["reason"] = r }
+        emit(o)
     case .membersChanged(let list):
         emit(["ev": "members", "members": list.map(memberJSON)])
     case .left(let reason):
@@ -175,7 +183,12 @@ func handle(_ cmd: String, _ o: [String: Any]) {
             out.async { emit(["ev": "error", "msg": "cannot read image"]) }
             return
         }
-        node.sendImage(data, mime: (o["mime"] as? String) ?? "image/png")
+        node.sendImage(data, mime: (o["mime"] as? String) ?? "image/png", id: o["id"] as? String)
+    case "announce_image":
+        let id = node.announceImage()
+        out.async { emit(["ev": "announced", "id": id]) }
+    case "cancel_image":
+        if let id = o["id"] as? String { node.cancelImage(id) }
     case "delete":
         if let id = o["id"] as? String { node.delete(ids: [id]) }
     case "remove":

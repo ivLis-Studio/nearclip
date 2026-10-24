@@ -93,6 +93,17 @@ final class AppEnvironment {
             self.clipboard.markSeen()
             self.pendingClipboard = nil
         }
+        model.onReceivedQuietly = { [weak self] sc in
+            guard let self else { return }
+            let text = String(localized: "Image from \(self.model.sourceName(sc))") + " · " + String(localized: "Saved to history")
+            self.show(Toast(text: text, symbol: "photo.fill"))
+        }
+        model.onTransferFailed = { [weak self] t in
+            guard let self else { return }
+            let text = String(localized: "Couldn't receive the image") + " · "
+                + String(localized: "Copy it again on \(self.model.deviceName(t.from)).")
+            self.show(Toast(text: text, symbol: "exclamationmark.triangle.fill", tint: Brand.warning))
+        }
         model.onPairPrompt = { [weak self] prompt in
             guard let self else { return }
             self.prompts.present(model: self.model, prompt: prompt)
@@ -171,8 +182,15 @@ final class AppEnvironment {
     /// Reads the clipboard directly (iOS may ask for permission unless allowed in Settings).
     func sendFromPasteboard() {
         let pb = UIPasteboard.general
-        if pb.hasImages, let img = pb.image, let png = img.pngData() {
-            sendImage(png, size: img.size)
+        if pb.hasImages, let img = pb.image {
+            // The other devices show "Receiving…" while the image is encoded (PROTOCOL.md §6.6).
+            let announced = model.announceImage()
+            Task.detached(priority: .userInitiated) {
+                let png = img.pngData()
+                await MainActor.run {
+                    if let png { self.sendImage(png, size: img.size, announced: announced) } else { self.model.cancelImage(announced) }
+                }
+            }
         } else if let s = pb.string, !s.isEmpty {
             sendText(s)
         }
@@ -186,10 +204,14 @@ final class AppEnvironment {
         pendingClipboard = nil
         guard let p = providers.first else { return }
         if p.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            let announced = model.announceImage()
             p.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
-                guard let data, let img = UIImage(data: data) else { return }
+                guard let data, let img = UIImage(data: data) else {
+                    Task { @MainActor in self.model.cancelImage(announced) }
+                    return
+                }
                 let png = img.pngData() ?? data
-                Task { @MainActor in self.sendImage(png, size: img.size) }
+                Task { @MainActor in self.sendImage(png, size: img.size, announced: announced) }
             }
         } else if p.canLoadObject(ofClass: URL.self) && !p.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
             _ = p.loadObject(ofClass: URL.self) { url, _ in
@@ -213,13 +235,17 @@ final class AppEnvironment {
         confirmSent()
     }
 
-    private func sendImage(_ data: Data, size: CGSize) {
-        guard !settings.paused else { return }
+    private func sendImage(_ data: Data, size: CGSize, announced: String?) {
+        guard !settings.paused else {
+            model.cancelImage(announced)
+            return
+        }
         guard settings.syncImages else {
+            model.cancelImage(announced)
             show(Toast(text: String(localized: "Image syncing is off"), symbol: "photo", tint: Brand.warning))
             return
         }
-        model.localCopy(image: data, mime: "image/png", width: Int(size.width), height: Int(size.height))
+        model.localCopy(image: data, mime: "image/png", width: Int(size.width), height: Int(size.height), announced: announced)
         confirmSent()
     }
 

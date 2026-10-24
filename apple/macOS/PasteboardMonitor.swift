@@ -6,7 +6,19 @@ import NearclipKit
 final class PasteboardMonitor: ClipboardWriter {
     enum Content {
         case text(String)
+        /// `announced`: the id from `onImageStart` (PROTOCOL.md §6.6), if the copy was announced.
+        case image(Data, mime: String, width: Int, height: Int, announced: String?)
+    }
+
+    /// What the pasteboard holds for an image, before it is encoded for sending.
+    private enum RawImage: Sendable {
+        case png(Data), bitmap(Data), jpeg(Data)
+    }
+
+    private enum Encoded: Sendable {
         case image(Data, mime: String, width: Int, height: Int)
+        case tooLarge
+        case unreadable
     }
 
     static let marker = NSPasteboard.PasteboardType("studio.ivlis.nearclip.marker")
@@ -26,8 +38,15 @@ final class PasteboardMonitor: ClipboardWriter {
     private var lastChange: Int
     private var timer: Timer?
     private var tiffProvider: TIFFProvider?
+    /// Bumped on every clipboard change: an image still being encoded when a newer copy comes is dropped, so the
+    /// newest copy always wins.
+    private var generation = 0
     var onCopy: ((Content) -> Void)?
     var onTooLarge: (() -> Void)?
+    /// An image copy is about to be encoded: returns an announcement id (PROTOCOL.md §6.6) or nil.
+    var onImageStart: (() -> String?)?
+    /// The announced image will not be sent (unreadable, too large, or replaced by a newer copy).
+    var onImageCancel: ((String?) -> Void)?
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -48,6 +67,7 @@ final class PasteboardMonitor: ClipboardWriter {
         let cc = pb.changeCount
         guard cc != lastChange else { return }
         lastChange = cc
+        generation += 1
         guard !settings.paused else { return }
         if pb == NSPasteboard.general, MacSystem.clipboardAccess == .denied { return }
         let types = pb.types ?? []
@@ -55,37 +75,70 @@ final class PasteboardMonitor: ClipboardWriter {
         if types.contains(where: { Self.skipTypes.contains($0.rawValue) }) { return }
         if let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier, settings.ignoredApps.contains(app) { return }
         if types.contains(.fileURL) { return }
-        if let content = read(types) { onCopy?(content) }
+        read(types)
     }
 
-    private func read(_ types: [NSPasteboard.PasteboardType]) -> Content? {
+    private func read(_ types: [NSPasteboard.PasteboardType]) {
         let imageFirst = types.first.map { Self.imageTypes.contains($0) } ?? false
         if imageFirst || !types.contains(.string), types.contains(where: { Self.imageTypes.contains($0) }) {
-            if let image = readImage() { return image }
+            if let raw = rawImage() {
+                encodeAndSend(raw)
+                return
+            }
         }
-        if let s = pb.string(forType: .string), !s.isEmpty { return .text(s) }
+        if let s = pb.string(forType: .string), !s.isEmpty { onCopy?(.text(s)) }
+    }
+
+    private func rawImage() -> RawImage? {
+        if let png = pb.data(forType: .png) { return .png(png) }
+        if let raw = pb.data(forType: .tiff) ?? pb.data(forType: NSPasteboard.PasteboardType("public.heic")) { return .bitmap(raw) }
+        if let jpeg = pb.data(forType: NSPasteboard.PasteboardType("public.jpeg")) { return .jpeg(jpeg) }
         return nil
     }
 
-    private func readImage() -> Content? {
-        var data: Data?
+    /// Announces the copy, encodes it off the main thread (a large screenshot takes a moment), then sends it.
+    private func encodeAndSend(_ raw: RawImage) {
+        let gen = generation
+        let announced = onImageStart?()
+        Task.detached(priority: .userInitiated) {
+            let result = Self.encode(raw)
+            await MainActor.run { [weak self] in self?.finish(result, generation: gen, announced: announced) }
+        }
+    }
+
+    private func finish(_ result: Encoded, generation gen: Int, announced: String?) {
+        guard gen == generation, !settings.paused else {
+            onImageCancel?(announced)
+            return
+        }
+        switch result {
+        case .image(let data, let mime, let w, let h):
+            onCopy?(.image(data, mime: mime, width: w, height: h, announced: announced))
+        case .tooLarge:
+            onImageCancel?(announced)
+            onTooLarge?()
+        case .unreadable:
+            onImageCancel?(announced)
+        }
+    }
+
+    nonisolated private static func encode(_ raw: RawImage) -> Encoded {
+        var out: Data
         var mime = "image/png"
-        if let png = pb.data(forType: .png) {
-            data = png
-        } else if let raw = pb.data(forType: .tiff) ?? pb.data(forType: NSPasteboard.PasteboardType("public.heic")),
-                  let rep = NSBitmapImageRep(data: raw) {
-            data = rep.representation(using: .png, properties: [:])
-        } else if let jpeg = pb.data(forType: NSPasteboard.PasteboardType("public.jpeg")) {
-            data = jpeg
+        switch raw {
+        case .png(let d):
+            out = d
+        case .bitmap(let d):
+            guard let rep = NSBitmapImageRep(data: d), let png = rep.representation(using: .png, properties: [:]) else { return .unreadable }
+            out = png
+        case .jpeg(let d):
+            out = d
             mime = "image/jpeg"
         }
-        guard var out = data, let rep = NSBitmapImageRep(data: out) else { return nil }
+        guard let rep = NSBitmapImageRep(data: out) else { return .unreadable }
         let limit = 32 * 1_048_576
         if out.count > limit {
-            guard let jpeg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.9]), jpeg.count <= limit else {
-                onTooLarge?()
-                return nil
-            }
+            guard let jpeg = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.9]), jpeg.count <= limit else { return .tooLarge }
             out = jpeg
             mime = "image/jpeg"
         }
@@ -115,6 +168,7 @@ final class PasteboardMonitor: ClipboardWriter {
         pb.clearContents()
         pb.writeObjects([item])
         lastChange = pb.changeCount
+        generation += 1
     }
 }
 

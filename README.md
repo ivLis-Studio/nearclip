@@ -19,7 +19,7 @@ devices hold.
 | App | menu bar app + Spotlight-style panel | tray app + Win+V-style flyout | Material 3 app + background service | SwiftUI app |
 | Language / UI | Swift · SwiftUI + AppKit | C# · WinUI 3 (Windows App SDK) | Kotlin · Jetpack Compose | Swift · SwiftUI |
 | Sending | automatic on copy | automatic on copy | open app, tile, notification, share, text selection; optional instant text capture with Shizuku | Paste button / automatic on open |
-| Receiving | automatic (+ toast) | automatic (+ toast) | automatic in background | while open (+ catch-up on open) |
+| Receiving | automatic (+ toast, with progress for large images) | automatic (+ toast, with progress for large images) | automatic in background (+ progress notification for large images) | while open (+ catch-up on open) |
 | Folder | `apple/macOS` | `windows/` | `android/` | `apple/iOS` |
 
 All four are native apps (no Electron, no web views).
@@ -37,6 +37,10 @@ All four are native apps (no Electron, no web views).
 ## Features
 
 * **Real-time sync** of text, links, colors and images (up to 32 MB).
+* **Large images show up right away**: the device that copies an image tells the others before it encodes it, so they
+  show *Receiving an image from iPhone…* with a progress bar and the size at once — in the toast on computers, as a card
+  in the phone apps, as a quiet banner on Android in the background — and the same place turns into *Copied from
+  iPhone* when it is in.
 * **Shared history** on every device: search, filters (Text · Links · Images · Pinned), pin, delete everywhere.
 * **Pairing without accounts**: scan a QR code with a phone (or the system camera), or pick a nearby computer and compare
   a 6-digit code on both screens. Any paired device can add more devices.
@@ -125,9 +129,10 @@ See [android/README.md](android/README.md) and [windows/README.md](windows/READM
 | Kotlin engine | `cd android && ./gradlew :core:test` |
 | C# engine | `cd windows && dotnet test --project tests/Nearclip.Core.Tests/Nearclip.Core.Tests.csproj` |
 | Tailnet bridge (Go, against an in-process control server) | `cd tailnet && go test ./...` |
-| **Cross-implementation interop** (Swift × Kotlin × C#, 39 scenarios incl. remote) | `python3 tools/interop/run.py` |
+| **Cross-implementation interop** (Swift × Kotlin × C#, 48 scenarios incl. remote and image progress) | `python3 tools/interop/run.py` |
 | iOS UI flow (onboarding → pair → catch-up → send; remote; licenses) | `xcodebuild test -scheme NearclipiOS …` (see `apple/iOSUITests`) |
 | macOS acceptance demo (real app + simulated peers) | `python3 apple/tools/demo.py` |
+| Large-image progress in the real apps (a peer that sends slowly; screenshots) | `tools/acceptance/mac_transfer.py`, `tools/acceptance/windows_transfer.py`, `tools/acceptance/android_transfer.py`, `apple/tools/ios_transfer.py` |
 | Remote connection in the real apps (throwaway Tailscale control server) | `apple/tools/remote_demo.py`, `apple/tools/ios_remote.py`, `tools/acceptance/android_remote.py`, `tools/acceptance/windows_remote.py` |
 | Remote connection against the real Tailscale service (a person signs in) | `python3 tools/acceptance/real_remote.py` |
 
@@ -135,10 +140,20 @@ See [android/README.md](android/README.md) and [windows/README.md](windows/READM
 
 * **Engines**: Swift 12 tests, Kotlin 24 tests, C# 28 tests, Go bridge tests — every value in `spec/test-vectors.json` plus
   real localhost pairing/sync scenarios and the tailnet dialing/discovery logic.
-* **Interop**: `tools/interop/run.py` passes **39/39** scenarios across Swift × Kotlin × C# (QR and code pairing in every
+* **Interop**: `tools/interop/run.py` passes **48/48** scenarios across Swift × Kotlin × C# (QR and code pairing in every
   direction, live text in Korean + emoji, multi-chunk images, delete everywhere, catch-up after restart, removal,
-  re-adding a removed device, 3-hop mesh forwarding in every permutation, and **remote**: every ordered pair pairs on the
+  re-adding a removed device, 3-hop mesh forwarding in every permutation, **image progress** for every ordered pair
+  (announced → preparing → progress → clip, an image without announcement, cancel, sender gone mid-announcement, no
+  progress for catch-up), and **remote**: every ordered pair pairs on the
   LAN, comes back on new ports with remote connection on, finds the other through the tailnet and syncs both ways).
+* **Large-image progress in the real apps** (a peer sending a 10.6 MB photo at 0.9 MB/s): the macOS app (isolated
+  instance), the Windows 11 ARM64 VM, the Android 16 emulator and the iPhone simulator showed *Receiving an image from …*
+  with *Preparing…*, then *3.1 / 10.6 MB*, *7.3 / 10.6 MB* (Windows counts like File Explorer: *3.0 / 10.1 MB*), and
+  turned into *Copied from …* in place with the image on the clipboard. Clicking the computer toast mid-transfer hid it
+  until the image was in. A cancelled announcement just disappeared; a sender dropping mid-transfer gave *Couldn't receive the
+  image · Copy it again on …*; with auto-copy off, *Image from … · Saved to history*. On Android also in the background
+  (banner, progress in the shade, *Copied from …* banner with the thumbnail), and an image shared into Nearclip was
+  announced before it was read (size known 0.2 s later). **Not verified yet:** real phones and a real Windows PC.
 * **Real apps, one group** (macOS app on this Mac, iPhone/iPad simulators, Android 16 emulator, Windows 11 ARM64 VM):
   a clip copied on each platform arrived on all the others —
   Mac → Windows clipboard / Android / iPhone, Windows → Mac clipboard / Android / iPhone,

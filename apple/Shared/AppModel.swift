@@ -44,6 +44,12 @@ final class AppModel {
     @ObservationIgnored var onPairPrompt: ((PairPrompt) -> Void)?
     /// Something was sent or received (status-icon pulse).
     @ObservationIgnored var onActivity: (() -> Void)?
+    /// The live image shown as "Receiving…" changed (nil: none). See `shownTransfer`.
+    @ObservationIgnored var onShownTransfer: ((IncomingTransfer?) -> Void)?
+    /// A shown transfer arrived but was not copied to the clipboard (auto-copy off, or an older clip).
+    @ObservationIgnored var onReceivedQuietly: ((StoredClip) -> Void)?
+    /// A shown transfer ended without the image (the sender cancelling it is not reported).
+    @ObservationIgnored var onTransferFailed: ((IncomingTransfer) -> Void)?
 
     private(set) var deviceId: String
     private(set) var deviceName: String
@@ -70,6 +76,12 @@ final class AppModel {
     var pairPrompt: PairPrompt?
     var joinState: JoinState = .idle
     var notice: Notice?
+    /// A live image on its way from another device (PROTOCOL.md §6.6): the newest transfer still running 0.3 s after it
+    /// started, so quick ones go straight to "Copied from …".
+    private(set) var shownTransfer: IncomingTransfer?
+    @ObservationIgnored private var transfers: [String: IncomingTransfer] = [:]
+    @ObservationIgnored private var transferOrder: [String] = []
+    @ObservationIgnored private var visibleTransfers = Set<String>()
     /// Name of a device that just joined through this one (inviter side).
     var justJoined: String?
     @ObservationIgnored private var ticketDemand = 0
@@ -170,6 +182,17 @@ final class AppModel {
         return DeviceStyle.symbol(platform: m?.platform ?? sc.srcPlatform ?? "", model: m?.model)
     }
 
+    /// Name and symbol of the device an image is coming from.
+    func deviceName(_ id: String) -> String {
+        if let m = members.first(where: { $0.id == id }), !m.name.isEmpty { return m.name }
+        return String(localized: "Another device")
+    }
+
+    func deviceSymbol(_ id: String) -> String {
+        let m = members.first { $0.id == id }
+        return DeviceStyle.symbol(platform: m?.platform ?? "", model: m?.model)
+    }
+
     func items(filter: HistoryFilter, query: String) -> [ClipItem] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return items.filter { item in
@@ -234,11 +257,30 @@ final class AppModel {
     }
 
     func localCopy(image: Data, mime: String, width: Int?, height: Int?) {
-        guard !settings.paused, settings.syncImages else { return }
-        if let sc = node.sendImage(image, mime: mime, width: width, height: height) {
+        localCopy(image: image, mime: mime, width: width, height: height, announced: nil)
+    }
+
+    /// `announced`: from `announceImage()`, called before the image was encoded.
+    func localCopy(image: Data, mime: String, width: Int?, height: Int?, announced: String?) {
+        guard !settings.paused, settings.syncImages else {
+            if let announced { node.cancelImage(announced) }
+            return
+        }
+        if let sc = node.sendImage(image, mime: mime, width: width, height: height, id: announced) {
             lastAppliedTs = max(lastAppliedTs, sc.clip.ts)
             onActivity?()
         }
+    }
+
+    /// An image was just copied here and is about to be encoded: lets the other devices show it arriving right away
+    /// (PROTOCOL.md §6.6). Pass the id to `localCopy(image:…announced:)` or `cancelImage`.
+    func announceImage() -> String? {
+        guard !settings.paused, settings.syncImages, connectedCount > 0 else { return nil }
+        return node.announceImage()
+    }
+
+    func cancelImage(_ id: String?) {
+        if let id { node.cancelImage(id) }
     }
 
     /// Mobile "copy the newest clip when Nearclip opens": for a short window after the app becomes active, the newest
@@ -481,17 +523,24 @@ final class AppModel {
         case .clipAdded(let sc, _, let apply, let local):
             insert(sc)
             guard !local else { return }
+            let wasShown = transfers[sc.id] != nil && endTransfer(sc.id)
             onActivity?()
+            var copied = false
             if apply, settings.autoApply, !settings.paused, !(sc.clip.isImage && !settings.syncImages) {
                 let blob = sc.clip.isImage ? node.blobData(for: sc.id) : nil
                 if !sc.clip.isImage || blob != nil {
                     clipboard?.write(sc.clip, blob: blob)
                     lastAppliedTs = max(lastAppliedTs, sc.clip.ts)
                     onReceive?(sc)
+                    copied = true
                 }
             } else if !apply {
                 considerCatchUp(sc)
             }
+            if wasShown && !copied { onReceivedQuietly?(sc) }
+            updateShownTransfer()
+        case .transfer(let t):
+            handleTransfer(t)
         case .clipsDeleted(let ids):
             let set = Set(ids)
             history.removeAll { set.contains($0.id) }
@@ -522,6 +571,45 @@ final class AppModel {
             #endif
             _ = s
         }
+    }
+
+    // MARK: - Live images on their way (PROTOCOL.md §6.6)
+
+    private func handleTransfer(_ t: IncomingTransfer) {
+        guard settings.syncImages else { return }
+        if t.state == .failed {
+            let wasShown = endTransfer(t.id)
+            if wasShown && t.reason != "cancelled" { onTransferFailed?(t) }
+            updateShownTransfer()
+            return
+        }
+        let isNew = transfers[t.id] == nil
+        transfers[t.id] = t
+        guard isNew else { updateShownTransfer(); return }
+        transferOrder.append(t.id)
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard let self, self.transfers[t.id] != nil else { return }
+            self.visibleTransfers.insert(t.id)
+            self.updateShownTransfer()
+        }
+    }
+
+    /// Forgets a transfer; returns whether it was the one shown.
+    @discardableResult
+    private func endTransfer(_ id: String) -> Bool {
+        let wasShown = shownTransfer?.id == id
+        transfers[id] = nil
+        transferOrder.removeAll { $0 == id }
+        visibleTransfers.remove(id)
+        return wasShown
+    }
+
+    private func updateShownTransfer() {
+        let next = transferOrder.last(where: { visibleTransfers.contains($0) }).flatMap { transfers[$0] }
+        guard next != shownTransfer else { return }
+        shownTransfer = next
+        onShownTransfer?(next)
     }
 }
 

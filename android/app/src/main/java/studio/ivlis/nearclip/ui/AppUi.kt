@@ -70,6 +70,7 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
     val settings by runtime.settings.state.collectAsStateWithLifecycle()
     val pending by runtime.pendingDeletes.collectAsStateWithLifecycle()
     val pairing by runtime.pairing.collectAsStateWithLifecycle()
+    val incoming by runtime.incoming.collectAsStateWithLifecycle()
     val nav = rememberNavController()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -124,6 +125,9 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                 ) { runtime.undoDelete(m.ids) }
                 UiMessage.Removed -> show(resources.getString(R.string.removed_message))
                 is UiMessage.ImageSaved -> show(resources.getString(if (m.ok) R.string.image_saved else R.string.image_save_failed))
+                is UiMessage.TransferFailed -> show(
+                    resources.getString(R.string.transfer_failed) + " · " + resources.getString(R.string.transfer_failed_body, m.name),
+                )
             }
         }
     }
@@ -182,6 +186,10 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                 onShare = { Actions.share(context, it, if (it.isImage) runtime.engine.blobFile(it) else null) },
                 onOpenLink = { Actions.openLink(context, it) },
                 onSaveImage = { saveImage(it) },
+                incoming = incoming,
+                incomingName = incoming?.let { t ->
+                    snapshot.members.firstOrNull { it.id == t.from }?.name?.takeIf { it.isNotBlank() }
+                } ?: resources.getString(R.string.unknown_device),
             )
         }
         composable(Routes.DEVICES) {

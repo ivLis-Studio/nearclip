@@ -130,6 +130,11 @@ notification action, share sheet, text-selection menu "Send to my devices").
 "Connected to N devices" with **Send clipboard** and **Pause**. When it is off, the engine stops 20 s after
 the app leaves the screen.
 
+**Large images.** Sharing or sending an image announces it before it is read and encoded (PROTOCOL §6.6), so the
+computers show "Receiving an image from …" right away. A large image on its way here shows a card with its progress
+on top of the history; when Nearclip is not open, a quiet banner (channel "Incoming images", no sound) with the
+progress in the notification shade turns into "Copied from …" with the thumbnail.
+
 **Security.** The group key is stored wrapped by a non-exportable AES-256-GCM key in the Android Keystore
 (`state.json` contains `"keyProtection":"android-keystore"`). Backups and device transfer exclude app data.
 Clips marked sensitive by password managers are never recorded or synced.
