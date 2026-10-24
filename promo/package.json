@@ -1,0 +1,12 @@
+{
+  "name": "nearclip-promo",
+  "private": true,
+  "description": "Nearclip promo film: a deterministic HTML stage rendered frame by frame (render.mjs) with a synthesised score (audio/synth.py).",
+  "type": "module",
+  "devDependencies": {
+    "@fluentui/svg-icons": "^1.1.300",
+    "playwright-core": "^1.64.1",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.35.5"
+  }
+}

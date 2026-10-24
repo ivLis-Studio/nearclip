@@ -1,0 +1,88 @@
+/* Scenes, captions, the hook, the four-platform grid, the feature cards and the end card. Flat colour only. */
+.scene { position: absolute; inset: 0; overflow: hidden; display: none; }
+.world { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; }
+.cap { position: absolute; font-family: var(--title); letter-spacing: -0.028em; line-height: 1.14; white-space: nowrap; word-break: keep-all; }
+.cap-mask { overflow: hidden; padding: 0.02em 0.08em 0.1em; margin: -0.02em -0.08em -0.1em; }
+.cap-line { display: block; }
+.csub { position: absolute; font-family: var(--title); font-weight: 500; letter-spacing: -0.012em; line-height: 1.36; white-space: nowrap; word-break: keep-all; }
+
+/* ---------------------------------------------------------------- hook */
+.hook { background: var(--iris); display: none; }
+.hook-box { position: absolute; left: 0; right: 0; top: 50%; display: flex; flex-direction: column; align-items: center; color: #fff;
+  font-family: var(--title); font-weight: 700; letter-spacing: -0.034em; line-height: 1.22; }
+.hook-mask { overflow: hidden; padding: 0.03em 0.12em 0.09em; margin-bottom: -0.04em; }
+.hook-line { display: flex; align-items: center; white-space: nowrap; }
+.hook-text { display: inline-block; }
+.hook-pill { position: relative; display: inline-block; height: 1.16em; border-radius: 0.22em; background: #fff; color: var(--iris); overflow: hidden; margin: 0 0.1em 0 0; flex: none; }
+.hook-line > .hook-text + .hook-pill { margin-left: 0.24em; }
+.hook-roll { position: absolute; left: 0; top: 0; }
+.hook-word { display: block; width: max-content; height: 1.16em; line-height: 1.16em; padding: 0 0.24em; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- four platforms */
+.tile { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.tile-screen { position: absolute; left: 0; top: 0; overflow: hidden; border-radius: 30px; }
+.tile-mbar { position: absolute; left: 0; right: 0; top: 0; height: 30px; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 16px;
+  font: 500 14px/1 var(--apple); color: #fff; background: rgba(255,255,255,0.2); }
+.tile-mbar .mac-nc { background: rgba(255,255,255,0.28); }
+.tile-tbar { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; display: flex; align-items: center; gap: 6px; padding: 0 10px; background: rgba(28,28,28,0.96); color: #fff;
+  border-top: 1px solid rgba(255,255,255,0.08); font-family: var(--win); }
+.tile-tbar .win-tray { right: 12px; gap: 12px; }
+.tile-tbar .win-tray-nc { background: rgba(255,255,255,0.1); }
+.tile-label { position: absolute; left: 0; top: 0; font: 600 26px/1 var(--title); color: #55565e; letter-spacing: -0.01em; white-space: nowrap; transform: translateX(-50%); }
+
+/* ---------------------------------------------------------------- feature cards */
+.qr-card { position: absolute; left: 0; top: 0; border-radius: 34px; background: #fff; transform-origin: 50% 50%; }
+.qr-card .qr { position: absolute; }
+.qr-card .qr svg { width: 100%; height: 100%; display: block; }
+.qr-scan { position: absolute; height: 5px; border-radius: 3px; background: var(--iris); }
+.bracket { position: absolute; width: 64px; height: 64px; border-color: #fff; border-style: solid; border-width: 0; }
+.bracket.tl { border-top-width: 7px; border-left-width: 7px; border-top-left-radius: 22px; }
+.bracket.tr { border-top-width: 7px; border-right-width: 7px; border-top-right-radius: 22px; }
+.bracket.bl { border-bottom-width: 7px; border-left-width: 7px; border-bottom-left-radius: 22px; }
+.bracket.br { border-bottom-width: 7px; border-right-width: 7px; border-bottom-right-radius: 22px; }
+.okpill { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 12px; height: 64px; padding: 0 28px 0 20px; border-radius: 32px; background: #fff; color: #15161b;
+  font: 600 26px/1 var(--title); white-space: nowrap; transform-origin: 50% 50%; }
+.okpill .okc { width: 32px; height: 32px; border-radius: 50%; background: var(--online); display: flex; align-items: center; justify-content: center; }
+
+.netcard { position: absolute; left: 0; top: 0; width: 330px; padding: 30px 30px 28px; border-radius: 34px; background: #fff; color: #15161b; font-family: var(--title); transform-origin: 50% 50%; }
+.netcard .nc-ic { width: 76px; height: 76px; border-radius: 24px; background: #eceefe; color: var(--iris); display: flex; align-items: center; justify-content: center; margin-bottom: 22px; }
+.netcard b { display: block; font-size: 31px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+.netcard .nc-net { display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 600; color: #5d5f6b; }
+.netline { position: absolute; left: 0; top: 0; overflow: visible; }
+.statuspill { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 26px 0 22px; border-radius: 30px; background: var(--ink); color: #fff;
+  font: 600 24px/1 var(--title); white-space: nowrap; transform-origin: 50% 50%; }
+.statuspill .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--online); }
+.travel { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 24px 0 14px; border-radius: 31px; background: #fff; color: #15161b;
+  font: 600 23px/1 var(--title); white-space: nowrap; transform: translate(-50%, -50%); }
+.travel .tv-ic { width: 38px; height: 38px; border-radius: 12px; overflow: hidden; flex: none; }
+.travel .tv-ic svg { width: 100%; height: 100%; display: block; }
+
+.e2e-dev { position: absolute; left: 0; top: 0; width: 180px; height: 180px; border-radius: 48px; background: #fff; color: var(--ink); display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 2px rgba(16,17,20,0.06); transform-origin: 50% 50%; }
+.e2e-name { position: absolute; left: 0; top: 0; font: 600 26px/1 var(--title); color: #6b6c75; transform: translateX(-50%); white-space: nowrap; }
+.e2e-track { position: absolute; left: 0; top: 0; height: 4px; border-radius: 2px; background: rgba(16,17,20,0.12); transform-origin: 0 50%; }
+.cipher { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 16px; height: 84px; padding: 0 32px 0 20px; border-radius: 42px; background: var(--ink); color: #fff;
+  font: 600 29px/1 var(--title); white-space: nowrap; transform: translate(-50%, -50%); }
+.cipher .lk { position: relative; width: 46px; height: 46px; border-radius: 50%; background: var(--iris); display: flex; align-items: center; justify-content: center; flex: none; }
+.cipher .ct { font-variant-numeric: tabular-nums; }
+.cipher .ct.mono { font-family: "SF Mono", ui-monospace, Menlo, monospace; font-weight: 600; letter-spacing: 0.02em; color: #aab3ff; }
+
+.pinbadge { position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--iris); display: flex; align-items: center; justify-content: center; transform-origin: 50% 50%; }
+
+/* ---------------------------------------------------------------- end card */
+.morph { position: absolute; left: 0; top: 0; }
+.fin-glyph { position: absolute; left: 0; top: 0; }
+.fin-glyph svg { width: 100%; height: 100%; display: block; }
+.fin-name { position: absolute; left: 0; right: 0; text-align: center; font: 700 132px/1 var(--title); letter-spacing: -0.04em; color: var(--ink); }
+.fin-tag { position: absolute; left: 0; right: 0; text-align: center; font: 600 46px/1.2 var(--title); letter-spacing: -0.025em; color: var(--iris); white-space: nowrap; }
+.fin-chips { position: absolute; left: 0; right: 0; display: flex; justify-content: center; gap: 14px; }
+.fin-chip { display: flex; align-items: center; gap: 11px; height: 62px; padding: 0 26px 0 20px; border-radius: 31px; background: #fff; color: #23242b; font: 600 25px/1 var(--title);
+  box-shadow: inset 0 0 0 2px rgba(16,17,20,0.07); transform-origin: 50% 50%; white-space: nowrap; }
+.fin-chip .fc-ic { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; color: var(--iris); }
+.fin-by { position: absolute; left: 0; right: 0; text-align: center; font: 500 24px/1 var(--title); color: #8a8b93; letter-spacing: 0.01em; }
+.fin-by b { color: var(--ink); font-weight: 700; letter-spacing: -0.01em; }
+.fin-by span { letter-spacing: 0.16em; font-weight: 600; color: var(--ink); margin-left: 0.32em; }
+
+/* Windows pointer: white arrow, black outline */
+.ptr.win .arrow path { fill: #fff; stroke: #000; }
+

@@ -1,0 +1,33 @@
+/* Windows faces and Roboto are served by render.mjs from this Mac's Office install (not redistributable). */
+@font-face { font-family: "Segoe UI W"; font-weight: 400; src: url(/winfonts/segoe-400); }
+@font-face { font-family: "Segoe UI W"; font-weight: 600; src: url(/winfonts/segoe-600); }
+@font-face { font-family: "Segoe UI W"; font-weight: 300; src: url(/winfonts/segoe-300); }
+@font-face { font-family: "Malgun W"; font-weight: 400; src: url(/winfonts/malgun-400); }
+@font-face { font-family: "Malgun W"; font-weight: 600 700; src: url(/winfonts/malgun-700); }
+@font-face { font-family: "Roboto A"; font-weight: 400; src: url(/winfonts/roboto-400); }
+@font-face { font-family: "Roboto A"; font-weight: 500 700; src: url(/winfonts/roboto-700); }
+
+:root {
+  --iris: #4c5bf5;
+  --iris-soft: #e9ebfe;
+  --ink: #101114;
+  --paper: #f2f1ec;
+  --online: #2fbf71;
+  --title: "Pretendard", -apple-system, "Apple SD Gothic Neo", sans-serif;
+  --apple: -apple-system, "SF Pro Text", "Apple SD Gothic Neo", sans-serif;
+  --win: "Segoe UI W", "Malgun W", "Segoe UI", sans-serif;
+  --android: "Roboto A", "Pretendard", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: var(--W); height: var(--H); overflow: hidden; background: #000; }
+body { -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; font-family: var(--apple); }
+#stage { position: absolute; inset: 0; overflow: hidden; background: var(--paper); }
+.abs { position: absolute; left: 0; top: 0; }
+.layer { position: absolute; inset: 0; transform-origin: 0 0; }
+.sym { display: inline-block; flex: none; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+.ico { display: inline-block; flex: none; line-height: 0; }
+.ico svg { width: 100%; height: 100%; display: block; }
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
