@@ -28,10 +28,8 @@
   <a href="README.ko.md">한국어</a>
 </p>
 
-<!-- FILM -->
-<p align="center">
-  <a href="https://ivlis-studio.github.io/nearclip/#film"><img src="website/public/assets/media/poster-en.webp" width="880" alt="Nearclip launch film — Copy here. Paste there."></a>
-</p>
+<!-- The film is a GitHub attachment, so it plays inline here. Source: promo/ -->
+https://github.com/user-attachments/assets/481e0b9a-8704-4dc0-aacd-5fb4c61d13f6
 
 <p align="center"><sub>39 seconds · turn the sound on · <a href="https://ivlis-studio.github.io/nearclip/#film">Watch on the website</a></sub></p>
 
