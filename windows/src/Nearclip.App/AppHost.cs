@@ -127,7 +127,7 @@ internal sealed class AppHost
     public void Start(string[] args)
     {
         Log.Write($"Nearclip {AppVersion} starting ({string.Join(' ', args)})");
-        RegisterLinkProtocol();
+        if (!PackageInfo.IsPackaged) RegisterLinkProtocol(); // the Store edition declares nearclip: in its manifest
         _hotkey.Register(Settings.HotKeyModifiers, Settings.HotKeyKey);
         Flyout = new FlyoutWindow();
         ApplyTheme();
@@ -135,11 +135,11 @@ internal sealed class AppHost
         UpdateTray();
         if (!Settings.LoginItemInitialized)
         {
-            Startup.Set(true);
+            if (Startup.EnableByDefault) Startup.Set(true);
             Settings.LoginItemInitialized = true;
             Settings.Save();
         }
-        var background = args.Contains("--background");
+        var background = args.Contains("--background") || PackageInfo.StartedAtSignIn();
         if (!Settings.OnboardingDone && !background && !args.Contains("--show")) ShowOnboarding();
         HandleArgs(args);
     }
@@ -196,6 +196,11 @@ internal sealed class AppHost
                     break;
                 case "--quit":
                     Quit();
+                    break;
+                case "--login": // turn Open at login on or off (the Run key, or the startup task of the Store edition)
+                    var on = Next() == "on";
+                    var done = Startup.Set(on);
+                    Log.Write("open at login " + (on ? "on" : "off") + ": " + (done ? "ok" : "failed") + ", now " + (Startup.IsEnabled ? "on" : "off") + (PackageInfo.IsPackaged ? " (startup task)" : " (Run key)"));
                     break;
             }
         }

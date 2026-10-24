@@ -75,6 +75,7 @@ WM_COPYDATA to its hidden window) and exits.
 | `--background` | start in the notification area only (used by "Open at login") |
 | `--show <surface>` | open a surface: `flyout`, `shortcut`, `add`, `add:address`, `settings` or `settings:<general, devices, privacy, history, about>`, `onboarding:<0, 1, 2>`, and the screenshot previews `toast` and `prompt:<name>` |
 | `--theme <light, dark, system>`, `--lang <en-US, ko-KR, system>` | theme now; language at the next start (`--lang` is applied at startup) |
+| `--login <on, off>` | turn Open at login on or off (the Run key; the startup task in the Microsoft Store edition) |
 | `--quit` | quit the running instance (sends `bye` and withdraws the DNS-SD advertisement) |
 
 Environment: `NEARCLIP_DATA` (data directory, default `%LOCALAPPDATA%\Nearclip`), `NEARCLIP_PORT` (default 45821, any free port
@@ -90,6 +91,31 @@ replaces the rules with one inbound allow rule for Nearclip.exe. On a network ma
 allow rule must cover the Public profile; the app's rule covers all profiles.
 Remote connection only connects out, so it works without the rule; when a direct path is blocked, Tailscale relays
 the traffic instead.
+
+### Microsoft Store edition (MSIX)
+
+The Store edition is the same app packed as MSIX: identity `ivLis-STUDIO.Nearclip` (Store ID 9PNQ3Z9S83QS, package family
+`ivLis-STUDIO.Nearclip_hxw094hmzvn72`), manifest `packaging\Package.appxmanifest`, logos `packaging\Images` (made by
+`design/make-icons.mjs`). On Windows:
+
+```powershell
+cd windows
+scripts\package-msix.ps1 -Version 1.0.0                    # artifacts\store\Nearclip-1.0.0.msixbundle (+ one .msix per arch)
+scripts\package-msix.ps1 -Version 1.0.0 -TestCertificate   # ...plus test-signed copies and a .cer to sideload on a test PC
+```
+
+Upload the unsigned bundle to Partner Center (the Store signs it); bump `Version` in the manifest first for every update.
+At run time `Platform\PackageInfo.cs` tells the editions apart by package identity. The packaged app:
+
+* opens at login through the `NearclipStartup` startup task, off until the user turns it on (Windows may also let the
+  user turn it off in Settings › Apps › Startup); the GitHub build keeps using the Run key and turns it on at first start;
+* gets `nearclip:` links through the manifest's protocol declaration instead of a registry handler;
+* adds its inbound firewall rules on install (TCP and UDP, all profiles), so the first-run firewall prompt does not appear;
+* keeps its data in the same `%LOCALAPPDATA%\Nearclip` as the GitHub build, so switching editions keeps the pairing.
+
+The listing (copy, screenshots, art and trailers) is built from `docs/store/microsoft-listing.json` and `promo/store.sh`:
+export the listing CSV in Partner Center, run `python3 docs/store/build-listing-csv.py EXPORT.csv`, then use Import listings ›
+Upload folder with `promo/out/store/import/nearclip-listing`.
 
 ## Architecture
 
@@ -142,4 +168,5 @@ Screenshots of every surface in English/Korean × light/dark are in ../docs/scre
 * Pairing screens were exercised in an ARM64 VM at 200 % scale; x64 was build-verified (not run).
 * Remote connection was verified in the ARM64 VM against a throwaway control server (Devices showed the Mac as
   *Connected · Remote*, its clip reached the clipboard). Against the real Tailscale service and on x64 it is untested.
-* The unpackaged app has no MSIX/Store identity: no Start-menu tile is created by the build; use the published folder.
+* The unpackaged app has no MSIX/Store identity: no Start-menu tile is created by the build; use the published folder
+  (or the Store edition above). The Store package was sideload-tested on ARM64 only; the x64 package is build-verified.

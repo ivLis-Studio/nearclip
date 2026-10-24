@@ -37,6 +37,21 @@
   <ItemGroup>
     <Content Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- Microsoft Store edition (scripts\package-msix.ps1): the same app as an MSIX package with the manifest and logos in
+       ..\..\packaging. dotnet publish … -p:NearclipStore=true writes an unsigned .msix to artifacts\msix (the Store signs it). -->
+  <PropertyGroup Condition="'$(NearclipStore)' == 'true'">
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <AppxBundle>Never</AppxBundle>
+    <AppxSymbolPackageEnabled>false</AppxSymbolPackageEnabled>
+    <GenerateTestArtifacts>false</GenerateTestArtifacts>
+    <AppxPackageDir>$(MSBuildProjectDirectory)\..\..\artifacts\msix\</AppxPackageDir>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(NearclipStore)' == 'true'">
+    <AppxManifest Include="..\..\packaging\Package.appxmanifest" />
+    <Content Include="..\..\packaging\Images\*.png" Link="Images\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
   <!-- Embedded Tailscale node (tailnet/build.sh windows): nctailnet.dll next to Nearclip.exe. -->
   <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-arm64'">
     <None Include="..\..\native\win-arm64\nctailnet.dll" Link="nctailnet.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

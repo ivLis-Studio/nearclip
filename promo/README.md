@@ -16,6 +16,11 @@ Outputs land in `promo/out/`, all 60 fps with AAC 256 kb/s audio:
   The vertical cut has its own layouts: captions sit below the top 190 px and nothing that has to be read goes in the
   bottom 400 px, where the platforms draw their own buttons.
 
+`promo/store.sh` turns the film into the Microsoft Store listing assets in `promo/out/store/`: seven 3840×2160 screenshots
+per language (held moments of the film plus the Windows flyout drawn large, from `store.html`), the Store logo, box,
+poster and super hero art, and the trailers, re-encoded from the 4K masters to Microsoft's recommendations. See
+windows/README.md (Microsoft Store edition) for the upload.
+
 ## The edit
 
 One beat grid (120 BPM, a bar is 2 s, `window.MUSIC`) is shared by the cuts and the score. Flat colour only — Iris

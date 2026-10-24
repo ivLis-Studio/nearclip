@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Nearclip — store art</title>
+<!-- Store listing art for Nearclip, drawn at the size of the page (promo/store.mjs renders it, promo/store.sh says which):
+       ?art=box      1:1 box art: the Windows icon, "Nearclip" and "by ivLis STUDIO" on the film's paper
+       ?art=poster   2:3 poster art: the same, stacked for a tall frame, with the tagline
+       ?art=hero     16:9 super hero art: the glyph alone on Iris, in the upper two thirds (no text, no logo plate)
+       ?art=thumb    16:9 trailer thumbnail: glyph above, tagline below, the middle left clear for the Store's play button
+       ?shot=windows&lang=en|ko   desktop screenshot: the Windows flyout from the film, large, with its caption
+     Colours and type are the film's (src/base.css): paper #F2F1EC, ink #101114, Iris #4C5BF5, Pretendard. -->
+<style>
+  @font-face { font-family: "Pretendard"; src: local("Pretendard"), local("Pretendard-Regular"); }
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  body { font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", sans-serif; color: #101114; -webkit-font-smoothing: antialiased; }
+  .paper { background: #F2F1EC; } .iris { background: #4C5BF5; color: #fff; }
+  .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .name { font-weight: 800; letter-spacing: -0.045em; line-height: 1; }
+  .by { color: #5C5C5C; letter-spacing: 0.02em; line-height: 1.2; }
+  .by b { color: #101114; letter-spacing: 0.08em; font-weight: 800; }
+  .tag { color: #4C5BF5; font-weight: 700; letter-spacing: -0.02em; }
+  img { display: block; }
+  .shot { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr auto; align-items: center; padding: 0 8vw 0 9vw; gap: 4vw; }
+  .shot h1 { margin: 0; font-size: 6.2vw; line-height: 1.05; letter-spacing: -0.04em; font-weight: 800; }
+  .shot h1 span { color: #4C5BF5; }
+  html:lang(ko) .shot h1 { font-size: 5.4vw; letter-spacing: -0.03em; line-height: 1.18; }
+  .shot p { margin: 2.6vw 0 0; font-size: 2vw; color: #48484D; line-height: 1.45; letter-spacing: -0.01em; }
+  .keys { display: flex; gap: 0.9vw; margin-bottom: 2.4vw; }
+  .keys span { font-size: 1.9vw; font-weight: 700; padding: 0.7vw 1.4vw; border-radius: 0.9vw; background: #fff; box-shadow: 0 0.35vw 0 rgba(0,0,0,0.12); border: 1px solid rgba(0,0,0,0.1); }
+  .device { height: 88vh; filter: drop-shadow(0 2.4vw 4vw rgba(16,17,20,0.18)); }
+</style>
+</head><body>
+<script>
+  const q = new URLSearchParams(location.search);
+  const art = q.get("art"), shot = q.get("shot"), lang = q.get("lang") === "ko" ? "ko" : "en";
+  document.documentElement.lang = lang;
+  const W = innerWidth, H = innerHeight, b = document.body;
+  const icon = "../design/out/icon-windows.svg", glyph = "../design/out/glyph-white.svg";
+  if (art === "box" || art === "poster") {
+    b.className = "paper";
+    const s = Math.min(W, H);
+    const tall = art === "poster";
+    b.innerHTML = '<div class="center">' +
+      '<img src="' + icon + '" style="width:' + (s * (tall ? 0.42 : 0.36)) + 'px;height:auto;margin-bottom:' + (s * 0.05) + 'px">' +
+      '<div class="name" style="font-size:' + (s * (tall ? 0.19 : 0.15)) + 'px">Nearclip</div>' +
+      (tall ? '<div class="tag" style="font-size:' + (s * 0.058) + 'px;margin-top:' + (s * 0.05) + 'px">Copy here.<br>Paste there.</div>' : "") +
+      '<div class="by" style="font-size:' + (s * (tall ? 0.045 : 0.042)) + 'px;margin-top:' + (s * (tall ? 0.09 : 0.05)) + 'px">by <b>ivLis STUDIO</b></div></div>';
+  } else if (art === "hero") {
+    b.className = "iris";
+    b.innerHTML = '<img src="' + glyph + '" style="position:absolute;left:50%;top:34%;width:' + (H * 0.5) + 'px;transform:translate(-50%,-50%)">';
+  } else if (art === "thumb") {
+    b.className = "iris";
+    b.innerHTML = '<img src="' + glyph + '" style="position:absolute;left:50%;top:22%;width:' + (H * 0.26) + 'px;transform:translate(-50%,-50%)">' +
+      '<div style="position:absolute;left:0;right:0;top:72%;text-align:center;font-weight:800;letter-spacing:-0.035em;font-size:' + (H * 0.1) + 'px;line-height:1.1">' +
+      (lang === "ko" ? "여기서 복사하고, 저기서 붙여넣기." : "Copy here. Paste there.") + "</div>" +
+      '<div style="position:absolute;left:0;right:0;top:86%;text-align:center;font-weight:600;opacity:.8;font-size:' + (H * 0.042) + 'px">Mac · Windows · Android · iPhone</div>';
+  } else if (shot === "windows") {
+    b.className = "paper";
+    const t = lang === "ko"
+      ? { h: "모든 기기의 기록을<br><span>단축키 하나로.</span>", p: "Mac, Android, iPhone에서 복사한 것까지<br>Windows 알림 영역에서 바로 찾아 붙여넣으세요." }
+      : { h: "Every device's history,<br><span>one shortcut away.</span>", p: "What you copied on your Mac, Galaxy or iPhone<br>is right there in the Windows flyout." };
+    b.innerHTML = '<div class="shot"><div><div class="keys"><span>Win</span><span>Alt</span><span>V</span></div><h1>' + t.h + "</h1><p>" + t.p + '</p></div>' +
+      '<img class="device" src="' + q.get("img") + '"></div>';
+  }
+</script>
+</body></html>
+

@@ -118,7 +118,7 @@ window.SITE_I18N = {
     "apps.win.sub": "알림 영역 앱 · Windows 10 1809 이상, 11",
     "apps.win.1": "Ctrl+C를 누르는 순간 동기화",
     "apps.win.2": "<kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd>로 Win+V 같은 플라이아웃 열기",
-    "apps.win.3": "Mica, 내 강조 색, x64·Arm64",
+    "apps.win.3": "Mica, 라이트·다크 모드, x64·Arm64",
     "apps.win.alt": "Windows 작업 표시줄 위에 열린 Nearclip 플라이아웃",
     "apps.android.sub": "Material You · Android 8 이상",
     "apps.android.1": "백그라운드에서 받아 바로 클립보드로",

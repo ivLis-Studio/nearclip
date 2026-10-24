@@ -1,0 +1,80 @@
+{
+  "en-us": {
+    "description": "Copy here. Paste there.\nOne clipboard for your Windows PC, Mac, Android phone and iPhone, with no account, no server and end-to-end encryption.\n\nCopy on your Mac and paste on your PC. Send the sign-in code from your Galaxy, or the photo you just took on your iPhone, straight to the clipboard of your Windows PC. Nearclip connects every device with every device, whoever made it. Install it on two or more of your devices and pair them once.\n\nOn Windows, Nearclip waits in the notification area. Press Ctrl+C as usual and the clip is already on your other devices. Press Win+Alt+V to open your shared history: search it, filter text, links and images, pin what you reuse and press Enter to copy a clip, or let Nearclip paste it straight into the app you were using. A quiet note tells you where each clip came from, and a big image shows its size and progress the moment it is copied on another device.\n\nPrivate by design: there is no Nearclip server and no account. Your devices find each other on your network and connect directly, end-to-end encrypted with keys only they hold. Pair a phone by scanning a QR code, or a computer by comparing a 6-digit code. Items your password manager marks private are never synced, you can ignore apps or pause syncing at any time, and deleting a clip deletes it on every device.\n\nOn different networks? Turn on Remote connection and sign in with the same free Tailscale account on each device. Tailscale is built into Nearclip: nothing else to install and no VPN to set up, and Wi-Fi stays preferred.\n\nNearclip is also available for Mac, Android and iPhone: see ivlis-studio.github.io/nearclip. It is free, with no ads, and open source under the MIT License on GitHub.",
+    "shortDescription": "One clipboard for your PC, Mac, Android phone and iPhone. Copy on one device, paste on another, with no account, no server and end-to-end encryption.",
+    "features": [
+      "Copy on your PC, Mac, Android phone or iPhone and paste on any other",
+      "Win+Alt+V opens one shared history: search, filter, pin and paste",
+      "Text, links, colors and images up to 32 MB, with progress for big images",
+      "No account and no server: your devices connect directly on your network",
+      "End-to-end encrypted with keys only your devices hold",
+      "Pair a phone with a QR code, or a computer with a 6-digit code",
+      "Optional remote connection across networks with built-in Tailscale",
+      "Password-manager items are never synced; ignore apps or pause any time",
+      "Delete a clip once and it is gone from every device",
+      "Fluent design with Mica, light and dark mode, English and Korean",
+      "Free and open source (MIT License)"
+    ],
+    "searchTerms": [
+      "clipboard",
+      "universal clipboard",
+      "clipboard sync",
+      "copy paste",
+      "cross device",
+      "iphone",
+      "android"
+    ],
+    "screenshotCaptions": [
+      "One clipboard for Mac, Windows, Android and iPhone",
+      "Copy on your Mac, paste on your Windows PC",
+      "Photos from your iPhone, straight to your PC",
+      "Win+Alt+V: the history of every device, one shortcut away",
+      "Scan a QR code and you are connected",
+      "Even on another network, with Tailscale built in",
+      "End-to-end encrypted: only your devices can read what you copy"
+    ],
+    "trailerTitle": "Nearclip: copy here, paste there",
+    "copyright": "© 2026 ivLis STUDIO",
+    "developedBy": "ivLis STUDIO",
+    "additionalLicenseTerms": "Nearclip is free and open-source software under the MIT License: https://github.com/ivLis-Studio/nearclip/blob/main/LICENSE. Remote connection includes Tailscale (BSD-3-Clause) and other open-source components; their license texts are in the app under Settings > About."
+  },
+  "ko-kr": {
+    "description": "여기서 복사하고, 저기서 붙여넣기.\nWindows PC, Mac, Android 폰, iPhone을 하나의 클립보드로. 계정도 서버도 없이, 종단 간 암호화로.\n\nMac에서 복사하고 PC에서 붙여넣으세요. 갤럭시로 온 인증번호도, iPhone으로 방금 찍은 사진도 Windows PC 클립보드로 바로 옵니다. Nearclip은 제조사와 상관없이 모든 기기를 모든 기기와 잇습니다. 기기 두 대 이상에 설치하고 한 번만 연결하면 됩니다.\n\nWindows에서 Nearclip은 알림 영역에서 지냅니다. 평소처럼 Ctrl+C를 누르면 다른 기기에 이미 가 있습니다. Win+Alt+V를 누르면 모든 기기의 기록이 열립니다. 검색하고, 텍스트·링크·이미지로 골라 보고, 자주 쓰는 건 고정하고, Enter로 복사하세요. 원하면 쓰던 앱에 바로 붙여넣어 줍니다. 클립이 도착할 때마다 어디서 왔는지 조용히 알려 주고, 다른 기기에서 큰 이미지를 복사하면 크기와 진행률이 바로 표시됩니다.\n\n처음부터 개인정보를 생각했습니다. Nearclip 서버도, 계정도 없습니다. 같은 네트워크의 기기끼리 서로를 찾아 바로 연결하고, 그 기기들만 가진 키로 종단 간 암호화합니다. 휴대폰은 QR 코드를 스캔해서, 컴퓨터는 6자리 코드를 비교해서 연결합니다. 비밀번호 관리자가 비공개로 표시한 항목은 동기화하지 않고, 앱을 제외하거나 언제든 동기화를 일시정지할 수 있으며, 클립을 지우면 모든 기기에서 지워집니다.\n\n네트워크가 다른가요? 원격 연결을 켜고 기기마다 같은 무료 Tailscale 계정으로 로그인하세요. Tailscale이 Nearclip에 들어 있어서 따로 설치할 것도, 설정할 VPN도 없고, Wi-Fi 연결이 항상 우선입니다.\n\nNearclip은 Mac, Android, iPhone용도 있습니다. ivlis-studio.github.io/nearclip 에서 확인하세요. 광고 없이 무료이며, GitHub에서 MIT 라이선스로 공개된 오픈 소스입니다.",
+    "shortDescription": "Windows PC, Mac, Android 폰, iPhone을 하나의 클립보드로. 한 기기에서 복사하고 다른 기기에서 붙여넣으세요. 계정도 서버도 없이, 종단 간 암호화로.",
+    "features": [
+      "PC, Mac, Android 폰, iPhone 어디서든 복사하고 다른 기기에서 붙여넣기",
+      "Win+Alt+V로 모든 기기의 기록 열기: 검색, 필터, 고정, 붙여넣기",
+      "텍스트, 링크, 색상, 최대 32MB 이미지, 큰 이미지는 진행률 표시",
+      "계정도 서버도 없이 같은 네트워크의 기기끼리 바로 연결",
+      "내 기기들만 가진 키로 종단 간 암호화",
+      "휴대폰은 QR 코드로, 컴퓨터는 6자리 코드로 연결",
+      "Tailscale 내장 원격 연결로 다른 네트워크에서도 동기화(선택)",
+      "비밀번호 관리자 항목은 동기화 안 함, 앱 제외와 일시정지 지원",
+      "클립을 한 번 지우면 모든 기기에서 지워짐",
+      "Mica를 입힌 Fluent 디자인, 라이트·다크 모드, 한국어·영어",
+      "무료 오픈 소스(MIT 라이선스)"
+    ],
+    "searchTerms": [
+      "클립보드",
+      "클립보드 동기화",
+      "복사 붙여넣기",
+      "유니버설 클립보드",
+      "clipboard",
+      "아이폰",
+      "갤럭시"
+    ],
+    "screenshotCaptions": [
+      "Mac, Windows, Android, iPhone을 하나의 클립보드로",
+      "Mac에서 복사하면 Windows PC에 바로",
+      "iPhone 사진도 Windows PC에 그대로",
+      "Win+Alt+V: 모든 기기의 기록을 단축키 하나로",
+      "QR 코드 한 번이면 연결 끝",
+      "Tailscale 내장, 다른 네트워크에서도 그대로",
+      "종단 간 암호화: 복사한 내용은 내 기기만 읽을 수 있어요"
+    ],
+    "trailerTitle": "Nearclip: 여기서 복사하고, 저기서 붙여넣기",
+    "copyright": "© 2026 ivLis STUDIO",
+    "developedBy": "ivLis STUDIO",
+    "additionalLicenseTerms": "Nearclip은 MIT 라이선스의 무료 오픈 소스 소프트웨어입니다: https://github.com/ivLis-Studio/nearclip/blob/main/LICENSE. 원격 연결에는 Tailscale(BSD-3-Clause)과 그 밖의 오픈 소스 구성 요소가 포함되며, 라이선스 전문은 앱의 설정 > 정보에 있습니다."
+  }
+}

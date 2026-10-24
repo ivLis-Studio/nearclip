@@ -96,5 +96,27 @@ for (const [d, s] of [["mdpi", 48], ["hdpi", 72], ["xhdpi", 96], ["xxhdpi", 144]
 await png("icon-macos.svg", 512, "nearclip-512.png");
 // In-app brand mark (full-bleed square; the UI rounds the corners itself)
 for (const s of [64, 128, 192, 256]) await png("icon-ios.svg", s, "brandmark-" + s + ".png");
+// Microsoft Store (MSIX) logos for windows/packaging/Images: the Windows icon on a transparent canvas at every scale
+// and target size the package manifest can ask for (resources.pri resolves the qualified names).
+mkdirSync(join(out, "msix"), { recursive: true });
+const SCALES = [100, 125, 150, 200, 400];
+async function msixImage(file, w, h, iconFraction) {
+  const size = Math.round(Math.min(w, h) * iconFraction);
+  const icon = await sharp(Buffer.from(files["icon-windows.svg"])).resize(size, size).png().toBuffer();
+  await sharp({ create: { width: w, height: h, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: icon, left: Math.round((w - size) / 2), top: Math.round((h - size) / 2) }]).png().toFile(join(out, "msix", file));
+}
+for (const s of SCALES) {
+  const k = s / 100;
+  await msixImage("Square44x44Logo.scale-" + s + ".png", Math.round(44 * k), Math.round(44 * k), 1);
+  await msixImage("Square150x150Logo.scale-" + s + ".png", Math.round(150 * k), Math.round(150 * k), 0.66);
+  await msixImage("Wide310x150Logo.scale-" + s + ".png", Math.round(310 * k), Math.round(150 * k), 0.66);
+  await msixImage("SmallTile.scale-" + s + ".png", Math.round(71 * k), Math.round(71 * k), 0.8);
+  await msixImage("LargeTile.scale-" + s + ".png", Math.round(310 * k), Math.round(310 * k), 0.5);
+  await msixImage("StoreLogo.scale-" + s + ".png", Math.round(50 * k), Math.round(50 * k), 1);
+}
+for (const t of [16, 20, 24, 30, 32, 36, 40, 48, 60, 64, 72, 80, 96, 256]) {
+  for (const form of ["", "_altform-unplated", "_altform-lightunplated"]) await msixImage("Square44x44Logo.targetsize-" + t + form + ".png", t, t, 1);
+}
 console.log("icons written to", out);
 

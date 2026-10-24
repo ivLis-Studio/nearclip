@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nearclip for the Microsoft Store (MSIX). Used only by the Store build:
+    dotnet publish src\Nearclip.App\Nearclip.App.csproj -c Release -p:Platform=x64 -p:NearclipStore=true
+  (scripts\package-msix.ps1 builds both architectures and the bundle). Identity, publisher and publisher display name
+  are the Partner Center product's: change them only together with Partner Center. Images\ comes from
+  design/make-icons.mjs (design/out/msix); resources.pri maps the names below to their scale and target-size files.
+
+  Differences from the GitHub build (Platform\PackageInfo.cs switches at run time):
+  - Open at login is the startup task below (off until the user turns it on), not the Run key.
+  - nearclip:// links come from the protocol declaration, not from HKCU\Software\Classes.
+  - Windows adds the inbound firewall rules at install, so other devices reach the PC without the firewall prompt.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:desktop2="http://schemas.microsoft.com/appx/manifest/desktop/windows10/2"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap3 desktop desktop2 rescap">
+
+  <Identity
+    Name="ivLis-STUDIO.Nearclip"
+    Publisher="CN=0C33D71C-3E83-4FF3-A9B9-CA2EA49A5C77"
+    Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>Nearclip</DisplayName>
+    <PublisherDisplayName>ivLis-STUDIO</PublisherDisplayName>
+    <Logo>Images\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-US" />
+    <Resource Language="ko-KR" />
+  </Resources>
+
+  <Applications>
+    <Application Id="Nearclip" Executable="Nearclip.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Nearclip"
+        Description="One clipboard for Mac, Windows, Android and iPhone: copy on one device, paste on another."
+        BackgroundColor="transparent"
+        Square150x150Logo="Images\Square150x150Logo.png"
+        Square44x44Logo="Images\Square44x44Logo.png">
+        <uap:DefaultTile
+          Wide310x150Logo="Images\Wide310x150Logo.png"
+          Square71x71Logo="Images\SmallTile.png"
+          Square310x310Logo="Images\LargeTile.png"
+          ShortName="Nearclip" />
+      </uap:VisualElements>
+      <Extensions>
+        <!-- Open at login (Platform\Startup.cs, task NearclipStartup): off until the user turns it on. -->
+        <desktop:Extension Category="windows.startupTask" Executable="Nearclip.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="NearclipStartup" Enabled="false" DisplayName="Nearclip" />
+        </desktop:Extension>
+        <!-- Pairing links from QR codes: Windows starts Nearclip.exe with the link as its argument. -->
+        <uap3:Extension Category="windows.protocol" Executable="Nearclip.exe" EntryPoint="Windows.FullTrustApplication">
+          <uap3:Protocol Name="nearclip" Parameters="&quot;%1&quot;" />
+        </uap3:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Extensions>
+    <!-- Other devices connect to this PC (TCP 45821, or a free port) and the remote connection receives WireGuard (UDP). -->
+    <desktop2:Extension Category="windows.firewallRules">
+      <desktop2:FirewallRules Executable="Nearclip.exe">
+        <desktop2:Rule Direction="in" IPProtocol="TCP" Profile="all" />
+        <desktop2:Rule Direction="in" IPProtocol="UDP" Profile="all" />
+      </desktop2:FirewallRules>
+    </desktop2:Extension>
+  </Extensions>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <Capability Name="privateNetworkClientServer" />
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
+
