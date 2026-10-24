@@ -103,7 +103,9 @@ welcome + member LWW merge before deciding on bye removed.
   TS_LOGS_DIR to the node's directory. Found on the emulator; fixed in tailnet/bridge/bridge.go.
 - Verified on emulator-5584 (tools/acceptance/android_remote.py, throwaway control server): Settings "켜짐 · …",
   Devices "MacBook Pro · 연결됨 · 원격", clip from the LAN-unreachable peer shown and applied to the clipboard.
-- Real service (login.tailscale.com): the node registered and asked for sign-in; the Custom Tab opened the real
-  login page. A completed sign-in was not done (needs the account owner).
+- Real service (login.tailscale.com, real account, tools/acceptance/real_remote.py): emulator and macOS app signed in,
+  Devices "남준서의 MacBook Pro · 연결됨 · 원격", clips both ways, direct WireGuard path; sign-out expires the node key.
+- The test AVD runs with -no-snapshot-save: restarting the emulator returns the app to its quick-boot snapshot
+  (06:26 group), which silently undoes later pairings. Re-pair after an emulator restart (real_remote.py --pair).
 
 

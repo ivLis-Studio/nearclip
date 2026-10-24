@@ -142,9 +142,12 @@ scripts/build-release.sh          # 유니버설·ad-hoc 서명된 dist/Nearclip
   macOS 앱, iPhone 시뮬레이터, Android 16 에뮬레이터, Windows 11 ARM64 VM 모두 *켜짐 · ‹계정›*을 표시하고, LAN으로는 닿지 않는
   기기를 *연결됨 · 원격*으로 보여 주며 그 기기의 클립을 받음(Windows는 클립보드까지 확인). iPhone은 14초간 백그라운드에 있다가
   돌아와도 다시 *원격*으로 연결됨
-* **실제 Tailscale 서비스**(login.tailscale.com): macOS 앱과 Android 앱이 노드를 등록하고 실제 로그인 링크로 로그인을 요청함
-  (Mac은 기본 브라우저, Android는 Custom Tab으로 열림). **아직 검증하지 않은 것:** 실제 계정으로 로그인 완료, 인터넷을 건너는 연결
-  (NAT 통과, DERP), 모바일 데이터의 휴대폰, 배터리 사용량
+* **실제 Tailscale 서비스**(login.tailscale.com, 실제 계정, `tools/acceptance/real_remote.py`): macOS 앱과 Android 앱(에뮬레이터)이
+  로그인해 *켜짐 · ‹계정›*과 테일넷 주소를 표시함. LAN 경로를 없앤 뒤 서로를 *연결됨 · 원격*으로 표시했고, Mac → Android,
+  Android → Mac(Mac 클립보드까지) 양방향으로 클립이 도착했으며, 두 노드 모두 직접 WireGuard 경로를 사용함. 각 앱의
+  *Tailscale에서 로그아웃*으로 노드가 오프라인·키 만료 상태가 됨.
+  **아직 검증하지 않은 것:** 서로 다른 실제 네트워크(두 노드가 같은 공유기 뒤에 있어 인터넷을 건너는 NAT 통과와 DERP 중계는
+  확인하지 못함), 실제 서비스에서의 iPhone·Windows, 모바일 데이터의 휴대폰, 배터리 사용량
 * UI: 모든 주요 화면을 라이트/다크 × 영어/한국어로 캡처 — [docs/screenshots](docs/screenshots)
 
 ## 다운로드
@@ -162,6 +165,8 @@ scripts/build-release.sh          # 유니버설·ad-hoc 서명된 dist/Nearclip
   내 기기 사이의 TCP 45821을 허용해야 하고, 기기 승인을 켠 테일넷은 관리 콘솔에서 Nearclip 기기를 승인해야 합니다.
 * iOS는 앱이 열려 있을 때만 동기화합니다(iOS는 백그라운드 클립보드 접근을 허용하지 않음). 열면 즉시 밀린 내용을 받고 최신 클립을 자동으로 복사할 수 있습니다.
   원격 연결도 마찬가지로 앱이 열려 있는 동안 동작합니다.
+* Nearclip에서 Tailscale 로그아웃은 Tailscale 공식 앱과 같게 동작합니다. 기기 키가 만료되고, Tailscale 관리 콘솔에서 직접
+  삭제하기 전까지는 (만료된 기기로) 목록에 남습니다.
 * Android 10 이상은 화면에 떠 있는 앱만 클립보드를 읽을 수 있어서, 보낼 때는 앱·빠른 설정 타일·알림 버튼·공유 시트·텍스트 선택 메뉴를 씁니다. 받기는 백그라운드에서 됩니다.
 * 기기 제거는 협조적으로 이뤄집니다. 키를 완전히 바꾸려면 나머지 기기에서 그룹을 나간 뒤 다시 연결하세요.
 * 아직 공개 배포용 코드 서명은 하지 않았습니다. 내려받은 사본은 macOS Gatekeeper와 Windows SmartScreen이 경고하며,

@@ -151,10 +151,14 @@ See [android/README.md](android/README.md) and [windows/README.md](windows/READM
   Windows 11 ARM64 VM each showed *On · ‹account›*, listed a peer that was not reachable over the LAN as
   *Connected · Remote* and received its clip (Windows: on the clipboard). The iPhone came back to *Remote* after 14 s in
   the background.
-* **Against the real Tailscale service** (login.tailscale.com): the macOS app and the Android app registered their nodes
-  and asked for sign-in with a real login link (the Mac opened it in the default browser, Android in a Custom Tab).
-  **Not verified yet:** a completed sign-in with a real account, connections across the internet (NAT traversal, DERP),
-  phones on mobile data, and battery use.
+* **Against the real Tailscale service** (login.tailscale.com, a real account; `tools/acceptance/real_remote.py`): the
+  macOS app and the Android app (emulator) signed in and showed *On · ‹account›* with their tailnet addresses. After
+  the LAN path was taken away, each listed the other as *Connected · Remote*, a clip went Mac → Android and
+  Android → Mac (onto the Mac clipboard), and both nodes reported a direct WireGuard path. *Sign out of Tailscale* in
+  each app took the node offline with its key expired.
+  **Not verified yet:** two different real networks (both nodes were behind the same router, so NAT traversal across
+  the internet and the DERP fallback were not exercised), iPhone and Windows against the real service, phones on
+  mobile data, and battery use.
 * UI: light/dark × English/Korean screenshots of every main screen in [docs/screenshots](docs/screenshots).
 
 ## Downloads
@@ -175,6 +179,8 @@ about 20 MB per platform.
 * iOS only syncs while Nearclip is open (iOS does not allow background clipboard access); it catches up instantly when
   opened and can copy the newest clip automatically. The same goes for remote connection: the iPhone's node runs while
   the app is open.
+* Signing out of Tailscale in Nearclip works like Tailscale's own apps: the device's key expires and it stays in the
+  Tailscale admin console (as expired) until you remove it there.
 * Android 10+ only lets the foreground app read the clipboard: sending uses the app, the Quick Settings tile, the
   notification action, the share sheet or the text-selection menu. Receiving works in the background.
 * Removing a device is cooperative; for a full key rotation, leave and pair the remaining devices again.

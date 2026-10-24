@@ -13,8 +13,12 @@ build with its own state directory, defaults suite and private pasteboard) and t
 4. Checks: the emulator shows the Mac as "Connected - Remote" and a clip goes each way (Mac -> Android through the
    private pasteboard, Android -> Mac through the share sheet). The WireGuard path is read from both nodes' logs.
 
-  python3 tools/acceptance/real_remote.py [--shots DIR]
-stdin while running:  m2a <text> | a2m <text> | path | shot <name> | logout | quit
+  python3 tools/acceptance/real_remote.py [--shots DIR] [--state DIR [--pair]]
+--state reuses an earlier run's directory: the same Mac identity and Tailscale machine key (so a node approved
+earlier is reused) and the emulator stays paired with it; add --pair when the emulator lost the pairing (the test
+AVD runs with -no-snapshot-save, so a restart returns it to its quick-boot snapshot).
+stdin while running:  m2a <text> | a2m <text> | path | shot <name> | screen | logout | quit
+(without a terminal the script holds until <state>/quit exists).
 Sign both nodes out afterwards: "Sign out of Tailscale" in the Mac app, `logout` here for the emulator.
 """
 import argparse, os, re, shutil, subprocess, sys, tempfile, time
@@ -29,6 +33,7 @@ SUITE = "studio.ivlis.nearclip.real-demo"
 PASTEBOARD = "studio.ivlis.nearclip.real-demo-pasteboard"
 AUTH = re.compile(r"https://login\.tailscale\.com/a/[0-9A-Za-z]+")
 SIGNED_OUT = ("Sign in to Tailscale to finish turning this on.", "Tailscale에 로그인하면 켜집니다.")
+HOME = ("Search history", "기록 검색", "Send clipboard", "클립보드 보내기")
 
 
 class MacApp:
@@ -36,8 +41,10 @@ class MacApp:
         self.base = base
         self.log = os.path.join(base, "mac-tailnet.log")
         self.proc = None
+        self.offset = 0
 
     def start(self, port, show):
+        self.offset = len(self.tailnet_log(all=True))  # only this run's log counts
         env = dict(os.environ, NC_STATE_DIR=os.path.join(self.base, "mac"), NC_PORT=str(port), NC_DEFAULTS_SUITE=SUITE,
                    NC_TICKET_FILE=os.path.join(self.base, "ticket.txt"), NC_PASTEBOARD=PASTEBOARD,
                    NC_TAILNET_LOG=self.log, NC_SHOW=show)
@@ -53,10 +60,10 @@ class MacApp:
             except subprocess.TimeoutExpired:
                 self.proc.kill()
 
-    def tailnet_log(self):
+    def tailnet_log(self, all=False):
         try:
             with open(self.log, errors="replace") as f:
-                return f.read()
+                return f.read()[0 if all else self.offset:]
         except OSError:
             return ""
 
@@ -103,8 +110,8 @@ def settings_screen():
 def home_screen():
     adb("shell", "am", "start", "-n", PKG + "/.ui.MainActivity")
     time.sleep(1)
-    for _ in range(3):
-        if find(lambda t: t in ("Settings", "설정"), 2):
+    for _ in range(4):
+        if find(lambda t: t in HOME, 2):  # Settings has a "설정" title too, so look for a home-only element
             return
         adb("shell", "input", "keyevent", "KEYCODE_BACK")
         time.sleep(0.8)
@@ -145,22 +152,31 @@ def logout_android():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--shots", default=tempfile.mkdtemp(prefix="nearclip-real-shots-"))
+    ap.add_argument("--state", help="reuse the state directory of an earlier run")
+    ap.add_argument("--pair", action="store_true", help="with --state: pair the emulator again")
     args = ap.parse_args()
-    base = tempfile.mkdtemp(prefix="nearclip-real-")
+    reuse = bool(args.state)
+    pair = not reuse or args.pair
+    base = args.state or tempfile.mkdtemp(prefix="nearclip-real-")
     pb = os.path.join(base, "pbtest")
-    subprocess.run(["swiftc", "-O", os.path.join(ROOT, "apple/tools/pbtest.swift"), "-o", pb], check=True)
+    if not os.path.exists(pb):
+        subprocess.run(["swiftc", "-O", os.path.join(ROOT, "apple/tools/pbtest.swift"), "-o", pb], check=True)
     print("state", base, "shots", args.shots, flush=True)
     for key, val in (("onboardingDone", "true"), ("remoteEnabled", "false")):
         subprocess.run(["defaults", "write", SUITE, key, "-bool", val], check=True)
     mac = MacApp(base)
-    mac.start(45910, "add")
+    if pair:
+        ticket = os.path.join(base, "ticket.txt")
+        if os.path.exists(ticket):
+            os.replace(ticket, ticket + ".old")  # wait for the new one
+        mac.start(45910, "add")
     try:
-        run(args, base, pb, mac)
+        run(args, base, pb, mac, reuse, pair)
     finally:
         mac.stop()
 
 
-def run(args, base, pb, mac):
+def run(args, base, pb, mac, reuse, pair):
     # The emulator gets a fresh node for the real control server; its earlier test node is moved aside.
     adb("wait-for-device")
     while adb("shell", "getprop", "sys.boot_completed").stdout.strip() != "1":
@@ -168,7 +184,9 @@ def run(args, base, pb, mac):
     print(adb("install", "-r", APK).stdout.strip().splitlines()[-1:], flush=True)
     adb("shell", "am", "force-stop", PKG)
     stamp = int(time.time())
-    adb("shell", f"run-as {PKG} sh -c 'cd files && for f in tailnet tailnet.log tailnet-control.txt; "
+    # A reused run keeps the emulator's node (already signed in); a new one starts from scratch.
+    aside = "tailnet-control.txt" if reuse else "tailnet tailnet.log tailnet-control.txt"
+    adb("shell", f"run-as {PKG} sh -c 'cd files && for f in {aside}; "
                  f"do [ -e $f ] && mv $f $f.old-{stamp}; done; true'")
     left = adb("shell", f"run-as {PKG} sh -c '[ -e files/tailnet-control.txt ] && echo test-control || echo real'").stdout
     assert "real" in left, "could not move files/tailnet-control.txt aside"
@@ -184,37 +202,41 @@ def run(args, base, pb, mac):
             if find(lambda t: t in ("Continue", "계속"), 2):
                 tap(lambda t: t in ("Continue", "계속"), "continue")
 
-    # 1. Pair over the LAN path (the emulator reaches the Mac at 10.0.2.2).
-    ticket = os.path.join(base, "ticket.txt")
-    end = time.time() + 30
-    while not os.path.exists(ticket) and time.time() < end:
-        time.sleep(0.2)
-    p = urlsplit(open(ticket).read().strip())
-    q = [(k, "10.0.2.2" if k == "h" else v) for k, v in parse_qsl(p.query, keep_blank_values=True)]
-    link = urlunsplit((p.scheme, p.netloc, p.path, urlencode(q, quote_via=quote), ""))
-    adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "'" + link + "'", PKG)
-    tap(lambda t: t in ("Pair", "연결"), "pair button")
-    assert find(lambda t: t in ("Done", "완료"), 60), "pairing did not finish: " + repr([t for t, _ in dump() if t][:30])
-    tap(lambda t: t in ("Done", "완료"), "done")
-    print("paired over the LAN path", flush=True)
+    if pair:
+        # 1. Pair over the LAN path (the emulator reaches the Mac at 10.0.2.2).
+        ticket = os.path.join(base, "ticket.txt")
+        end = time.time() + 30
+        while not os.path.exists(ticket) and time.time() < end:
+            time.sleep(0.2)
+        p = urlsplit(open(ticket).read().strip())
+        q = [(k, "10.0.2.2" if k == "h" else v) for k, v in parse_qsl(p.query, keep_blank_values=True)]
+        link = urlunsplit((p.scheme, p.netloc, p.path, urlencode(q, quote_via=quote), ""))
+        adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "'" + link + "'", PKG)
+        tap(lambda t: t in ("Pair", "연결"), "pair button")
+        assert find(lambda t: t in ("Done", "완료"), 60), "pairing did not finish: " + repr([t for t, _ in dump() if t][:30])
+        tap(lambda t: t in ("Done", "완료"), "done")
+        print("paired over the LAN path", flush=True)
+        mac.stop()
 
-    # 2. The LAN path goes away; remote connection comes on.
-    mac.stop()
+    # 2. The LAN path goes away (the Mac app comes back on another port); remote connection comes on.
     subprocess.run(["defaults", "write", SUITE, "remoteEnabled", "-bool", "true"], check=True)
     mac.start(45911, "settings:general")
     settings_screen()
     if not find(lambda t: t in SIGNED_OUT or t.startswith(("On · ", "켜짐 · ")), 5):
         tap(lambda t: t in ("Sync across networks", "다른 네트워크에서도 동기화"), "remote toggle")
 
-    # 3. Sign-in on both.
-    url, end = None, time.time() + 90
-    while not url and time.time() < end:
-        url = last_auth(emulator_log())
-        time.sleep(1)
-    assert url, "the emulator node did not ask for a sign-in"
-    shot(args.shots, "r0-android-needs-login")
-    print("EMULATOR SIGN-IN:", url, flush=True)
-    print("MAC SIGN-IN: click 'Sign in with Tailscale' in the Nearclip settings window", flush=True)
+    # 3. Sign-in on both (a node of a reused run may already be signed in).
+    time.sleep(5)
+    if not running(emulator_log()):
+        url, end = None, time.time() + 90
+        while not url and time.time() < end:
+            url = last_auth(emulator_log())
+            time.sleep(1)
+        assert url, "the emulator node did not ask for a sign-in"
+        shot(args.shots, "r0-android-needs-login")
+        print("EMULATOR SIGN-IN:", url, flush=True)
+    if not running(mac.tailnet_log()):
+        print("MAC SIGN-IN: click 'Sign in with Tailscale' in the Nearclip settings window", flush=True)
     seen, end = set(), time.time() + 900
     while len(seen) < 2 and time.time() < end:
         for name, log in (("Mac", mac.tailnet_log()), ("Android", emulator_log())):
@@ -228,18 +250,28 @@ def run(args, base, pb, mac):
     print("emulator settings:", on[0] if on else "?", flush=True)
     shot(args.shots, "r1-android-settings-on")
 
-    # 4. The route and a clip each way.
-    home_screen()
-    tap(lambda t: "connected" in t.lower() or "연결됨" in t, "devices chip", timeout=120)
-    remote = find(lambda t: t in ("Connected · Remote", "연결됨 · 원격"), 120)
-    assert remote, "Mac not shown as remote: " + repr([t for t, _ in dump() if t][:30])
-    print("emulator devices:", remote[0], flush=True)
-    time.sleep(1)
-    shot(args.shots, "r2-android-devices-remote")
-    mac_to_android(pb, args.shots, "Mac에서 다른 네트워크로 ✈️ " + time.strftime("%H:%M:%S"))
-    android_to_mac(pb, "Android에서 Mac으로 🛰️ " + time.strftime("%H:%M:%S"))
+    # 4. The route and a clip each way. A failed check leaves both apps running for a look (commands below).
+    try:
+        home_screen()
+        tap(lambda t: "connected" in t.lower() or "연결됨" in t, "devices chip", timeout=120)
+        remote = find(lambda t: t in ("Connected · Remote", "연결됨 · 원격"), 120)
+        assert remote, "Mac not shown as remote: " + repr([t for t, _ in dump() if t][:30])
+        print("emulator devices:", remote[0], flush=True)
+        time.sleep(1)
+        shot(args.shots, "r2-android-devices-remote")
+        mac_to_android(pb, args.shots, "Mac에서 다른 네트워크로 ✈️ " + time.strftime("%H:%M:%S"))
+        android_to_mac(pb, "Android에서 Mac으로 🛰️ " + time.strftime("%H:%M:%S"))
+    except AssertionError as e:
+        print("CHECK FAILED:", str(e)[:300], flush=True)
     path_report(mac)
-    print("ready - commands: m2a <text> | a2m <text> | path | shot <name> | logout | quit", flush=True)
+    print("ready - commands: m2a <text> | a2m <text> | path | shot <name> | screen | logout | quit", flush=True)
+    if not sys.stdin.isatty():
+        quit_file = os.path.join(base, "quit")
+        print("holding until", quit_file, "exists", flush=True)
+        while not os.path.exists(quit_file):
+            time.sleep(1)
+        os.remove(quit_file)
+        return
     for line in sys.stdin:
         cmd, _, rest = line.strip().partition(" ")
         if cmd == "quit":
@@ -252,6 +284,8 @@ def run(args, base, pb, mac):
             path_report(mac)
         elif cmd == "shot" and rest:
             shot(args.shots, rest)
+        elif cmd == "screen":
+            print([t for t, _ in dump() if t][:40], flush=True)
         elif cmd == "logout":
             logout_android()
         print("ok", flush=True)
