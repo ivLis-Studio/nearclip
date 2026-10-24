@@ -23,13 +23,13 @@ class SyncService : Service() {
     private var runtime: Nearclip? = null
     private var job: Job? = null
 
-    private data class Key(val paused: Boolean, val members: List<String>, val online: List<String>)
+    private data class Key(val paused: Boolean, val members: List<String>, val online: List<String>, val shizukuStopped: Boolean)
 
     @SuppressLint("MissingPermission")
     override fun onCreate() {
         super.onCreate()
         val rt = Nearclip.get(this)
-        val initial = Notifications.sync(this, rt.engine.state.value, rt.settings.value)
+        val initial = Notifications.sync(this, rt.engine.state.value, rt.settings.value, rt.capture.status.value)
         val type = if (Build.VERSION.SDK_INT >= 29) ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
         try {
             ServiceCompat.startForeground(this, Notifications.ID_SYNC, initial, type)
@@ -41,10 +41,13 @@ class SyncService : Service() {
         runtime = rt
         rt.onServiceStarted()
         job = rt.scope.launch {
-            rt.engine.state.combine(rt.settings.state) { snap, st ->
-                Key(st.paused, snap.otherMembers.map { it.id + it.name }, snap.otherMembers.filter { it.id in snap.online }.map { it.name })
+            combine(rt.engine.state, rt.settings.state, rt.capture.status) { snap, st, cap ->
+                Key(
+                    st.paused, snap.otherMembers.map { it.id + it.name }, snap.otherMembers.filter { it.id in snap.online }.map { it.name },
+                    Notifications.shizukuStopped(st, cap),
+                )
             }.distinctUntilChanged().collect {
-                val n = Notifications.sync(this@SyncService, rt.engine.state.value, rt.settings.value)
+                val n = Notifications.sync(this@SyncService, rt.engine.state.value, rt.settings.value, rt.capture.status.value)
                 try { NotificationManagerCompat.from(this@SyncService).notify(Notifications.ID_SYNC, n) } catch (_: SecurityException) {}
             }
         }

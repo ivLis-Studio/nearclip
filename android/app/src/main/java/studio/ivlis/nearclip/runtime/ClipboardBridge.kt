@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
 import android.os.PersistableBundle
+import android.text.Html
 import androidx.core.content.FileProvider
 import java.io.File
 
@@ -71,5 +72,25 @@ class ClipboardBridge(private val context: Context) {
         const val EXTRA_ORIGIN = "studio.ivlis.nearclip.CLIP_ID"
         /** ClipDescription.EXTRA_IS_SENSITIVE (API 33); password managers also set it on older releases. */
         const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"
+
+        private val NOT_TEXT = setOf(ClipDescription.MIMETYPE_TEXT_URILIST, ClipDescription.MIMETYPE_TEXT_INTENT)
+        private val LOCAL_SCHEMES = setOf("content", "file", "android.resource")
+
+        /** Whether a clip holds text, judged from its description (photos, files and intents don't). */
+        fun hasText(desc: ClipDescription): Boolean =
+            (0 until desc.mimeTypeCount).map { desc.getMimeType(it) }.any { it.startsWith("text/") && it !in NOT_TEXT }
+
+        /**
+         * The text of a clip read on someone else's behalf (InstantCapture): content: and file: URIs are never
+         * opened — their read grant went to the reader, not to Nearclip.
+         */
+        fun plainText(clip: ClipData): String? {
+            if (clip.itemCount == 0) return null
+            val item = clip.getItemAt(0)
+            val text: CharSequence? = item.text
+                ?: item.htmlText?.let { Html.fromHtml(it, Html.FROM_HTML_MODE_COMPACT) }
+                ?: item.uri?.takeIf { it.scheme !in LOCAL_SCHEMES }?.toString()
+            return text?.toString()?.takeIf { it.isNotEmpty() }
+        }
     }
 }

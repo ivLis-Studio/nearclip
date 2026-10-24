@@ -45,8 +45,11 @@ object Notifications {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    /** "Nearclip · Connected to 2 devices" with Send clipboard + Pause/Resume (DESIGN §5 Android). */
-    fun sync(context: Context, snap: EngineSnapshot, settings: AppSettings): Notification {
+    /**
+     * "Nearclip · Connected to 2 devices" with Send clipboard + Pause/Resume (DESIGN §5 Android). With instant
+     * capture on and Shizuku stopped (it does when the phone restarts), the header says so.
+     */
+    fun sync(context: Context, snap: EngineSnapshot, settings: AppSettings, capture: CaptureStatus? = null): Notification {
         val others = snap.otherMembers
         val online = others.filter { it.id in snap.online }
         val title = when {
@@ -76,6 +79,7 @@ object Notifications {
             .setColor(IRIS)
             .setContentTitle(title)
             .setContentText(text)
+            .setSubText(if (shizukuStopped(settings, capture)) context.getString(R.string.notification_shizuku_off) else null)
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)
@@ -122,4 +126,7 @@ object Notifications {
     fun cancelPairPrompt(context: Context) {
         NotificationManagerCompat.from(context).cancel(ID_PAIRING)
     }
+
+    fun shizukuStopped(settings: AppSettings, capture: CaptureStatus?): Boolean =
+        settings.instantCapture && capture?.setup == CaptureSetup.NOT_RUNNING
 }

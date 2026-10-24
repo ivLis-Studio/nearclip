@@ -108,4 +108,34 @@ welcome + member LWW merge before deciding on bye removed.
 - The test AVD runs with -no-snapshot-save: restarting the emulator returns the app to its quick-boot snapshot
   (06:26 group), which silently undoes later pairings. Re-pair after an emulator restart (real_remote.py --pair).
 
+## Opt-in Shizuku instant capture (2026-10-24)
+
+- Android 1.0.1, versionCode 2. Sync settings now contains "복사한 항목 바로 Nearclip에 불러오기", default false.
+  Tapping it opens install → start → allow guidance. Existing permission does not activate it until Turn on is tapped;
+  granting permission from this setup flow activates it. Enabling also enables Stay connected. Switch has a TalkBack label.
+- Reviewed ClipStack's ShizukuManager/ShizukuClipboardService at commit 934eb9c:
+  https://github.com/liliangxing/ClipStack . Reference for install/start/permission and binder lifecycle; no code copied.
+  Nearclip calls the clipboard through ShizukuBinderWrapper instead of running a separate UserService, so no helper
+  process is left behind when the user opts out. Clipboard arguments adapt to platform signatures.
+- Shizuku API/provider 13.1.5 (MIT), HiddenApiBypass 6.1 (Apache-2.0), license text in the app. 6.2 needs compileSdk 37;
+  6.1 works with the app's SDK 36 and Android 16 emulator. Hidden-API exemptions limited to the clipboard interfaces.
+- Description-first checks skip own/sensitive clips without content access. Recheck the fetched ClipData flags to
+  cover a change between metadata and data reads. Text/links only; no content/file URI reads through shell grants.
+  Capture stops while paused, opted out, or when neither UI nor SyncService is active.
+- Binder death updates setup and persistent notification ("Shizuku 꺼짐"); restarting Shizuku restores readiness
+  without toggling the setting. Non-root users restart Shizuku after reboot. Android's Shell paste-access toast was
+  observed and is explained in the sheet. Nearclip does not change global Android privacy settings.
+- Verification: debug/release build, lintRelease (no issues), existing core test task (24 tests, up-to-date).
+  New InstantCaptureTest against the live Android 16 clipboard/engine: OK (1 test), covering background text capture,
+  sensitive/own-marker exclusion, pause/resume and opt-out. Existing SensitiveClipTest: OK (1 test).
+- `tools/acceptance/android_capture.py`, debug and signed R8 release on emulator-5584 + Swift LAN peer:
+  off → no background send; opt-in → real Contacts copy received exactly once at peer; incoming text reaches Nearclip
+  without echo; opt-out → no background send. Uses UI rather than run-as so the signed release is testable.
+  Contacts formats names during input, so compare the actual field contents with the peer payload.
+- Release 1.0.1 installed in place on emulator; same signer as the previous APK (SHA-256 fecc2790…759cb46).
+  Tested Shizuku server termination → settings + notification update, then restart → ready again, on the release.
+  Screenshots in docs/screenshots/android/instant-capture/. Galaxy S25 and other Android/OEM versions remain untested.
+- `dist/Nearclip-Android.apk` replaced with the signed release. Prior APK is recoverable from
+  ~/.Trash/Nearclip-Android-previous.Nm6hF0/Nearclip-Android.apk. macOS installed app and pairing window left untouched.
+
 

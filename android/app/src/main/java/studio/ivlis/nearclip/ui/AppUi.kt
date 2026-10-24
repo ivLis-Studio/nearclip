@@ -198,6 +198,7 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
         }
         composable(Routes.SETTINGS) {
             val signingIn by runtime.tailnetSigningIn.collectAsStateWithLifecycle()
+            val capture by runtime.capture.status.collectAsStateWithLifecycle()
             SettingsScreen(
                 settings = settings,
                 actions = SettingsActions(
@@ -210,11 +211,15 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                     signIn = { runtime.signInToTailscale { url -> Actions.openSignIn(context, url) } },
                     signOut = { runtime.signOutOfTailscale() },
                     retryRemote = { runtime.retryRemote() },
+                    setInstantCapture = { runtime.setInstantCapture(it) },
+                    allowInstantCapture = { runtime.allowInstantCapture() },
+                    refreshCapture = { runtime.capture.refresh() },
                 ),
                 onBack = { nav.popBackStack() },
                 tailnet = snapshot.tailnet,
                 remoteAvailable = runtime.remoteAvailable,
                 signingIn = signingIn,
+                capture = capture,
             )
         }
         composable(Routes.LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }

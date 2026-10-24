@@ -65,6 +65,12 @@ private val libraries = listOf(
     Library("Kotlin, kotlinx.coroutines, kotlinx.serialization", "JetBrains s.r.o."),
     Library("ZXing", "ZXing authors"),
     Library("Material Symbols", "Google"),
+    Library("Android Hidden API Bypass", "LSPosed"),
+)
+
+/** Used only by the opt-in "Bring copies into Nearclip instantly". */
+private val mitLibraries = listOf(
+    Library("Shizuku API", "RikkaW"),
 )
 
 /** The main parts of the embedded Tailscale node; every module and its license text is in the notices file. */
@@ -97,9 +103,13 @@ fun LicensesScreen(onBack: () -> Unit) {
     val resources = LocalResources.current
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showText by rememberSaveable { mutableStateOf(false) }
+    var showMit by rememberSaveable { mutableStateOf(false) }
     var showNotices by rememberSaveable { mutableStateOf(false) }
     val license = remember(resources) {
         reflow(resources.openRawResource(R.raw.apache_license_2_0).bufferedReader().use { it.readText() })
+    }
+    val mitLicense = remember(resources) {
+        reflow(resources.openRawResource(R.raw.shizuku_api_license).bufferedReader().use { it.readText() })
     }
     val notices = remember(resources, showNotices) {
         if (!showNotices) emptyList()
@@ -150,6 +160,32 @@ fun LicensesScreen(onBack: () -> Unit) {
                                     )
                                     isHeading(p) -> Text(p, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 4.dp))
                                     else -> Text(p, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                SectionHeader(stringResource(R.string.license_mit))
+                SettingsGroup {
+                    for (lib in mitLibraries) SettingsRow(title = lib.name, summary = lib.owner)
+                }
+                TextButton(onClick = { showMit = !showMit }, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(stringResource(if (showMit) R.string.hide_license_text else R.string.show_license_text))
+                }
+                AnimatedVisibility(showMit) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        shape = MaterialTheme.shapes.large,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    ) {
+                        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            mitLicense.forEachIndexed { i, p ->
+                                if (i == 0) {
+                                    Text(p, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                                } else {
+                                    Text(p, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }

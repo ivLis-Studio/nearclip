@@ -17,7 +17,7 @@
 |---|---|---|---|---|
 | 앱 형태 | 메뉴 막대 앱 + Spotlight 스타일 패널 | 트레이 앱 + Win+V 스타일 플라이아웃 | Material 3 앱 + 백그라운드 서비스 | SwiftUI 앱 |
 | 언어 / UI | Swift · SwiftUI + AppKit | C# · WinUI 3 (Windows App SDK) | Kotlin · Jetpack Compose | Swift · SwiftUI |
-| 보내기 | 복사하면 자동 | 복사하면 자동 | 앱 열기 · 빠른 설정 타일 · 알림 · 공유 시트 · 텍스트 선택 메뉴 | 붙여넣기 버튼 / 열 때 자동 |
+| 보내기 | 복사하면 자동 | 복사하면 자동 | 앱 열기 · 타일 · 알림 · 공유 · 텍스트 선택 / Shizuku로 텍스트 즉시 불러오기 선택 가능 | 붙여넣기 버튼 / 열 때 자동 |
 | 받기 | 자동 (+알림) | 자동 (+알림) | 백그라운드에서 자동 | 앱이 열려 있을 때 (+열면 밀린 내용 수신) |
 | 폴더 | `apple/macOS` | `windows/` | `android/` | `apple/iOS` |
 
@@ -167,7 +167,11 @@ scripts/build-release.sh          # 유니버설·ad-hoc 서명된 dist/Nearclip
   원격 연결도 마찬가지로 앱이 열려 있는 동안 동작합니다.
 * Nearclip에서 Tailscale 로그아웃은 Tailscale 공식 앱과 같게 동작합니다. 기기 키가 만료되고, Tailscale 관리 콘솔에서 직접
   삭제하기 전까지는 (만료된 기기로) 목록에 남습니다.
-* Android 10 이상은 화면에 떠 있는 앱만 클립보드를 읽을 수 있어서, 보낼 때는 앱·빠른 설정 타일·알림 버튼·공유 시트·텍스트 선택 메뉴를 씁니다. 받기는 백그라운드에서 됩니다.
+* Android의 기본 보내기 방식은 앱 열기·빠른 설정 타일·알림 버튼·공유 시트·텍스트 선택 메뉴입니다.
+  설정의 *복사한 항목 바로 Nearclip에 불러오기*를 선택하면 Shizuku 설치·시작·허용 안내 후 텍스트와 링크를 백그라운드에서 즉시 보낼 수 있습니다.
+  기본은 꺼져 있으며 원하는 사람만 켭니다. 루팅하지 않은 기기는 재부팅 후 Shizuku를 다시 시작해야 합니다.
+  Android 12 이상에서는 복사할 때 Shell의 클립보드 접근 알림이 표시될 수 있습니다. 민감한 정보로 표시된 항목은 제외하고,
+  사진은 기존 보내기 방식을 사용합니다. 받기는 백그라운드에서 됩니다.
 * 기기 제거는 협조적으로 이뤄집니다. 키를 완전히 바꾸려면 나머지 기기에서 그룹을 나간 뒤 다시 연결하세요.
 * 아직 공개 배포용 코드 서명은 하지 않았습니다. 내려받은 사본은 macOS Gatekeeper와 Windows SmartScreen이 경고하며,
   Windows 빌드는 설치 프로그램(MSIX) 없이 폴더째 실행하는 형태입니다. Windows 첫 실행 때 방화벽 허용을 묻는데,
@@ -178,6 +182,9 @@ scripts/build-release.sh          # 유니버설·ad-hoc 서명된 dist/Nearclip
 원격 연결에는 오픈소스 소프트웨어가 들어 있습니다: Tailscale(BSD-3-Clause), wireguard-go(MIT), gVisor(Apache-2.0),
 Go 표준 라이브러리(BSD-3-Clause)와 그 밖의 Go 모듈. 라이선스 전문은 [tailnet/notices/THIRD_PARTY_NOTICES.txt](tailnet/notices/THIRD_PARTY_NOTICES.txt)와
 각 앱의 정보 › 오픈소스 라이선스에서 볼 수 있습니다.
+
+Android의 선택 기능인 즉시 불러오기는 Shizuku API(MIT)와 Android Hidden API Bypass(Apache-2.0)를 사용합니다.
+라이선스 전문은 Android 앱의 설정 › 오픈소스 라이선스에서 볼 수 있습니다.
 
 ## 라이선스
 

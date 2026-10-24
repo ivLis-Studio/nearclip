@@ -11,6 +11,7 @@ import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import studio.ivlis.nearclip.R
 import studio.ivlis.nearclip.core.model.Clip
+import studio.ivlis.nearclip.runtime.InstantCapture
 import studio.ivlis.nearclip.runtime.SendOutcome
 import java.io.File
 
@@ -57,6 +58,17 @@ object Actions {
         runCatching {
             context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, "package:${context.packageName}".toUri()))
         }
+    }
+
+    /** Shizuku on Google Play, or its download page where there is no Play Store (instant capture setup). */
+    fun getShizuku(context: Context) {
+        val market = Intent(Intent.ACTION_VIEW, "market://details?id=${InstantCapture.SHIZUKU_PACKAGE}".toUri())
+        try { context.startActivity(market) } catch (_: Exception) { openLink(context, "https://shizuku.rikka.app/download/") }
+    }
+
+    fun openShizuku(context: Context) {
+        val intent = context.packageManager.getLaunchIntentForPackage(InstantCapture.SHIZUKU_PACKAGE)
+        if (intent == null) getShizuku(context) else runCatching { context.startActivity(intent) }
     }
 
     /** User-facing text for a send result (snackbar in the app, toast from background surfaces). */

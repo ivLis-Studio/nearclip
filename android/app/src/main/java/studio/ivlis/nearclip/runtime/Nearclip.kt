@@ -100,6 +100,12 @@ class Nearclip private constructor(val app: Application) {
     val tailnetSigningIn: StateFlow<Boolean> = _tailnetSigningIn.asStateFlow()
     private var networkJob: Job? = null
 
+    /** Opt-in "Bring copies into Nearclip instantly" (Shizuku on Android 10+). */
+    val capture: InstantCapture
+    private var captureWait: Job? = null
+    /** "Allow" was tapped in the setup sheet: turn the feature on once Shizuku grants it. */
+    private var enableWhenAllowed = false
+
     /** Started MainActivity instances; a counter, because an old instance can stop after a new one started. */
     private var visibleActivities = 0
     val uiVisible: Boolean get() = visibleActivities > 0
@@ -136,6 +142,7 @@ class Nearclip private constructor(val app: Application) {
         engine.setPaused(s.paused)
         engine.setRemoteEnabled(s.remoteEnabled)
         discovery = Discovery(app, engine)
+        capture = InstantCapture(app, onChanged = ::onClipboardChanged, onPermissionResult = ::onCapturePermission, log = { engine.log(it) })
         Notifications.ensureChannels(app)
         scope.launch { engine.events.collect { onEvent(it) } }
         scope.launch {
@@ -143,6 +150,7 @@ class Nearclip private constructor(val app: Application) {
         }
         scope.launch { settings.state.map { it.retentionDays }.distinctUntilChanged().collect { engine.setRetention(it) } }
         scope.launch { settings.state.map { it.syncImages }.distinctUntilChanged().collect { engine.setSyncImages(it) } }
+        scope.launch { settings.state.collect { updateCaptureWanted() } }
         // Wi-Fi ↔ mobile data, new addresses: redial at once and let the embedded node re-bind (PROTOCOL §4.5, §10.4).
         NetInfo.watch(app) {
             scope.launch {
@@ -172,6 +180,7 @@ class Nearclip private constructor(val app: Application) {
     // ---------------------------------------------------------------- lifecycle
 
     private fun updateRunning() {
+        updateCaptureWanted()
         if (processVisible || serviceRunning) {
             stopJob?.cancel()
             stopJob = null
@@ -209,6 +218,7 @@ class Nearclip private constructor(val app: Application) {
 
     fun setUiVisible(visible: Boolean) {
         visibleActivities = (visibleActivities + if (visible) 1 else -1).coerceAtLeast(0)
+        updateCaptureWanted()
         if (visible) Notifications.cancelPairPrompt(app) else if (!uiVisible) flushDeletes()
     }
 
@@ -323,6 +333,55 @@ class Nearclip private constructor(val app: Application) {
     suspend fun send(content: ClipboardBridge.Content): SendOutcome = when (content) {
         is ClipboardBridge.Text -> sendText(content.text)
         is ClipboardBridge.Image -> sendImage(content.uri)
+    }
+
+    // ---------------------------------------------------------------- instant capture
+
+    /** Something was copied somewhere on the phone while instant capture listens. */
+    private fun onClipboardChanged() {
+        captureWait?.cancel()
+        captureWait = scope.launch {
+            delay(150) // some apps set a clip twice in a row
+            scope.launch { captureCopy() }
+        }
+    }
+
+    /** Sends new text from the clipboard right away; photos and files are left to sharing or opening Nearclip. */
+    private suspend fun captureCopy() {
+        val s = settings.value
+        if (!s.instantCapture || s.paused || !s.onboardingDone || !(serviceRunning || uiVisible)) return
+        val change = capture.read(settings.lastClipboardStamp) ?: return
+        val current = settings.value
+        if (!current.instantCapture || current.paused || !(serviceRunning || uiVisible)) return
+        // Opening Nearclip may have sent it meanwhile: onAppOpened updates the stamp on this (main) thread.
+        if (change.stamp == settings.lastClipboardStamp) return
+        settings.lastClipboardStamp = change.stamp
+        if (change is InstantCapture.Change.Copied) {
+            send(ClipboardBridge.Text(change.text, change.stamp, ours = false, sensitive = false))
+        }
+    }
+
+    /** Turning it on also keeps Nearclip connected in the background, which it needs. */
+    fun setInstantCapture(on: Boolean) {
+        settings.update { it.copy(instantCapture = on, stayConnected = it.stayConnected || on) }
+        updateCaptureWanted()
+        ensureService()
+    }
+
+    private fun updateCaptureWanted() {
+        val s = settings.value
+        capture.setWanted(s.instantCapture && !s.paused && s.onboardingDone && (serviceRunning || uiVisible))
+    }
+
+    /** Asks Shizuku to allow Nearclip; the feature turns on when it does. */
+    fun allowInstantCapture() {
+        enableWhenAllowed = true
+        capture.requestPermission()
+    }
+
+    private fun onCapturePermission(granted: Boolean) {
+        if (granted && enableWhenAllowed) setInstantCapture(true)
+        enableWhenAllowed = false
     }
 
     suspend fun sendText(text: String): SendOutcome = withContext(Dispatchers.IO) {

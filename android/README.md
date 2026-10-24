@@ -121,7 +121,7 @@ rule and dialing with back-off (20 s → 5 min). Semantics follow the Swift refe
 
 **Clipboard.** Incoming live clips from other devices go to the clipboard with `setPrimaryClip` (works from the
 service). Our own writes carry a marker in the ClipDescription extras, so they are never sent back. Android 10+
-only lets the focused app *read* the clipboard; sending therefore happens when Nearclip gains focus ("Send
+only lets the focused app *read* the clipboard by default; sending therefore happens when Nearclip gains focus ("Send
 clipboard when Nearclip opens"), from the FAB, or through the transparent SendActivity (Quick Settings tile,
 notification action, share sheet, text-selection menu "Send to my devices").
 
@@ -134,12 +134,35 @@ the app leaves the screen.
 (`state.json` contains `"keyProtection":"android-keystore"`). Backups and device transfer exclude app data.
 Clips marked sensitive by password managers are never recorded or synced.
 
+## Optional instant capture (Shizuku)
+
+Settings › Sync › **Bring copies into Nearclip instantly** is off by default. Tap it for an explanation and
+install → start → allow steps. Only explicitly enabling it (or granting Shizuku permission from this flow) turns
+it on; it also enables Stay connected in the background. The existing send paths keep working without Shizuku.
+
+* Android 10+: Shizuku API 13.1.5 plus HiddenApiBypass 6.1 (6.2 requires compileSdk 37). A clipboard binder wrapped
+  by Shizuku uses the shell identity; method arguments adapt to Android's attribution/user/device signatures.
+* Android 8–9: background reads use the public clipboard API and need no Shizuku.
+* Text and links only. URI-backed images/files are not read through Shizuku; use share/open/send for images.
+* Description metadata filters sensitive and Nearclip-origin copies before fetching content. The fetched data's
+  flags are checked again; timestamps deduplicate with send-on-open, and pause/opt-out unregister the listener.
+* Shizuku stops after reboot on non-root devices. Its death updates the row and background notification, and
+  restarting it reconnects the listener automatically.
+* Android 12+ may show “Shell pasted from your clipboard” per copied item. The sheet explains this; Nearclip
+  does not change Android's global clipboard-access notification setting.
+
+Live test: with Shizuku started and Nearclip allowed on emulator-5584,
+`python3 tools/acceptance/android_capture.py` pairs a temporary Swift peer and copies real text in Contacts.
+`InstantCaptureTest` exercises the real background clipboard/engine for sensitive flags, own markers, pause,
+resume and opt-out (run with `adb shell am instrument -w -e class studio.ivlis.nearclip.InstantCaptureTest
+studio.ivlis.nearclip.test/androidx.test.runner.AndroidJUnitRunner` after installing the debug test APK).
+
 ## Limits (by design)
 
 * Text up to 4 MiB, images (PNG/JPEG) up to 32 MiB live / 16 MiB in catch-up (PROTOCOL §7 limits); larger text
   is kept locally as "Too large to sync".
-* Reading the clipboard needs window focus on Android 10+, so a copy in another app reaches the other devices
-  when Nearclip opens or through the tile / notification action / share sheet, not silently in the background.
+* Default clipboard reads need window focus on Android 10+. Instant background text capture is optional and
+  requires Shizuku; images still use the existing open / tile / notification / share send paths.
 * Pins are local (PROTOCOL §6.3); "Clear history" deletes every clip, pinned ones included, on all devices.
 
 See `NOTES.md` for the worklog, verification evidence and the spec interpretations taken.

@@ -18,6 +18,8 @@ data class AppSettings(
     val onboardingDone: Boolean = false,
     /** Remote connection through the embedded Tailscale node (DESIGN §4.7). */
     val remoteEnabled: Boolean = false,
+    /** Opt-in "Bring copies into Nearclip instantly" (InstantCapture: Shizuku on Android 10+). */
+    val instantCapture: Boolean = false,
 )
 
 class SettingsStore(context: Context) {
@@ -36,6 +38,7 @@ class SettingsStore(context: Context) {
         retentionDays = prefs.getInt(RETENTION, 30),
         onboardingDone = prefs.getBoolean(ONBOARDED, false),
         remoteEnabled = prefs.getBoolean(REMOTE, false),
+        instantCapture = prefs.getBoolean(INSTANT_CAPTURE, false),
     )
 
     @Synchronized
@@ -51,6 +54,7 @@ class SettingsStore(context: Context) {
             putInt(RETENTION, next.retentionDays)
             putBoolean(ONBOARDED, next.onboardingDone)
             putBoolean(REMOTE, next.remoteEnabled)
+            putBoolean(INSTANT_CAPTURE, next.instantCapture)
         }
         _state.value = next
     }
@@ -75,6 +79,7 @@ class SettingsStore(context: Context) {
         const val RETENTION = "retentionDays"
         const val ONBOARDED = "onboardingDone"
         const val REMOTE = "remoteEnabled"
+        const val INSTANT_CAPTURE = "instantCapture"
         const val CLIPBOARD_STAMP = "clipboardStamp"
         const val APPLIED_TS = "appliedTs"
     }

@@ -110,7 +110,8 @@ resource system (String Catalog, `strings.xml`, `.resw`). Device-platform words 
 * Phones send:
   * Android: auto-send when the app opens and the clipboard changed (setting), **Send clipboard**
     FAB, Quick Settings tile, action button on the persistent notification, share sheet target,
-    text-selection menu entry "Send to my devices".
+    text-selection menu entry "Send to my devices". Optional **Bring copies into Nearclip instantly**
+    captures text and links in the background with Shizuku; it is off until the user opts in.
   * iOS: when the app opens and the clipboard changed: auto-send if "Paste from Other Apps" is
     allowed, otherwise a prominent card with the system **Paste** button ("Send what you copied").
 * Never sync: password-manager items (concealed/transient/sensitive markers), clips larger than the
@@ -191,6 +192,7 @@ section). Copy (EN / KO):
 | Mobile | Send clipboard when Nearclip opens | on |
 | Mobile | Copy the newest clip when Nearclip opens (if it arrived ≤ 10 min ago) | on |
 | Android | Stay connected in the background (persistent notification) | on |
+| Android / Sync | Bring copies into Nearclip instantly (Shizuku on Android 10+) | off |
 | Remote connection | Sync across networks (embedded Tailscale, §4.7) | off |
 | Privacy | Skip password managers (always on, explained) | — |
 | Privacy | Ignore apps… (macOS/Windows list) | 1Password, Bitwarden, KeePassXC, Keychain Access |
@@ -237,6 +239,15 @@ section). Copy (EN / KO):
 * Quick Settings tile "Send clipboard"; share target (text, images); `PROCESS_TEXT` action
   "Send to my devices". Sending from background surfaces uses a transparent, focus-taking activity
   that reads the clipboard, sends, and finishes instantly with a toast.
+* Optional "Bring copies into Nearclip instantly" ("복사한 항목 바로 Nearclip에 불러오기") in Sync settings.
+  Tapping opens a sheet explaining Shizuku, with install → start → allow steps. The main button follows the missing
+  step; only granting permission from this flow or explicitly tapping Turn on enables it. On Android ≤9 the sheet
+  offers Turn on without Shizuku. Enabling also enables Stay connected. Opting out unregisters the listener.
+  The Shizuku clipboard binder calls use the shell identity and adapt to Android API signatures; description
+  metadata is checked before reading so own/sensitive copies are skipped. Data flags are checked again after reading.
+  Text/links only, no URI/file reads. Pause stops capture. Binder death updates settings and the background
+  notification; restarting Shizuku reconnects automatically. The sheet explains the Android Shell paste notice
+  and that non-root users must restart Shizuku after reboot. Global clipboard privacy settings are left to Android.
 * Edge-to-edge, predictive back, dynamic color, haptics on copy.
 
 ### iOS (Swift, SwiftUI, iOS 17+)

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
@@ -26,6 +27,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,6 +40,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -45,6 +49,8 @@ import studio.ivlis.nearclip.BuildConfig
 import studio.ivlis.nearclip.R
 import studio.ivlis.nearclip.core.tailnet.TailnetStatus
 import studio.ivlis.nearclip.runtime.AppSettings
+import studio.ivlis.nearclip.runtime.CaptureSetup
+import studio.ivlis.nearclip.runtime.CaptureStatus
 import studio.ivlis.nearclip.ui.Actions
 import studio.ivlis.nearclip.ui.components.SectionHeader
 import studio.ivlis.nearclip.ui.components.SettingsGroup
@@ -62,6 +68,9 @@ class SettingsActions(
     val signIn: () -> Unit = {},
     val signOut: () -> Unit = {},
     val retryRemote: () -> Unit = {},
+    val setInstantCapture: (Boolean) -> Unit = {},
+    val allowInstantCapture: () -> Unit = {},
+    val refreshCapture: () -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,17 +82,20 @@ fun SettingsScreen(
     tailnet: TailnetStatus = TailnetStatus.OFF,
     remoteAvailable: Boolean = false,
     signingIn: Boolean = false,
+    capture: CaptureStatus = CaptureStatus(CaptureSetup.NOT_INSTALLED),
 ) {
     val context = LocalContext.current
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var retentionOpen by rememberSaveable { mutableStateOf(false) }
     var clearOpen by rememberSaveable { mutableStateOf(false) }
+    var captureOpen by rememberSaveable { mutableStateOf(false) }
     var batteryOk by rememberSaveable { mutableStateOf(true) }
     var notificationsOk by rememberSaveable { mutableStateOf(true) }
     LifecycleResumeEffect(Unit) {
         val pm = context.getSystemService(PowerManager::class.java)
         batteryOk = pm?.isIgnoringBatteryOptimizations(context.packageName) == true
         notificationsOk = NotificationManagerCompat.from(context).areNotificationsEnabled()
+        actions.refreshCapture() // Shizuku may have been installed or started meanwhile
         onPauseOrDispose {}
     }
 
@@ -115,6 +127,12 @@ fun SettingsScreen(
                 SettingsGroup {
                     toggle(R.string.pause_syncing, R.string.pause_syncing_summary, R.drawable.ic_pause, settings.paused) { actions.setPaused(it) }
                     toggle(R.string.auto_apply, R.string.auto_apply_summary, R.drawable.ic_content_paste, settings.autoApply) { v -> actions.update { it.copy(autoApply = v) } }
+                    InstantCaptureRow(
+                        settings, capture,
+                        onOpen = { captureOpen = true },
+                        // Turning on always goes through the sheet: it says what is needed and what happens.
+                        onSwitch = { on -> if (on) captureOpen = true else actions.setInstantCapture(false) },
+                    )
                     toggle(R.string.sync_images, R.string.sync_images_summary, R.drawable.ic_image, settings.syncImages) { v -> actions.update { it.copy(syncImages = v) } }
                 }
             }
@@ -260,6 +278,21 @@ fun SettingsScreen(
             dismissButton = { TextButton(onClick = { clearOpen = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
+    if (captureOpen) {
+        InstantCaptureSheet(
+            on = settings.instantCapture,
+            stayConnected = settings.stayConnected,
+            st = capture,
+            actions = CaptureSheetActions(
+                turnOn = { actions.setInstantCapture(true) },
+                turnOff = { actions.setInstantCapture(false) },
+                getShizuku = { Actions.getShizuku(context) },
+                openShizuku = { Actions.openShizuku(context) },
+                allow = actions.allowInstantCapture,
+            ),
+            onDismiss = { captureOpen = false },
+        )
+    }
     @Suppress("UNUSED_VARIABLE") val sdk = Build.VERSION.SDK_INT
     Spacer(Modifier.height(0.dp))
 }
@@ -269,6 +302,37 @@ fun retentionLabel(days: Int): Int = when (days) {
     7 -> R.string.retention_7
     30 -> R.string.retention_30
     else -> R.string.retention_forever
+}
+
+/**
+ * "Bring copies into Nearclip instantly": the row opens the setup sheet, the switch turns it off directly (or
+ * opens the sheet to turn it on). Off by default.
+ */
+@Composable
+private fun InstantCaptureRow(settings: AppSettings, st: CaptureStatus, onOpen: () -> Unit, onSwitch: (Boolean) -> Unit) {
+    val on = settings.instantCapture
+    val title = stringResource(R.string.instant_capture)
+    val problem = captureProblem(on, settings.stayConnected, st)
+    val summary = when {
+        problem != null -> problem
+        on -> R.string.instant_capture_on
+        st.setup == CaptureSetup.BUILT_IN -> R.string.instant_capture_summary_builtin
+        else -> R.string.instant_capture_summary
+    }
+    SettingsRow(
+        title = title,
+        summary = stringResource(summary),
+        icon = R.drawable.ic_content_paste_go,
+        iconTint = if (problem != null) Brand.Warning else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = onOpen,
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                VerticalDivider(Modifier.height(32.dp))
+                Spacer(Modifier.width(16.dp))
+                Switch(checked = on, onCheckedChange = onSwitch, modifier = Modifier.semantics { contentDescription = title })
+            }
+        },
+    )
 }
 
 /** Remote-connection status and actions (DESIGN §4.7). */

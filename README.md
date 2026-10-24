@@ -18,7 +18,7 @@ devices hold.
 |---|---|---|---|---|
 | App | menu bar app + Spotlight-style panel | tray app + Win+V-style flyout | Material 3 app + background service | SwiftUI app |
 | Language / UI | Swift · SwiftUI + AppKit | C# · WinUI 3 (Windows App SDK) | Kotlin · Jetpack Compose | Swift · SwiftUI |
-| Sending | automatic on copy | automatic on copy | open app, Quick Settings tile, notification, share sheet, text selection | Paste button / automatic on open |
+| Sending | automatic on copy | automatic on copy | open app, tile, notification, share, text selection; optional instant text capture with Shizuku | Paste button / automatic on open |
 | Receiving | automatic (+ toast) | automatic (+ toast) | automatic in background | while open (+ catch-up on open) |
 | Folder | `apple/macOS` | `windows/` | `android/` | `apple/iOS` |
 
@@ -182,7 +182,11 @@ about 20 MB per platform.
 * Signing out of Tailscale in Nearclip works like Tailscale's own apps: the device's key expires and it stays in the
   Tailscale admin console (as expired) until you remove it there.
 * Android 10+ only lets the foreground app read the clipboard: sending uses the app, the Quick Settings tile, the
-  notification action, the share sheet or the text-selection menu. Receiving works in the background.
+  notification action, the share sheet or the text-selection menu by default. Settings › *Bring copies into Nearclip
+  instantly* optionally captures text and links in the background with Shizuku. The setup sheet guides installation,
+  starting Shizuku and allowing Nearclip; nothing is enabled until you choose it. Restart Shizuku after reboot
+  (non-root devices). Android 12+ may show a Shell clipboard-access notice per copy. Sensitive-marked items are
+  skipped; images still use the existing send actions. Receiving works in the background.
 * Removing a device is cooperative; for a full key rotation, leave and pair the remaining devices again.
 * Builds are not code-signed for public distribution yet: macOS Gatekeeper and Windows SmartScreen will warn on
   downloaded copies, and the Windows build is a self-contained folder (no installer/MSIX yet). On first launch Windows
@@ -194,6 +198,9 @@ Remote connection embeds open-source software: Tailscale (BSD-3-Clause), wiregua
 Go standard library (BSD-3-Clause) and other Go modules. Their license texts are in
 [tailnet/notices/THIRD_PARTY_NOTICES.txt](tailnet/notices/THIRD_PARTY_NOTICES.txt) and in each app under About ›
 Open-source licenses.
+
+Optional Android instant capture uses Shizuku API (MIT) and Android Hidden API Bypass (Apache-2.0). Their license
+texts are available in the Android app under Settings › Open-source licenses.
 
 ## License
 

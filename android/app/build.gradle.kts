@@ -11,8 +11,8 @@ android {
         applicationId = "studio.ivlis.nearclip"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -87,6 +87,11 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.zxing.core)
+
+    // Opt-in instant capture (runtime/InstantCapture.kt): clipboard reads as the shell user through Shizuku.
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
+    implementation(libs.hiddenapibypass)
 
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
