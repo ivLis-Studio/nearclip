@@ -17,6 +17,7 @@ var port: UInt16 = 0
 var platform = "cli"
 var tailnetDir: String?
 var tailnetControl: String?
+var lanDial = true
 var args = CommandLine.arguments.dropFirst().makeIterator()
 while let a = args.next() {
     switch a {
@@ -26,6 +27,7 @@ while let a = args.next() {
     case "--platform": platform = args.next() ?? platform  // demos only: impersonate mac/win/android/ios
     case "--tailnet": tailnetDir = args.next()
     case "--tailnet-control": tailnetControl = args.next()
+    case "--remote-only": lanDial = false  // demos: neither dial nor advertise LAN endpoints (like a phone on LTE)
     default: usage()
     }
 }
@@ -66,10 +68,12 @@ if let tailnetDir {
 }
 let node: NearclipNode
 do {
-    node = try NearclipNode(config: .init(stateDirectory: stateURL, deviceName: name, platform: platform, appVersion: "1.0.0",
-                                          port: port, bonjour: false,
-                                          secretStore: FileSecretStore(directory: stateURL.appendingPathComponent("secrets")),
-                                          tailnet: tailnetOptions))
+    var config = NearclipNode.Config(stateDirectory: stateURL, deviceName: name, platform: platform, appVersion: "1.0.0",
+                                     port: port, bonjour: false,
+                                     secretStore: FileSecretStore(directory: stateURL.appendingPathComponent("secrets")),
+                                     tailnet: tailnetOptions)
+    config.lanDial = lanDial
+    node = try NearclipNode(config: config)
 } catch {
     errlog("init failed: \(error)")
     exit(1)
@@ -77,7 +81,11 @@ do {
 if node.snapshot().deviceName != name { node.rename(name) }
 
 @Sendable func tailnetJSON(_ st: TailnetStatus) -> [String: Any] {
-    ["ev": "tailnet", "state": st.state, "ip": st.ip ?? "", "peers": st.peers.count]
+    var o: [String: Any] = ["ev": "tailnet", "state": st.state, "ip": st.ip ?? "", "peers": st.peers.count]
+    if let a = st.account { o["account"] = a }
+    if let u = st.authURL { o["authURL"] = u }
+    if let e = st.error { o["error"] = e }
+    return o
 }
 nonisolated(unsafe) var lastTailnet = ""
 
@@ -115,7 +123,7 @@ node.onEvent = { ev in
     case .tooLarge(let kind):
         emit(["ev": "error", "msg": "too large: \(kind)"])
     case .tailnetChanged(let st):
-        let key = "\(st.state)|\(st.ip ?? "")|\(st.peers.count)"
+        let key = "\(st.state)|\(st.ip ?? "")|\(st.peers.count)|\(st.authURL ?? "")"
         if key != lastTailnet {
             lastTailnet = key
             emit(tailnetJSON(st))
@@ -184,6 +192,10 @@ func handle(_ cmd: String, _ o: [String: Any]) {
     case "tailnet":
         let st = node.snapshot().tailnet
         out.async { emit(tailnetJSON(st)) }
+    case "tailnet_login":
+        node.tailnetLogin { st in emit(tailnetJSON(st)) }
+    case "tailnet_logout":
+        node.tailnetLogout()
     case "quit":
         quit()
     default:

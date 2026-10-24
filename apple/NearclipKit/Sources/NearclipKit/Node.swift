@@ -15,6 +15,9 @@ public final class NearclipNode: @unchecked Sendable {
         public var secretStore: SecretStore
         /// Embedded Tailscale node (remote connection, PROTOCOL.md §10). nil = not available.
         public var tailnet: TailnetOptions?
+        /// Tests and demos: never dial or advertise LAN endpoints, so sessions must go through the tailnet
+        /// (what a phone on mobile data looks like to the other devices).
+        public var lanDial = true
 
         public init(stateDirectory: URL, deviceName: String, platform: String, model: String? = nil,
                     appVersion: String? = nil, port: UInt16 = 45821, bonjour: Bool = true, secretStore: SecretStore,
@@ -542,7 +545,7 @@ public final class NearclipNode: @unchecked Sendable {
     /// All ways to reach a member: the discovered service, remembered endpoints and its tailnet node.
     private func dialCandidates(for id: String) -> [DialCandidate] {
         var out: [DialCandidate] = []
-        if let d = discovered[id], d.gt == groupTag {
+        if config.lanDial, let d = discovered[id], d.gt == groupTag {
             out.append(DialCandidate(endpoint: d.endpoint, address: nil, proxyRequest: nil, delay: 0, route: .lan))
         }
         var eps = store.state.endpoints[id] ?? []
@@ -562,7 +565,7 @@ public final class NearclipNode: @unchecked Sendable {
         var osTailnet: Bool?
         for e in eps where !e.h.isEmpty && seen.insert(e).inserted {
             guard TailnetAddress.contains(e.h) else {
-                if let c = DialCandidate.direct(e) { out.append(c) }
+                if config.lanDial, let c = DialCandidate.direct(e) { out.append(c) }
                 continue
             }
             if e.h == st.ip { continue }
@@ -601,7 +604,7 @@ public final class NearclipNode: @unchecked Sendable {
 
     private func ownEndpoints() -> [Endpoint] {
         guard port > 0 else { return [] }
-        var eps = LocalAddresses.ipv4().map { Endpoint(h: $0, p: Int(port)) }
+        var eps = config.lanDial ? LocalAddresses.ipv4().map { Endpoint(h: $0, p: Int(port)) } : []
         if tailnetStatus.isRunning, let ip = tailnetStatus.ip { eps.append(Endpoint(h: ip, p: Self.tailnetPort)) }
         return eps
     }

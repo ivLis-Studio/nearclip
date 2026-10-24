@@ -15,6 +15,7 @@ tailnet/build.sh apple android windows desktop testcontrol   # or: all
 
 | Target | Output (gitignored) |
 |---|---|
+| notices | `tailnet/notices/THIRD_PARTY_NOTICES.txt` — license texts of Go and every module linked in (committed; the apps show it) |
 | apple | `apple/NearclipKit/Binaries/NCTailnet.xcframework` — static, macOS arm64+x86_64, iOS arm64, iOS Simulator arm64+x86_64; Swift module `NCTailnet` |
 | android | `android/app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/libnctailnet.so` — JNI, 16 KB pages |
 | windows | `windows/native/win-{x64,arm64}/nctailnet.dll` — C ABI (UCRT only) |
@@ -91,3 +92,4 @@ Connect to `127.0.0.1:<proxyPort>`, send `NCTN1 <token> <tailnet-ip>:<port>\n`, 
 | [tailscale#17311](https://github.com/tailscale/tailscale/issues/17311) | Android apps: `netlinkrib: permission denied`, the node never starts (Tailscale's fallback is compiled out of cgo Android builds) | `bridge/network_android.go` registers an interface getter fed by the app (`NCTailnetSetNetwork`), with a synthetic-interface fallback |
 | [tailscale#20060](https://github.com/tailscale/tailscale/issues/20060) | iOS: after suspension the loopback LocalAPI socket is dead and status calls fail forever | status uses tsnet's in-memory LocalAPI; apps stop the node when networking pauses and start a fresh one when active |
 | [tailscale#20992](https://github.com/tailscale/tailscale/issues/20992) | TailscaleKit has no privacy manifest (ITMS-91053) and no macOS build | no TailscaleKit: own static xcframework incl. macOS; the apps ship `PrivacyInfo.xcprivacy` |
+| (found here) | Android apps: tsnet panics with "no safe place found to store log state" — none of the directories it tries is writable in the app sandbox | the bridge sets `TS_LOGS_DIR` to the node's own directory (also keeps it apart from an installed Tailscale app's state on macOS and Windows) |

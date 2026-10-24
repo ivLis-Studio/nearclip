@@ -22,6 +22,8 @@ internal sealed class AppSettings
     public string Theme { get; set; } = "system";
     /// <summary>"" (Windows setting) | en-US | ko-KR</summary>
     public string Language { get; set; } = "";
+    /// <summary>Remote connection through the embedded Tailscale node (DESIGN.md §4.7).</summary>
+    public bool RemoteEnabled { get; set; }
 
     [JsonIgnore] public string? FilePath { get; private set; }
 

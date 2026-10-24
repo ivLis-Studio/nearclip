@@ -128,5 +128,99 @@ final class NearclipFlowTests: XCTestCase {
         sleep(2)
         shot("22-add-device")
     }
+
+    /// Settings › About › Open-source licenses: the embedded Tailscale node's components and one full license text.
+    /// Needs an already onboarded app.
+    func testOpenSourceLicenses() throws {
+        app.launchArguments = language()
+        app.launch()
+        XCTAssertTrue(app.buttons["home.settings"].waitForExistence(timeout: 10))
+        app.buttons["home.settings"].tap()
+        let link = app.buttons["about.licenses"]
+        XCTAssertTrue(app.buttons["sheet.done"].waitForExistence(timeout: 5), "Settings sheet did not open")
+        for _ in 0..<8 where !(link.exists && link.isHittable) { app.swipeUp() } // the list is lazy
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        link.tap()
+        let any = app.descendants(matching: .any)
+        XCTAssertTrue(any.matching(NSPredicate(format: "label CONTAINS %@", "Tailscale (tsnet)")).firstMatch.waitForExistence(timeout: 5))
+        shot("50-licenses")
+        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "tailscale.com ")).firstMatch
+        for _ in 0..<12 where !(row.exists && row.isHittable) { app.swipeUp() }
+        row.tap()
+        XCTAssertTrue(any.matching(NSPredicate(format: "label CONTAINS %@", "Tailscale Inc")).firstMatch.waitForExistence(timeout: 5))
+        shot("51-license-text")
+    }
+
+    /// Remote connection (PROTOCOL.md §10) against a test control server: pair through NC_PAIR_LINK, turn on
+    /// "Sync across networks", wait until the peer is reached through the tailnet (apple/tools/ios_remote.py makes
+    /// the peer LAN-unreachable), then expect NC_EXPECT to arrive. Pass NC_TAILNET_CONTROL to the app.
+    func testRemoteConnection() throws {
+        let env = ProcessInfo.processInfo.environment
+        let link = try XCTUnwrap(env["NC_PAIR_LINK"], "set TEST_RUNNER_NC_PAIR_LINK")
+        addUIInterruptionMonitor(withDescription: "system alerts") { alert in
+            for label in ["Allow", "허용", "OK", "확인", "Open", "열기"] where alert.buttons[label].exists {
+                alert.buttons[label].tap()
+                return true
+            }
+            return false
+        }
+        app.launchArguments = language()
+        app.launchEnvironment["NC_TAILNET_CONTROL"] = env["NC_TAILNET_CONTROL"]
+        app.launch()
+        let next = app.buttons["onboarding.next"]
+        if next.waitForExistence(timeout: 6) {
+            next.tap()
+            if next.waitForExistence(timeout: 3) { next.tap() }
+            app.tap()
+            tapIfExists(app.buttons["onboarding.later"], timeout: 5)
+        }
+        XCTAssertTrue(app.buttons["home.settings"].waitForExistence(timeout: 10))
+        app.open(URL(string: link)!)
+        XCTAssertTrue(app.staticTexts["join.success"].waitForExistence(timeout: 30))
+        app.buttons["join.done"].tap()
+        tapIfExists(app.buttons["sheet.done"])
+
+        app.buttons["home.settings"].tap()
+        let toggle = app.switches["remote.toggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        if (toggle.value as? String) != "1" {
+            let knob = toggle.switches.firstMatch
+            if knob.exists { knob.tap() } else { toggle.tap() }
+        }
+        let running = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "On ·", "켜짐 ·")).firstMatch
+        XCTAssertTrue(running.waitForExistence(timeout: 60), "remote connection did not come up")
+        sleep(1)
+        shot("40-remote-on")
+        app.buttons["sheet.done"].tap()
+
+        app.buttons["home.devices"].tap()
+        XCTAssertTrue(app.collectionViews["devices.list"].waitForExistence(timeout: 5))
+        let remote = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "Connected · Remote", "연결됨 · 원격")).firstMatch
+        XCTAssertTrue(remote.waitForExistence(timeout: 120), "peer never connected through the tailnet")
+        sleep(1)
+        shot("41-devices-remote")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        for expected in (env["NC_EXPECT"] ?? "").split(separator: ",").map(String.init) where !expected.isEmpty {
+            let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", expected)).firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 60), "missing clip: \(expected)")
+        }
+        sleep(1)
+        shot("42-home-remote-clip")
+
+        // iOS: networking pauses 8 s after Nearclip goes to the background, which stops the embedded node; a fresh one
+        // starts when the app is active again (tailscale/tailscale#20060). The remote session must come back.
+        XCUIDevice.shared.press(.home)
+        sleep(14)
+        app.activate()
+        XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        app.buttons["home.devices"].tap()
+        let again = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "Connected · Remote", "연결됨 · 원격")).firstMatch
+        XCTAssertTrue(again.waitForExistence(timeout: 60), "remote session did not come back after the background pause")
+        sleep(1)
+        shot("43-devices-remote-after-background")
+    }
 }
 

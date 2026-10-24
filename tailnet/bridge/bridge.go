@@ -30,6 +30,7 @@ import (
 	"net"
 	"net/netip"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -130,8 +131,11 @@ type bridge struct {
 
 var (
 	lifecycle sync.Mutex // serializes Start and Stop
-	mu        sync.Mutex // guards cur
+	mu        sync.Mutex // guards cur and startErr
 	cur       *bridge
+	// startErr is why the last Start failed; reported by CurrentStatus until the next Start or Stop,
+	// so status polling does not hide the error behind "off".
+	startErr error
 )
 
 func current() *bridge {
@@ -176,11 +180,15 @@ func Start(cfg Config) Status {
 	}
 	b, err := start(cfg)
 	if err != nil {
+		mu.Lock()
+		startErr = err
+		mu.Unlock()
 		return errStatus(err)
 	}
 	b.cfgKey = string(key)
 	mu.Lock()
 	cur = b
+	startErr = nil
 	mu.Unlock()
 	return b.status(3 * time.Second)
 }
@@ -192,6 +200,7 @@ func Stop() Status {
 	mu.Lock()
 	b := cur
 	cur = nil
+	startErr = nil
 	mu.Unlock()
 	if b != nil {
 		b.close()
@@ -201,8 +210,13 @@ func Stop() Status {
 
 // CurrentStatus reports the node's state, its tailnet address and the other Nearclip nodes.
 func CurrentStatus() Status {
-	b := current()
+	mu.Lock()
+	b, err := cur, startErr
+	mu.Unlock()
 	if b == nil {
+		if err != nil {
+			return errStatus(err)
+		}
 		return offStatus()
 	}
 	return b.status(3 * time.Second)
@@ -267,7 +281,14 @@ func NetworkChanged() {
 	}
 }
 
-func start(cfg Config) (*bridge, error) {
+func start(cfg Config) (b *bridge, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			buf := make([]byte, 64<<10)
+			n := runtime.Stack(buf, false)
+			b, err = nil, fmt.Errorf("panic: %v\n%s", r, buf[:n])
+		}
+	}()
 	if cfg.Dir == "" || cfg.Forward == "" {
 		return nil, errors.New("dir and forward are required")
 	}
@@ -279,6 +300,11 @@ func start(cfg Config) (*bridge, error) {
 	}
 	// Diagnostic logs stay on the device: nothing is uploaded to log.tailscale.com.
 	envknob.Setenv("TS_NO_LOGS_NO_SUPPORT", "true")
+	// Keep Tailscale's own log state in our directory. Inside the Android app sandbox none of the places
+	// logpolicy.LogsDir tries is writable and tsnet panics with "no safe place found to store log state"
+	// (the Android tsnet start failure); on macOS and Windows it would otherwise share the directory of an
+	// installed Tailscale app.
+	envknob.Setenv("TS_LOGS_DIR", cfg.Dir)
 	if cfg.TestMode {
 		netns.SetEnabled(false)
 	}
@@ -301,6 +327,18 @@ func start(cfg Config) (*bridge, error) {
 		closeLog()
 		return nil, err
 	}
+	// A start that hangs is a bug we want to see in the (local) log: dump the goroutines after 15 s.
+	started := make(chan struct{})
+	defer close(started)
+	go func() {
+		select {
+		case <-started:
+		case <-time.After(15 * time.Second):
+			buf := make([]byte, 1<<20)
+			n := runtime.Stack(buf, true)
+			logf("nearclip bridge: tsnet start is taking long; goroutines:\n%s", buf[:n])
+		}
+	}()
 	if err := srv.Start(); err != nil {
 		return fail(err)
 	}
@@ -335,7 +373,7 @@ func start(cfg Config) (*bridge, error) {
 		return fail(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	b := &bridge{
+	b = &bridge{
 		cfg:       cfg,
 		srv:       srv,
 		lc:        lc,

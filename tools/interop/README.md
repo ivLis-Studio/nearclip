@@ -8,10 +8,17 @@ every ordered pair of implementations:
 * **pair-code** — numeric comparison: one decline, then accept; catch-up of an earlier clip; rename gossip.
 * **mesh forward** — A ⇄ B ⇄ C where A and C never connect directly: clips and deletes must be
   forwarded by B (every permutation of three implementations).
+* **readd** — A removes C and adds it again while B is offline; when C later meets B, which still holds C's old
+  tombstone, C must stay in the group (PROTOCOL §4.3).
+* **remote** — X and Y pair on the LAN with remote connection off, then restart with it on and new ports. They must
+  find each other through the tailnet (a throwaway control server, `tailnet/out/nctestcontrol`), report the session
+  route as `remote` and carry clips both ways. Needs `tailnet/build.sh desktop testcontrol`: the Swift CLI links the
+  bridge statically, the Kotlin and C# CLIs load `tailnet/out/desktop/libnctailnet.dylib`.
 
 ```sh
 python3 tools/interop/run.py                 # auto-detects built CLIs
 python3 tools/interop/run.py --only swift,kotlin
+python3 tools/interop/run.py --scenarios remote
 python3 tools/interop/run.py --impl dotnet="dotnet /path/Nearclip.Cli.dll"
 ```
 

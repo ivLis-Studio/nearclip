@@ -221,6 +221,16 @@
         }
       }
     },
+    "Approve this device in the Tailscale admin console.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale 관리 콘솔에서 이 기기를 승인하세요."
+          }
+        }
+      }
+    },
     "Asked when needed": {
       "localizations": {
         "ko": {
@@ -431,6 +441,26 @@
         }
       }
     },
+    "Connected · Remote": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결됨 · 원격"
+          }
+        }
+      }
+    },
+    "Connected · Same network": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결됨 · 같은 네트워크"
+          }
+        }
+      }
+    },
     "Connecting to ‘%@’…": {
       "localizations": {
         "ko": {
@@ -591,12 +621,22 @@
         }
       }
     },
-    "Couldn't reach the device. Make sure both devices are on the same Wi-Fi.": {
+    "Couldn't reach the device. Make sure both devices are on the same Wi-Fi, or turn on Remote connection on both.": {
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "기기에 연결할 수 없습니다. 두 기기가 같은 Wi-Fi에 있는지 확인하세요."
+            "value": "기기에 연결할 수 없습니다. 두 기기가 같은 Wi-Fi에 있는지 확인하거나, 두 기기 모두 원격 연결을 켜세요."
+          }
+        }
+      }
+    },
+    "Couldn't start remote connection. %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원격 연결을 시작할 수 없습니다. %@"
           }
         }
       }
@@ -647,6 +687,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "기기"
+          }
+        }
+      }
+    },
+    "Direct device-to-device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 간 직접 연결"
           }
         }
       }
@@ -727,6 +777,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "일반"
+          }
+        }
+      }
+    },
+    "General…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일반…"
           }
         }
       }
@@ -897,6 +957,16 @@
         }
       }
     },
+    "Keeps your devices connected on different networks — home, office or mobile data. Uses a free Tailscale account; clips stay end-to-end encrypted.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "집, 회사, 모바일 데이터처럼 서로 다른 네트워크에서도 기기끼리 연결됩니다. 무료 Tailscale 계정을 사용하며, 클립은 계속 종단 간 암호화됩니다."
+          }
+        }
+      }
+    },
     "Last seen %@": {
       "localizations": {
         "ko": {
@@ -963,6 +1033,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 Wi-Fi에서 내 기기를 찾을 수 있게 합니다. macOS가 한 번 물어보면 ‘허용’을 선택하세요."
+          }
+        }
+      }
+    },
+    "License texts": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이선스 전문"
           }
         }
       }
@@ -1347,6 +1427,36 @@
         }
       }
     },
+    "On": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "켜짐"
+          }
+        }
+      }
+    },
+    "On another network? Turn on Remote connection.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 네트워크에 있나요? 원격 연결을 켜 보세요."
+          }
+        }
+      }
+    },
+    "On · %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "켜짐 · %@"
+          }
+        }
+      }
+    },
     "Only your paired devices can read what you copy.": {
       "localizations": {
         "ko": {
@@ -1423,6 +1533,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "로그인 시 열기"
+          }
+        }
+      }
+    },
+    "Open-source licenses": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오픈소스 라이선스"
+          }
+        }
+      }
+    },
+    "Open-source licenses…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오픈소스 라이선스…"
           }
         }
       }
@@ -1623,6 +1753,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "연결 대기 중"
+          }
+        }
+      }
+    },
+    "Remote connection": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원격 연결"
+          }
+        }
+      }
+    },
+    "Remote connection (Tailscale)": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원격 연결 (Tailscale)"
+          }
+        }
+      }
+    },
+    "Remote connection runs an embedded Tailscale node, which includes this open-source software.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원격 연결은 내장된 Tailscale 노드로 동작하며, 다음 오픈소스 소프트웨어를 포함합니다."
           }
         }
       }
@@ -1847,6 +2007,46 @@
         }
       }
     },
+    "Sign in to Tailscale to finish turning this on.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale에 로그인하면 켜집니다."
+          }
+        }
+      }
+    },
+    "Sign in with Tailscale": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale로 로그인"
+          }
+        }
+      }
+    },
+    "Sign in with the same account on your other devices.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기에서도 같은 계정으로 로그인하세요."
+          }
+        }
+      }
+    },
+    "Sign out of Tailscale": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tailscale에서 로그아웃"
+          }
+        }
+      }
+    },
     "Skip passwords and private items": {
       "localizations": {
         "ko": {
@@ -1857,12 +2057,32 @@
         }
       }
     },
+    "Starting…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "준비 중…"
+          }
+        }
+      }
+    },
     "Sync": {
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "동기화"
+          }
+        }
+      }
+    },
+    "Sync across networks": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 네트워크에서도 동기화"
           }
         }
       }
@@ -2097,6 +2317,16 @@
         }
       }
     },
+    "This device: %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기: %@"
+          }
+        }
+      }
+    },
     "This iPad": {
       "localizations": {
         "ko": {
@@ -2143,6 +2373,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "다른 검색어나 필터를 사용해 보세요."
+          }
+        }
+      }
+    },
+    "Try again": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 시도"
           }
         }
       }
@@ -2213,6 +2453,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "확인을 기다리는 중…"
+          }
+        }
+      }
+    },
+    "Waiting for sign-in…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인 기다리는 중…"
           }
         }
       }

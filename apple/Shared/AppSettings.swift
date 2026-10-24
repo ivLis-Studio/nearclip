@@ -19,6 +19,8 @@ final class AppSettings {
     var hotKeyCode: Int { didSet { defaults.set(hotKeyCode, forKey: "hotKeyCode") } }
     var hotKeyModifiers: Int { didSet { defaults.set(hotKeyModifiers, forKey: "hotKeyModifiers") } }
     var ignoredApps: [String] { didSet { defaults.set(ignoredApps, forKey: "ignoredApps") } }
+    /// Remote connection (embedded Tailscale, DESIGN.md §4.7).
+    var remoteEnabled: Bool { didSet { defaults.set(remoteEnabled, forKey: "remoteEnabled") } }
 
     static let defaultIgnoredApps = [
         "com.1password.1password", "com.agilebits.onepassword7", "com.bitwarden.desktop",
@@ -38,7 +40,7 @@ final class AppSettings {
             "autoApply": true, "syncImages": true, "showToasts": true, "pasteAfterChoosing": false,
             "retentionDays": 30, "paused": false, "onboardingDone": false, "sendOnOpen": sendOnOpenDefault,
             "copyLatestOnOpen": true, "hotKeyCode": 9, "hotKeyModifiers": 4352, // ⌃⌘V (controlKey | cmdKey)
-            "ignoredApps": Self.defaultIgnoredApps,
+            "ignoredApps": Self.defaultIgnoredApps, "remoteEnabled": false,
         ])
         autoApply = defaults.bool(forKey: "autoApply")
         syncImages = defaults.bool(forKey: "syncImages")
@@ -52,6 +54,7 @@ final class AppSettings {
         hotKeyCode = defaults.integer(forKey: "hotKeyCode")
         hotKeyModifiers = defaults.integer(forKey: "hotKeyModifiers")
         ignoredApps = defaults.stringArray(forKey: "ignoredApps") ?? Self.defaultIgnoredApps
+        remoteEnabled = defaults.bool(forKey: "remoteEnabled")
     }
 }
 

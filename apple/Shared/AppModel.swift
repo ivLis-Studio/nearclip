@@ -56,6 +56,16 @@ final class AppModel {
     private(set) var nearby: [NearbyDevice] = []
     private(set) var port: UInt16 = 0
     private(set) var addresses: [String] = []
+    /// Route of every connected device (same network / remote).
+    private(set) var routes: [String: PeerRoute] = [:]
+    /// The embedded Tailscale node (remote connection).
+    private(set) var tailnet: TailnetStatus = .off
+    /// Waiting for the Tailscale sign-in page (button pressed, page opened).
+    private(set) var tailnetSigningIn = false
+    /// iOS shows this sign-in page in an in-app Safari sheet; cleared once the node runs.
+    var tailnetLoginURL: URL?
+    /// macOS opens sign-in pages in the default browser.
+    @ObservationIgnored var onOpenTailnetLogin: ((URL) -> Void)?
     private(set) var ticket: PairingTicket?
     var pairPrompt: PairPrompt?
     var joinState: JoinState = .idle
@@ -89,6 +99,7 @@ final class AppModel {
     func start() {
         node.setRetention(days: settings.retentionDays)
         node.setPaused(settings.paused)
+        node.setRemoteEnabled(settings.remoteEnabled)
         node.start()
     }
 
@@ -103,6 +114,8 @@ final class AppModel {
         nearby = snap.nearby
         port = snap.port
         addresses = snap.addresses
+        routes = snap.routes
+        tailnet = snap.tailnet
     }
 
     // MARK: - Derived
@@ -112,6 +125,22 @@ final class AppModel {
     var connectedMembers: [MemberRecord] { otherMembers.filter { online.contains($0.id) } }
     var connectedCount: Int { connectedMembers.count }
     func isOnline(_ id: String) -> Bool { online.contains(id) }
+    func route(_ id: String) -> PeerRoute? { online.contains(id) ? routes[id] : nil }
+
+    /// "Connected · Same network" / "Connected · Remote" (DESIGN.md §4.7).
+    func connectionText(_ id: String) -> String {
+        guard isOnline(id) else { return Format.lastSeen(lastSeen[id]) }
+        switch route(id) {
+        case .remote: return String(localized: "Connected · Remote")
+        case .lan: return String(localized: "Connected · Same network")
+        case nil: return String(localized: "Connected")
+        }
+    }
+
+    /// Remote connection is off and a device is out of reach: suggest turning it on.
+    var suggestsRemote: Bool {
+        node.isTailnetAvailable && !settings.remoteEnabled && otherMembers.contains { !online.contains($0.id) }
+    }
 
     var thisDeviceLabel: String {
         switch platform {
@@ -263,12 +292,62 @@ final class AppModel {
     func setPaused(_ paused: Bool) {
         settings.paused = paused
         node.setPaused(paused)
-        if paused { online = [] }
+        if paused { online = []; routes = [:] }
     }
 
     func setRetention(_ days: Int) {
         settings.retentionDays = days
         node.setRetention(days: days)
+    }
+
+    // MARK: - Remote connection (embedded Tailscale)
+
+    var remoteAvailable: Bool { node.isTailnetAvailable }
+
+    func setRemoteEnabled(_ on: Bool) {
+        settings.remoteEnabled = on
+        node.setRemoteEnabled(on)
+        if !on {
+            tailnet = .off
+            tailnetSigningIn = false
+            tailnetLoginURL = nil
+        }
+    }
+
+    /// Opens Tailscale's sign-in page (asks the node for one first when needed).
+    func signInToTailscale() {
+        if let s = tailnet.authURL, let url = URL(string: s) {
+            openTailnetLogin(url)
+            return
+        }
+        tailnetSigningIn = true
+        node.tailnetLogin { [weak self] st in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.tailnet = st
+                if let s = st.authURL, let url = URL(string: s) {
+                    self.openTailnetLogin(url)
+                } else {
+                    self.tailnetSigningIn = false
+                }
+            }
+        }
+    }
+
+    private func openTailnetLogin(_ url: URL) {
+        tailnetSigningIn = true
+        if let open = onOpenTailnetLogin { open(url) } else { tailnetLoginURL = url }
+    }
+
+    func signOutOfTailscale() {
+        tailnetSigningIn = false
+        node.tailnetLogout()
+    }
+
+    /// Restarts the node after an error.
+    func retryRemote() {
+        node.setRemoteEnabled(false)
+        node.setRemoteEnabled(true)
     }
 
     // MARK: - Pairing
@@ -327,7 +406,8 @@ final class AppModel {
         switch reason {
         case "declined": return String(localized: "The other device declined.")
         case "no_ticket": return String(localized: "That code expired. Show a new one on the other device.")
-        case "unreachable", "io": return String(localized: "Couldn't reach the device. Make sure both devices are on the same Wi-Fi.")
+        case "unreachable", "io":
+            return String(localized: "Couldn't reach the device. Make sure both devices are on the same Wi-Fi, or turn on Remote connection on both.")
         case "timeout": return String(localized: "The other device didn't answer in time.")
         case "busy": return String(localized: "The other device is pairing with someone else. Try again in a moment.")
         case "self": return String(localized: "That's this device.")
@@ -390,11 +470,13 @@ final class AppModel {
             refresh()
         case .pairFailed(let reason):
             joinState = .failed(reason)
-        case .peerUp(let rec):
+        case .peerUp(let rec, let route):
             online.insert(rec.id)
+            routes[rec.id] = route
             if let i = members.firstIndex(where: { $0.id == rec.id }) { members[i] = rec } else { members.append(rec) }
         case .peerDown(let id):
             online.remove(id)
+            routes[id] = nil
             lastSeen[id] = nowMs()
         case .clipAdded(let sc, _, let apply, let local):
             insert(sc)
@@ -422,11 +504,18 @@ final class AppModel {
         case .left(let reason):
             refresh()
             online = []
+            routes = [:]
             if reason == "removed" {
                 show(String(localized: "This device was removed from your devices."), symbol: "person.crop.circle.badge.xmark", tone: .warning)
             }
         case .tooLarge:
             show(String(localized: "Too large to sync"), symbol: "exclamationmark.triangle.fill", tone: .warning)
+        case .tailnetChanged(let st):
+            tailnet = st
+            if st.isRunning || st.state == "off" {
+                tailnetSigningIn = false
+                tailnetLoginURL = nil
+            }
         case .log(let s):
             #if DEBUG
             print("[nearclip]", s)

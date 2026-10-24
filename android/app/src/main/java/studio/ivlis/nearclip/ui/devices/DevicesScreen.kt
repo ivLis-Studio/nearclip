@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import studio.ivlis.nearclip.R
 import studio.ivlis.nearclip.core.engine.EngineSnapshot
 import studio.ivlis.nearclip.core.model.MemberRecord
+import studio.ivlis.nearclip.core.tailnet.PeerRoute
 import studio.ivlis.nearclip.runtime.DeviceInfo
 import studio.ivlis.nearclip.ui.Format
 import studio.ivlis.nearclip.ui.components.DeviceAvatar
@@ -72,6 +73,8 @@ fun DevicesScreen(
     onRename: (String) -> Unit,
     onRemove: (MemberRecord) -> Unit,
     onLeave: () -> Unit,
+    suggestRemote: Boolean = false,
+    onOpenSettings: () -> Unit = {},
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var renaming by rememberSaveable { mutableStateOf(false) }
@@ -98,7 +101,18 @@ fun DevicesScreen(
                 item("others-header") { SectionHeader(stringResource(R.string.other_devices)) }
                 item("others") {
                     SettingsGroup {
-                        for (m in others) DeviceRow(m, m.id in snapshot.online, snapshot.lastSeen[m.id], now, onRemove = { removeId = m.id })
+                        for (m in others) {
+                            DeviceRow(m, m.id in snapshot.online, snapshot.routes[m.id], snapshot.lastSeen[m.id], now, onRemove = { removeId = m.id })
+                        }
+                    }
+                }
+                if (suggestRemote && others.any { it.id !in snapshot.online }) {
+                    item("suggest-remote") {
+                        TextButton(onClick = onOpenSettings, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                            Sym(R.drawable.ic_public, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.remote_suggest))
+                        }
                     }
                 }
             } else {
@@ -216,10 +230,15 @@ private fun ThisDeviceCard(name: String, onRename: () -> Unit) {
 }
 
 @Composable
-private fun DeviceRow(m: MemberRecord, online: Boolean, lastSeen: Long?, now: Long, onRemove: () -> Unit) {
+private fun DeviceRow(m: MemberRecord, online: Boolean, route: PeerRoute?, lastSeen: Long?, now: Long, onRemove: () -> Unit) {
     val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
-    val status = if (online) stringResource(R.string.connected) else Format.lastSeen(context, lastSeen, now)
+    val status = when {
+        !online -> Format.lastSeen(context, lastSeen, now)
+        route == PeerRoute.REMOTE -> stringResource(R.string.connected_remote)
+        route == PeerRoute.LAN -> stringResource(R.string.connected_same_network)
+        else -> stringResource(R.string.connected)
+    }
     val model = m.model?.takeIf { it.isNotBlank() } ?: Format.platformName(context, m.platform)
     SettingsRow(
         title = m.name,
@@ -255,6 +274,10 @@ private fun DeviceRow(m: MemberRecord, online: Boolean, lastSeen: Long?, now: Lo
                     color = if (online) Brand.OnlineText else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
+                if (online && route == PeerRoute.REMOTE) {
+                    Spacer(Modifier.width(4.dp))
+                    Sym(R.drawable.ic_public, null, Modifier.size(14.dp), tint = Brand.OnlineText)
+                }
             }
         },
     )

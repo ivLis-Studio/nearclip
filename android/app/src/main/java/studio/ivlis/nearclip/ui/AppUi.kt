@@ -192,9 +192,12 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                 onRename = { runtime.engine.rename(it) },
                 onRemove = { runtime.engine.removeMember(it.id) },
                 onLeave = { runtime.engine.leaveGroup() },
+                suggestRemote = runtime.remoteAvailable && !settings.remoteEnabled,
+                onOpenSettings = { nav.navigate(Routes.SETTINGS) { launchSingleTop = true } },
             )
         }
         composable(Routes.SETTINGS) {
+            val signingIn by runtime.tailnetSigningIn.collectAsStateWithLifecycle()
             SettingsScreen(
                 settings = settings,
                 actions = SettingsActions(
@@ -203,8 +206,15 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                     setStayConnected = { runtime.setStayConnected(it) },
                     clearHistory = { runtime.engine.clearHistory() },
                     openLicenses = { nav.navigate(Routes.LICENSES) { launchSingleTop = true } },
+                    setRemoteEnabled = { runtime.setRemoteEnabled(it) },
+                    signIn = { runtime.signInToTailscale { url -> Actions.openSignIn(context, url) } },
+                    signOut = { runtime.signOutOfTailscale() },
+                    retryRemote = { runtime.retryRemote() },
                 ),
                 onBack = { nav.popBackStack() },
+                tailnet = snapshot.tailnet,
+                remoteAvailable = runtime.remoteAvailable,
+                signingIn = signingIn,
             )
         }
         composable(Routes.LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }

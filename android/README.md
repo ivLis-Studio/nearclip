@@ -1,7 +1,8 @@
 # Nearclip for Android
 
-The Android app, the shared Kotlin protocol engine and the interop CLI for Nearclip, the LAN-only universal
-clipboard (docs/PROTOCOL.md, docs/DESIGN.md). Native Kotlin + Jetpack Compose / Material 3; no server, no account.
+The Android app, the shared Kotlin protocol engine and the interop CLI for Nearclip, the universal clipboard that syncs
+over the local network and, with Remote connection on, through an embedded Tailscale node (docs/PROTOCOL.md,
+docs/DESIGN.md). Native Kotlin + Jetpack Compose / Material 3; no Nearclip server, no Nearclip account.
 
 | Module | What it is |
 |---|---|
@@ -13,10 +14,14 @@ clipboard (docs/PROTOCOL.md, docs/DESIGN.md). Native Kotlin + Jetpack Compose / 
 
 Use the JDK 21 bundled with Android Studio (Homebrew's newer JDKs are too new for Gradle 9.7):
 
+The embedded Tailscale node is a Go library built outside Gradle: run `tailnet/build.sh android` once (Go and the
+Android NDK; see ../tailnet/README.md). It writes `app/src/main/jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/libnctailnet.so`
+(gitignored); `preBuild` stops with a message when it is missing.
+
 ```sh
 cd android
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew :core:test                 # 22 tests: every spec/test-vectors.json value + loopback scenarios
+./gradlew :core:test                 # 24 tests: every spec/test-vectors.json value, loopback scenarios, tailnet dialing
 ./gradlew :cli:installDist           # → android/cli/build/install/cli/bin/cli
 ./gradlew :app:assembleDebug         # → android/app/build/outputs/apk/debug/app-debug.apk
 ./gradlew :app:assembleRelease       # R8-minified, unsigned → app/build/outputs/apk/release/
@@ -36,8 +41,8 @@ One JSON event per line on stdout, one JSON command per line on stdin, logs on s
 `tools/interop/run.py` finds this path automatically:
 
 ```sh
-python3 tools/interop/run.py --only swift,kotlin   # 9/9
-python3 tools/interop/run.py                       # swift × kotlin × dotnet: 24/24
+python3 tools/interop/run.py --only swift,kotlin
+python3 tools/interop/run.py                       # swift × kotlin × dotnet: 39/39 (incl. remote)
 ```
 
 ### Tests on a device
@@ -69,6 +74,21 @@ The emulator sits behind NAT (its own address is 10.0.2.15; the Mac is 10.0.2.2)
 DNS-SD browsing works on the emulator (real Macs and iPhones on the LAN show up under Nearby); devices on the
 LAN cannot reach the emulator's advertised 10.0.2.15, which is an emulator limitation, not an app one.
 
+## Remote connection (embedded Tailscale)
+
+Settings › Remote connection › *Sync across networks* starts the node (`runtime/Nearclip.kt`, `core/tailnet/`); *Sign in
+with Tailscale* opens the login page in a Custom Tab. The node runs only while the engine runs (pause stops it), and
+peers found in the tailnet are dialed 400 ms after the LAN candidates, so Wi-Fi wins when both work.
+`runtime/NetInfo.kt` feeds the device's interfaces and default network to the node — Tailscale's own interface lookup
+is not allowed for apps (tailscale#17311) — and reports network changes so peers are redialed at once.
+
+* Debug builds only: `files/tailnet-control.txt` (a test control server URL) and `files/tailnet.log`.
+* `python3 tools/acceptance/android_remote.py`: the whole flow on emulator-5584 against a throwaway control server
+  (Settings shows *On*, Devices shows the Mac as *Connected · Remote*, a clip arrives).
+* `python3 tools/acceptance/real_remote.py`: the same against the real Tailscale service; a person approves two sign-ins.
+* The native library is about 21 MB per ABI. It is stored compressed in the APK (`useLegacyPackaging`), and the
+  installer extracts only the device's ABI.
+
 ## Architecture
 
 ```
@@ -80,10 +100,12 @@ core  ─ crypto/      Crypto.kt (P-256 ECDH, X9.63, HKDF-SHA256, AES-256-GCM, S
       ─ store/       Store abstraction, FileStore (atomic writes), KeyProtector (group-key wrapping hook)
       ─ engine/      NearclipEngine (single engine thread owns all state), MemberSession (reader/writer threads,
                      streamed blob assembly with incremental SHA-256), Conn, Messages, Persistence, Events
+      ─ tailnet/     TailnetNative (JNI to libnctailnet), Tailnet (options/status JSON, the bridge's dial proxy)
 cli   ─ Main.kt      §9 adapter around NearclipEngine + FileStore
 app   ─ runtime/     Nearclip (process-wide runtime), SettingsStore, KeystoreKeyProtector (AES-GCM key in the
                      Android Keystore wraps the group key), ClipboardBridge, Discovery (NsdManager +
-                     MulticastLock), ImageTools, Notifications, DeviceInfo
+                     MulticastLock), NetInfo (interfaces + default network for the tailnet node), ImageTools,
+                     Notifications, DeviceInfo
       ─ service/     SyncService (FGS type connectedDevice), SendClipboardTileService, receivers (notification
                      actions, boot)
       ─ ui/          MainActivity + NavHost (onboarding, history, devices, settings, licenses, scan, my QR),

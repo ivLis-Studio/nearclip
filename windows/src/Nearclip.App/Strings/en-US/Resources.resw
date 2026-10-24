@@ -36,7 +36,7 @@
   <data name="TooLarge" xml:space="preserve"><value>Too large to sync</value></data>
   <data name="Fail_Declined" xml:space="preserve"><value>The other device declined.</value></data>
   <data name="Fail_Expired" xml:space="preserve"><value>That code expired. Show a new one on the other device.</value></data>
-  <data name="Fail_Unreachable" xml:space="preserve"><value>Couldn't reach the device. Make sure both devices are on the same Wi-Fi.</value></data>
+  <data name="Fail_Unreachable" xml:space="preserve"><value>Couldn't reach the device. Make sure both devices are on the same Wi-Fi, or turn on Remote connection on both.</value></data>
   <data name="Fail_Timeout" xml:space="preserve"><value>The other device didn't answer in time.</value></data>
   <data name="Fail_Busy" xml:space="preserve"><value>The other device is pairing with someone else. Try again in a moment.</value></data>
   <data name="Fail_Self" xml:space="preserve"><value>That's this device.</value></data>
@@ -205,7 +205,7 @@ Paste there.</value></data>
   <data name="Priv_Ignore" xml:space="preserve"><value>Ignore copies from these apps</value></data>
   <data name="Priv_AddApp" xml:space="preserve"><value>Add app…</value></data>
   <data name="Priv_Encryption" xml:space="preserve"><value>Encryption</value></data>
-  <data name="Priv_EncryptionBody" xml:space="preserve"><value>Your devices talk to each other directly on your local network. Everything is end-to-end encrypted with keys that only your devices hold — there is no server and no account.</value></data>
+  <data name="Priv_EncryptionBody" xml:space="preserve"><value>Your devices talk to each other directly — on your local network, or through Tailscale when Remote connection is on. Everything is end-to-end encrypted with keys that only your devices hold; Nearclip runs no server.</value></data>
   <data name="Hist_1Day" xml:space="preserve"><value>1 day</value></data>
   <data name="Hist_7Days" xml:space="preserve"><value>7 days</value></data>
   <data name="Hist_30Days" xml:space="preserve"><value>30 days</value></data>
@@ -222,4 +222,24 @@ Paste there.</value></data>
   <data name="Hist_ClearBody" xml:space="preserve"><value>Deletes every clip on all of your devices.</value></data>
   <data name="About_Version" xml:space="preserve"><value>Version {0}</value></data>
   <data name="About_OpenSource" xml:space="preserve"><value>Open-source software</value></data>
+  <data name="About_LicenseTexts" xml:space="preserve"><value>View license texts</value></data>
+  <data name="Remote_Section" xml:space="preserve"><value>Remote connection</value></data>
+  <data name="Remote_Toggle" xml:space="preserve"><value>Sync across networks</value></data>
+  <data name="Remote_Body" xml:space="preserve"><value>Keeps your devices connected on different networks — home, office or mobile data. Uses a free Tailscale account; clips stay end-to-end encrypted.</value></data>
+  <data name="Remote_Starting" xml:space="preserve"><value>Starting…</value></data>
+  <data name="Remote_NeedsLogin" xml:space="preserve"><value>Sign in to Tailscale to finish turning this on.</value></data>
+  <data name="Remote_Waiting" xml:space="preserve"><value>Waiting for sign-in…</value></data>
+  <data name="Remote_SignIn" xml:space="preserve"><value>Sign in with Tailscale</value></data>
+  <data name="Remote_NeedsApproval" xml:space="preserve"><value>Approve this device in the Tailscale admin console.</value></data>
+  <data name="Remote_On" xml:space="preserve"><value>On</value></data>
+  <data name="Remote_OnAccount" xml:space="preserve"><value>On · {0}</value></data>
+  <data name="Remote_ThisDevice" xml:space="preserve"><value>This device: {0}</value></data>
+  <data name="Remote_Hint" xml:space="preserve"><value>Sign in with the same account on your other devices.</value></data>
+  <data name="Remote_Error" xml:space="preserve"><value>Couldn't start remote connection. {0}</value></data>
+  <data name="Remote_Retry" xml:space="preserve"><value>Try again</value></data>
+  <data name="Remote_SignOut" xml:space="preserve"><value>Sign out of Tailscale</value></data>
+  <data name="Remote_Suggest" xml:space="preserve"><value>On another network? Turn on Remote connection.</value></data>
+  <data name="Connected_SameNetwork" xml:space="preserve"><value>Connected · Same network</value></data>
+  <data name="Connected_Remote" xml:space="preserve"><value>Connected · Remote</value></data>
+  <data name="About_Direct" xml:space="preserve"><value>Direct device-to-device</value></data>
 </root>

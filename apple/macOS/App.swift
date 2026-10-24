@@ -31,11 +31,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("Nearclip", isDirectory: true)
         let port = env["NC_PORT"].flatMap(UInt16.init) ?? 45821
+        // Remote connection: embedded Tailscale node. NC_TAILNET_CONTROL points it at a test control server.
+        let tailnetDir = dir.appendingPathComponent("tailnet", isDirectory: true)
+        let tailnet = TailnetOptions(directory: tailnetDir, controlURL: env["NC_TAILNET_CONTROL"],
+                                     logPath: env["NC_TAILNET_LOG"], testMode: env["NC_TAILNET_CONTROL"] != nil)
         let node: NearclipNode
         do {
             node = try NearclipNode(config: .init(stateDirectory: dir, deviceName: MacSystem.computerName, platform: "mac",
                                                   model: MacSystem.model, appVersion: MacSystem.appVersion, port: port,
-                                                  bonjour: true, secretStore: MacSystem.secretStore(dir)))
+                                                  bonjour: true, secretStore: MacSystem.secretStore(dir), tailnet: tailnet))
         } catch {
             let alert = NSAlert()
             alert.messageText = String(localized: "Nearclip couldn't start")
@@ -45,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         model = AppModel(node: node, settings: settings)
+        model.onOpenTailnetLogin = { NSWorkspace.shared.open($0) }
         monitor = PasteboardMonitor(settings: settings)
         model.clipboard = monitor
         monitor.onCopy = { [weak self] content in

@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -41,12 +43,14 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import studio.ivlis.nearclip.BuildConfig
 import studio.ivlis.nearclip.R
+import studio.ivlis.nearclip.core.tailnet.TailnetStatus
 import studio.ivlis.nearclip.runtime.AppSettings
 import studio.ivlis.nearclip.ui.Actions
 import studio.ivlis.nearclip.ui.components.SectionHeader
 import studio.ivlis.nearclip.ui.components.SettingsGroup
 import studio.ivlis.nearclip.ui.components.SettingsRow
 import studio.ivlis.nearclip.ui.components.Sym
+import studio.ivlis.nearclip.ui.theme.Brand
 
 class SettingsActions(
     val setPaused: (Boolean) -> Unit,
@@ -54,11 +58,22 @@ class SettingsActions(
     val setStayConnected: (Boolean) -> Unit,
     val clearHistory: () -> Unit,
     val openLicenses: () -> Unit,
+    val setRemoteEnabled: (Boolean) -> Unit = {},
+    val signIn: () -> Unit = {},
+    val signOut: () -> Unit = {},
+    val retryRemote: () -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(settings: AppSettings, actions: SettingsActions, onBack: () -> Unit) {
+fun SettingsScreen(
+    settings: AppSettings,
+    actions: SettingsActions,
+    onBack: () -> Unit,
+    tailnet: TailnetStatus = TailnetStatus.OFF,
+    remoteAvailable: Boolean = false,
+    signingIn: Boolean = false,
+) {
     val context = LocalContext.current
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var retentionOpen by rememberSaveable { mutableStateOf(false) }
@@ -101,6 +116,15 @@ fun SettingsScreen(settings: AppSettings, actions: SettingsActions, onBack: () -
                     toggle(R.string.pause_syncing, R.string.pause_syncing_summary, R.drawable.ic_pause, settings.paused) { actions.setPaused(it) }
                     toggle(R.string.auto_apply, R.string.auto_apply_summary, R.drawable.ic_content_paste, settings.autoApply) { v -> actions.update { it.copy(autoApply = v) } }
                     toggle(R.string.sync_images, R.string.sync_images_summary, R.drawable.ic_image, settings.syncImages) { v -> actions.update { it.copy(syncImages = v) } }
+                }
+            }
+            if (remoteAvailable) {
+                item("remote") {
+                    SectionHeader(stringResource(R.string.section_remote))
+                    SettingsGroup {
+                        toggle(R.string.remote_toggle, R.string.remote_summary, R.drawable.ic_public, settings.remoteEnabled) { actions.setRemoteEnabled(it) }
+                        if (settings.remoteEnabled) RemoteRows(tailnet, signingIn, actions)
+                    }
                 }
             }
             item("open") {
@@ -245,4 +269,73 @@ fun retentionLabel(days: Int): Int = when (days) {
     7 -> R.string.retention_7
     30 -> R.string.retention_30
     else -> R.string.retention_forever
+}
+
+/** Remote-connection status and actions (DESIGN §4.7). */
+@Composable
+private fun RemoteRows(st: TailnetStatus, signingIn: Boolean, actions: SettingsActions) {
+    val title: String
+    var detail: String? = null
+    val tint: androidx.compose.ui.graphics.Color
+    var busy = false
+    var signIn = false
+    var retry = false
+    var signOut = false
+    when {
+        st.isRunning -> {
+            title = st.account?.let { stringResource(R.string.remote_on_account, it) } ?: stringResource(R.string.remote_on)
+            detail = st.ip?.let { stringResource(R.string.remote_this_device, it) } + "\n" + stringResource(R.string.remote_hint)
+            tint = Brand.OnlineText
+            signOut = true
+        }
+        st.state == "needsLogin" -> {
+            title = stringResource(if (signingIn) R.string.remote_waiting else R.string.remote_needs_login)
+            tint = Brand.Warning
+            busy = signingIn
+            signIn = true
+        }
+        st.state == "needsApproval" -> {
+            title = stringResource(R.string.remote_needs_approval)
+            tint = Brand.Warning
+            signOut = true
+        }
+        st.state == "error" -> {
+            title = stringResource(R.string.remote_error, st.error ?: "")
+            tint = MaterialTheme.colorScheme.error
+            retry = true
+        }
+        else -> {
+            title = stringResource(R.string.remote_starting)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            busy = true
+        }
+    }
+    SettingsRow(
+        title = title,
+        summary = detail,
+        icon = R.drawable.ic_public,
+        iconTint = tint,
+        trailing = if (busy) ({ CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp) }) else null,
+    )
+    if (signIn) {
+        SettingsRow(
+            title = stringResource(R.string.remote_sign_in),
+            icon = R.drawable.ic_login,
+            titleColor = MaterialTheme.colorScheme.primary,
+            iconTint = MaterialTheme.colorScheme.primary,
+            onClick = actions.signIn,
+        )
+    }
+    if (retry) {
+        SettingsRow(title = stringResource(R.string.remote_retry), icon = R.drawable.ic_sync, onClick = actions.retryRemote)
+    }
+    if (signOut) {
+        SettingsRow(
+            title = stringResource(R.string.remote_sign_out),
+            icon = R.drawable.ic_logout,
+            titleColor = MaterialTheme.colorScheme.error,
+            iconTint = MaterialTheme.colorScheme.error,
+            onClick = actions.signOut,
+        )
+    }
 }

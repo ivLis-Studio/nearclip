@@ -16,6 +16,8 @@ data class AppSettings(
     val stayConnected: Boolean = true,
     val retentionDays: Int = 30,
     val onboardingDone: Boolean = false,
+    /** Remote connection through the embedded Tailscale node (DESIGN §4.7). */
+    val remoteEnabled: Boolean = false,
 )
 
 class SettingsStore(context: Context) {
@@ -33,6 +35,7 @@ class SettingsStore(context: Context) {
         stayConnected = prefs.getBoolean(STAY_CONNECTED, true),
         retentionDays = prefs.getInt(RETENTION, 30),
         onboardingDone = prefs.getBoolean(ONBOARDED, false),
+        remoteEnabled = prefs.getBoolean(REMOTE, false),
     )
 
     @Synchronized
@@ -47,6 +50,7 @@ class SettingsStore(context: Context) {
             putBoolean(STAY_CONNECTED, next.stayConnected)
             putInt(RETENTION, next.retentionDays)
             putBoolean(ONBOARDED, next.onboardingDone)
+            putBoolean(REMOTE, next.remoteEnabled)
         }
         _state.value = next
     }
@@ -70,6 +74,7 @@ class SettingsStore(context: Context) {
         const val STAY_CONNECTED = "stayConnected"
         const val RETENTION = "retentionDays"
         const val ONBOARDED = "onboardingDone"
+        const val REMOTE = "remoteEnabled"
         const val CLIPBOARD_STAMP = "clipboardStamp"
         const val APPLIED_TS = "appliedTs"
     }

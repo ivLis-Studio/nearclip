@@ -52,7 +52,8 @@ struct DevicesView: View {
                                 Text(verbatim: m.name).font(.body.weight(.medium))
                                 HStack(spacing: 5) {
                                     Circle().fill(online ? Brand.online : Color.secondary.opacity(0.5)).frame(width: 7, height: 7)
-                                    Text(verbatim: online ? String(localized: "Connected") : Format.lastSeen(model.lastSeen[m.id]))
+                                    Text(verbatim: model.connectionText(m.id))
+                                    if model.route(m.id) == .remote { Image(systemName: "globe") }
                                     Text(verbatim: "· " + DeviceStyle.platformName(m.platform, model: m.model))
                                 }
                                 .font(.caption)
@@ -75,6 +76,15 @@ struct DevicesView: View {
                     }
                 } header: {
                     Text("My devices")
+                } footer: {
+                    if model.suggestsRemote {
+                        Button {
+                            env.showSettings = true
+                        } label: {
+                            Text("On another network? Turn on Remote connection.")
+                        }
+                        .font(.footnote)
+                    }
                 }
                 Section {
                     Button("Leave My Devices", role: .destructive) { confirmLeave = true }

@@ -135,3 +135,18 @@ Nearclip.slnx includes the app only for the ARM64/x64 solution platforms (Any CP
 - Win+B focuses the notification area; Shift+F10 on the Nearclip icon opens the native menu (status line, Open,
   Add device…, Pause syncing, Settings…, Quit). Pause from the menu → icon dimmed, flyout InfoBar "Syncing paused"
   with Resume, menu item checked; resume → peers reconnect. Screenshots ko-dark-tray-menu*.png, ko-dark-flyout-paused.png.
+
+## Remote connection (2026-10-24)
+
+- Core: Tailnet.cs (P/Invoke to nctailnet.dll; NEARCLIP_TAILNET_LIB for the macOS test CLI), Dialer.RaceAsync (LAN
+  first, tailnet +400 ms, through the bridge proxy or directly when the OS has a tailnet address). Tests 28/28.
+- App: AppModel remote members, Settings › General remote card (status + sign in / try again / sign out), route text
+  on device rows, suggestion link, About license rows + "View license texts" (THIRD_PARTY_NOTICES.txt next to the exe).
+  NetworkChange (debounced) tells the node and redials. Debug-only hook `%LOCALAPPDATA%\Nearclip\tailnet-control.txt`.
+- Verified in the guest with tools/acceptance/windows_remote.py (throwaway control server at 10.211.55.2): Settings
+  "켜짐 · …", Devices "MacBook Pro · 연결됨 · 원격", `Get-Clipboard` = the peer's clip.
+- Release (13:15, from this source): Debug ARM64 0 warnings / 0 errors; publish win-arm64 533 files, win-x64 537 files,
+  each with nctailnet.dll and THIRD_PARTY_NOTICES.txt. The zips put everything under `Nearclip/`; .NET Framework's
+  ZipFile writes backslash separators, so dist/ gets copies with `/` (rewritten on the Mac, CRCs checked).
+- The published exe is a new path, so its first start shows the Windows Defender Firewall prompt (left unanswered in
+  the test VM). About › "View license texts" checked with UI Automation: Notepad opened THIRD_PARTY_NOTICES.txt.

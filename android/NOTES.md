@@ -91,4 +91,19 @@ A bumps C's record); A goes offline; B restarts; C dials B → B's attach sees C
 swift/dotnet/kotlin. Fix options: rotate the device id when a device leaves/is removed (no wire change), or exchange
 welcome + member LWW merge before deciding on bye removed.
 
+## Remote connection (2026-10-24)
+
+- Engine: tailnet discovery matches peer hostnames `nearclip-<slug>-<id8>`; candidates are raced (LAN first, tailnet
+  +400 ms) through the bridge proxy, or directly when the OS already has a tailnet address; 6 LAN + 2 tailnet endpoints
+  remembered; `networkChanged(netInfo)` redials at once. `:core:test` 24/24.
+- App: SettingsStore.remoteEnabled, runtime/NetInfo.kt, RemoteRows in Settings, route text in Devices, suggestion
+  link, Custom Tab sign-in, licenses section for the embedded node (assets/THIRD_PARTY_NOTICES.txt from
+  tailnet/notices). Proguard keeps TailnetNative.
+- tsnet panicked inside the app sandbox ("no safe place found to store log state"): the bridge now sets
+  TS_LOGS_DIR to the node's directory. Found on the emulator; fixed in tailnet/bridge/bridge.go.
+- Verified on emulator-5584 (tools/acceptance/android_remote.py, throwaway control server): Settings "켜짐 · …",
+  Devices "MacBook Pro · 연결됨 · 원격", clip from the LAN-unreachable peer shown and applied to the clipboard.
+- Real service (login.tailscale.com): the node registered and asked for sign-in; the Custom Tab opened the real
+  login page. A completed sign-in was not done (needs the account owner).
+
 

@@ -41,6 +41,7 @@ import studio.ivlis.nearclip.core.model.Endpoint
 import studio.ivlis.nearclip.core.model.Platform
 import studio.ivlis.nearclip.core.pairing.PairingUri
 import studio.ivlis.nearclip.core.store.FileStore
+import studio.ivlis.nearclip.core.tailnet.TailnetOptions
 import studio.ivlis.nearclip.service.SyncService
 import java.io.File
 import kotlin.math.max
@@ -94,6 +95,10 @@ class Nearclip private constructor(val app: Application) {
     private val _pendingDeletes = MutableStateFlow<Set<String>>(emptySet())
     val pendingDeletes: StateFlow<Set<String>> = _pendingDeletes.asStateFlow()
     private val deleteJobs = HashMap<Set<String>, Job>()
+    /** The Tailscale sign-in page was opened and the node is not running yet. */
+    private val _tailnetSigningIn = MutableStateFlow(false)
+    val tailnetSigningIn: StateFlow<Boolean> = _tailnetSigningIn.asStateFlow()
+    private var networkJob: Job? = null
 
     /** Started MainActivity instances; a counter, because an old instance can stop after a new one started. */
     private var visibleActivities = 0
@@ -107,6 +112,11 @@ class Nearclip private constructor(val app: Application) {
 
     init {
         val s = settings.value
+        // Debug builds only: files/tailnet-control.txt points the embedded node at a test control server
+        // (tailnet/out/nctestcontrol); written with `adb shell run-as` by tools/acceptance/android.py.
+        val testControl = if (BuildConfig.DEBUG) {
+            File(app.filesDir, "tailnet-control.txt").takeIf { it.isFile }?.readText()?.trim()?.takeIf { it.isNotEmpty() }
+        } else null
         engine = NearclipEngine(
             FileStore(File(app.filesDir, "nearclip"), KeystoreKeyProtector()),
             EngineConfig(
@@ -117,9 +127,14 @@ class Nearclip private constructor(val app: Application) {
                 retentionDays = s.retentionDays,
                 syncImages = s.syncImages,
                 liveRetryMs = 60_000,
+                // Remote connection: embedded Tailscale node; Android reports its interfaces (tailscale#17311).
+                tailnet = TailnetOptions(File(app.filesDir, "tailnet"), controlUrl = testControl, testMode = testControl != null,
+                    logPath = if (BuildConfig.DEBUG) File(app.filesDir, "tailnet.log").path else null,
+                    netInfo = { NetInfo.json(app) }),
             ),
         )
         engine.setPaused(s.paused)
+        engine.setRemoteEnabled(s.remoteEnabled)
         discovery = Discovery(app, engine)
         Notifications.ensureChannels(app)
         scope.launch { engine.events.collect { onEvent(it) } }
@@ -128,6 +143,17 @@ class Nearclip private constructor(val app: Application) {
         }
         scope.launch { settings.state.map { it.retentionDays }.distinctUntilChanged().collect { engine.setRetention(it) } }
         scope.launch { settings.state.map { it.syncImages }.distinctUntilChanged().collect { engine.setSyncImages(it) } }
+        // Wi-Fi ↔ mobile data, new addresses: redial at once and let the embedded node re-bind (PROTOCOL §4.5, §10.4).
+        NetInfo.watch(app) {
+            scope.launch {
+                networkJob?.cancel()
+                networkJob = launch {
+                    delay(1_000)
+                    val info = withContext(Dispatchers.IO) { NetInfo.json(app) }
+                    engine.networkChanged(info)
+                }
+            }
+        }
         ProcessLifecycleOwner.get().lifecycle.addObserver(
             LifecycleEventObserver { _, event ->
                 when (event) {
@@ -212,6 +238,7 @@ class Nearclip private constructor(val app: Application) {
                 }
             }
             is EngineEvent.Left -> if (e.reason == "removed") _messages.tryEmit(UiMessage.Removed)
+            is EngineEvent.TailnetChanged -> if (e.status.isRunning || e.status.state == "off") _tailnetSigningIn.value = false
             else -> Unit
         }
     }
@@ -426,6 +453,43 @@ class Nearclip private constructor(val app: Application) {
     fun setStayConnected(on: Boolean) {
         settings.update { it.copy(stayConnected = on) }
         ensureService()
+    }
+
+    // ---------------------------------------------------------------- remote connection (DESIGN §4.7)
+
+    val remoteAvailable: Boolean get() = engine.tailnetAvailable
+
+    fun setRemoteEnabled(on: Boolean) {
+        settings.update { it.copy(remoteEnabled = on) }
+        engine.setRemoteEnabled(on)
+        if (!on) _tailnetSigningIn.value = false
+    }
+
+    /** Opens Tailscale's sign-in page with [open] (asks the node for one first when needed). */
+    fun signInToTailscale(open: (String) -> Unit) {
+        engine.state.value.tailnet.authURL?.let { url ->
+            _tailnetSigningIn.value = true
+            open(url)
+            return
+        }
+        _tailnetSigningIn.value = true
+        engine.tailnetLogin().thenAccept { st ->
+            scope.launch {
+                val url = st.authURL
+                if (url != null) open(url) else _tailnetSigningIn.value = false
+            }
+        }
+    }
+
+    fun signOutOfTailscale() {
+        _tailnetSigningIn.value = false
+        engine.tailnetLogout()
+    }
+
+    /** Restarts the node after an error. */
+    fun retryRemote() {
+        engine.setRemoteEnabled(false)
+        engine.setRemoteEnabled(true)
     }
 
     fun completeOnboarding() {

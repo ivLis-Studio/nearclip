@@ -19,6 +19,7 @@ internal sealed class SettingsPages
 {
     readonly SettingsWindow _window;
     StackPanel? _members;
+    StackPanel? _remote;
     TextBlock? _address, _firewallState, _clipCount, _pinCount;
     Button? _firewallButton, _leaveButton, _clearButton;
     SettingsCard? _firewallCard, _selfCard;
@@ -47,6 +48,7 @@ internal sealed class SettingsPages
     {
         if (page == "devices" && (change & (ModelChange.Members | ModelChange.Online | ModelChange.Network | ModelChange.Identity | ModelChange.Settings)) != 0)
             RefreshDevices();
+        if (page == "general" && (change & (ModelChange.Remote | ModelChange.Settings)) != 0) RefreshRemote();
         if (page == "history" && change.HasFlag(ModelChange.History)) RefreshCounts();
     }
 
@@ -112,6 +114,16 @@ internal sealed class SettingsPages
         p.Children.Add(Card("\uE8C8", Loc.S("Gen_AutoApply"), Loc.S("Gen_AutoApplyBody"),
             Toggle(S.AutoApply, v => { S.AutoApply = v; Model.SaveSettings(); }, Loc.S("Gen_AutoApply"))));
         p.Children.Add(Card("\uE91B", Loc.S("Gen_SyncImages"), Loc.S("Gen_SyncImagesBody"), Toggle(S.SyncImages, Model.SetSyncImages, Loc.S("Gen_SyncImages"))));
+
+        if (Model.RemoteAvailable)
+        {
+            p.Children.Add(Section(Loc.S("Remote_Section")));
+            p.Children.Add(Card("\uE774", Loc.S("Remote_Toggle"), Loc.S("Remote_Body"),
+                Toggle(S.RemoteEnabled, v => Model.SetRemoteEnabled(v), Loc.S("Remote_Toggle"))));
+            _remote = new StackPanel { Spacing = 4 };
+            p.Children.Add(_remote);
+            RefreshRemote();
+        }
 
         p.Children.Add(Section("Windows"));
         p.Children.Add(Card("\uE7E8", Loc.S("Gen_OpenAtLogin"), Loc.S("Gen_OpenAtLoginBody"), Toggle(Startup.IsEnabled, v => Startup.Set(v), Loc.S("Gen_OpenAtLogin"))));
@@ -202,6 +214,66 @@ internal sealed class SettingsPages
         return card;
     }
 
+    /// <summary>Remote-connection status and actions (DESIGN.md §4.7).</summary>
+    void RefreshRemote()
+    {
+        if (_remote is null) return;
+        _remote.Children.Clear();
+        if (!S.RemoteEnabled) return;
+        var st = Model.Tailnet;
+        string title;
+        var description = "";
+        var tone = "IconSecondary";
+        var busy = false;
+        Button? action = null;
+        var signOut = false;
+        if (st.IsRunning)
+        {
+            title = st.Account is { Length: > 0 } acct ? Loc.F("Remote_OnAccount", acct) : Loc.S("Remote_On");
+            description = (st.Ip is { } ip ? Loc.F("Remote_ThisDevice", ip) + "\n" : "") + Loc.S("Remote_Hint");
+            tone = "IconOnline";
+            signOut = true;
+        }
+        else if (st.State == "needsLogin")
+        {
+            title = Loc.S(Model.TailnetSigningIn ? "Remote_Waiting" : "Remote_NeedsLogin");
+            tone = "IconWarning";
+            busy = Model.TailnetSigningIn;
+            action = new Button { Content = Loc.S("Remote_SignIn"), Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+            action.Click += async (_, _) => await Model.SignInToTailscaleAsync();
+        }
+        else if (st.State == "needsApproval")
+        {
+            title = Loc.S("Remote_NeedsApproval");
+            tone = "IconWarning";
+            signOut = true;
+        }
+        else if (st.State == "error")
+        {
+            title = Loc.F("Remote_Error", st.Error ?? "");
+            tone = "IconError";
+            action = new Button { Content = Loc.S("Remote_Retry") };
+            action.Click += (_, _) => Model.RetryRemote();
+        }
+        else
+        {
+            title = Loc.S("Remote_Starting");
+            busy = true;
+        }
+        if (signOut)
+        {
+            action = new Button { Content = Loc.S("Remote_SignOut") };
+            action.Click += (_, _) => Model.SignOutOfTailscale();
+        }
+        var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, VerticalAlignment = VerticalAlignment.Center };
+        if (busy) content.Children.Add(new ProgressRing { IsActive = true, Width = 18, Height = 18 });
+        if (action is not null) content.Children.Add(action);
+        var card = Card("\uE774", title, description, content);
+        card.GlyphStyle = St(tone);
+        AutomationProperties.SetAutomationId(card, "remote.status");
+        _remote.Children.Add(card);
+    }
+
     // ------------------------------------------------------------------ Devices
 
     FrameworkElement Devices()
@@ -283,6 +355,12 @@ internal sealed class SettingsPages
             _members.Children.Add(Card("\uE8EA", Loc.S("Dev_EmptyTitle"), Loc.S("Dev_EmptyBody")));
         }
         foreach (var m in others) _members.Children.Add(MemberRow(m));
+        if (Model.SuggestsRemote)
+        {
+            var link = new HyperlinkButton { Content = Loc.S("Remote_Suggest"), Margin = new Thickness(0, 4, 0, 0) };
+            link.Click += (_, _) => _window.Navigate("general");
+            _members.Children.Add(link);
+        }
         if (_leaveButton is not null) _leaveButton.IsEnabled = others.Count > 0;
     }
 
@@ -301,8 +379,10 @@ internal sealed class SettingsPages
         text.Children.Add(new TextBlock { Text = m.Name.Length > 0 ? m.Name : Format.PlatformName(m.Platform, m.Model), FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis });
         var status = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         status.Children.Add(new Ellipse { Width = 7, Height = 7, Style = St(online ? "DotOnline" : "DotOffline"), VerticalAlignment = VerticalAlignment.Center });
-        var statusText = online ? Loc.S("Connected") : Format.LastSeen(Model.LastSeen.TryGetValue(m.Id, out var seen) ? seen : null);
+        var statusText = online ? Model.ConnectionText(m.Id) : Format.LastSeen(Model.LastSeen.TryGetValue(m.Id, out var seen) ? seen : null);
         status.Children.Add(new TextBlock { Text = statusText, FontSize = 12, Style = St("TextSecondary") });
+        if (online && Model.Route(m.Id) == PeerRoute.Remote)
+            status.Children.Add(new FontIcon { Glyph = "\uE774", FontSize = 11, Style = St("IconOnline"), VerticalAlignment = VerticalAlignment.Center });
         text.Children.Add(status);
         Grid.SetColumn(text, 1);
         g.Children.Add(text);
@@ -445,7 +525,7 @@ internal sealed class SettingsPages
         p.Children.Add(new TextBlock { Text = Loc.S("Tagline"), FontSize = 16, Style = St("TextSecondary"), HorizontalAlignment = HorizontalAlignment.Center });
         p.Children.Add(new TextBlock { Text = Loc.F("About_Version", AppHost.AppVersion), Style = St("TextTertiary"), HorizontalAlignment = HorizontalAlignment.Center });
         var chips = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 8, 0, 8) };
-        foreach (var (glyph, text) in new[] { ("\uE701", Loc.S("Onb_LocalTitle")), ("\uE72E", Loc.S("Onb_E2eTitle")) })
+        foreach (var (glyph, text) in new[] { ("\uE8AB", Loc.S("About_Direct")), ("\uE72E", Loc.S("Onb_E2eTitle")) })
         {
             var chip = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
             chip.Children.Add(new FontIcon { Glyph = glyph, FontSize = 13, Style = St("IconIris") });
@@ -455,8 +535,21 @@ internal sealed class SettingsPages
         p.Children.Add(chips);
         var licenses = new StackPanel { Spacing = 4, MinWidth = 420 };
         licenses.Children.Add(new TextBlock { Text = Loc.S("About_OpenSource"), Style = (Style)Application.Current.Resources["BodyStrongTextBlockStyle"], Margin = new Thickness(1, 12, 0, 4) });
-        foreach (var (name, license) in new[] { ("Windows App SDK / WinUI 3", "MIT"), (".NET", "MIT"), ("QRCoder", "MIT") })
+        foreach (var (name, license) in new[] { ("Windows App SDK / WinUI 3", "MIT"), (".NET", "MIT"), ("QRCoder", "MIT"),
+                     ("Tailscale (tsnet)", "BSD-3-Clause"), ("wireguard-go", "MIT"), ("gVisor", "Apache-2.0"), ("Go, golang.org/x", "BSD-3-Clause") })
             licenses.Children.Add(Card("", name, "", new TextBlock { Text = license, Style = St("TextSecondary") }));
+        // Every module inside the embedded Tailscale node with its license text (copied next to Nearclip.exe).
+        var notices = System.IO.Path.Combine(AppContext.BaseDirectory, "THIRD_PARTY_NOTICES.txt");
+        if (File.Exists(notices))
+        {
+            var link = new HyperlinkButton { Content = Loc.S("About_LicenseTexts"), Margin = new Thickness(-10, 4, 0, 0) };
+            link.Click += (_, _) =>
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(notices) { UseShellExecute = true }); }
+                catch (Exception e) { Log.Write("open notices failed: " + e.Message); }
+            };
+            licenses.Children.Add(link);
+        }
         p.Children.Add(licenses);
         p.Children.Add(new TextBlock { Text = "© 2026 ivLis Studio · MIT License", FontSize = 12, Style = St("TextTertiary"), HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 16, 0, 0) });
         return p;

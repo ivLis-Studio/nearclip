@@ -47,6 +47,17 @@ internal sealed class AppHost
         DataDirectory = dataDirectory;
         try { Native.SetPreferredAppMode(1); Native.FlushMenuThemes(); } catch (Exception) { /* menus stay light */ }
         Discovery = new DnsSdDiscovery();
+        // Remote connection: embedded Tailscale node (nctailnet.dll next to the exe). NEARCLIP_TAILNET_CONTROL points it
+        // at a test control server; NEARCLIP_TAILNET_LOG writes its verbose log.
+        var tailnetControl = Environment.GetEnvironmentVariable("NEARCLIP_TAILNET_CONTROL");
+#if DEBUG
+        // Debug builds: %LOCALAPPDATA%\Nearclip\tailnet-control.txt does the same (the test VM cannot pass env vars to
+        // the GUI session easily).
+        var devControl = Path.Combine(dataDirectory, "tailnet-control.txt");
+        if (string.IsNullOrEmpty(tailnetControl) && File.Exists(devControl)) tailnetControl = File.ReadAllText(devControl).Trim();
+#endif
+        var tailnet = new TailnetOptions(Path.Combine(dataDirectory, "tailnet"), tailnetControl,
+            Environment.GetEnvironmentVariable("NEARCLIP_TAILNET_LOG"), TestMode: !string.IsNullOrEmpty(tailnetControl));
         Node = new NearclipNode(new NearclipNode.Options
         {
             StateDirectory = Path.Combine(dataDirectory, "state"),
@@ -57,6 +68,7 @@ internal sealed class AppHost
             Port = int.TryParse(Environment.GetEnvironmentVariable("NEARCLIP_PORT"), out var p) ? p : Wire.DefaultPort,
             SecretStore = new DpapiSecretStore(Path.Combine(dataDirectory, "state", "secrets")),
             Discovery = Discovery,
+            Tailnet = tailnet,
         });
         Model = new AppModel(Node, settings, dispatcher);
         _messages = new MessageWindow(Program.InstanceKey);
@@ -78,6 +90,28 @@ internal sealed class AppHost
         _hotkey = new HotKeyService(_messages);
         _hotkey.Pressed += () => Flyout?.ShowFromShortcut();
         _messages.SettingsChanged += () => { if (Settings.Theme == "system") ApplyTheme(); };
+        // Wi-Fi changes, VPN up/down, wake from sleep: redial at once (PROTOCOL.md §4.5, §10.4).
+        System.Net.NetworkInformation.NetworkChange.NetworkAddressChanged += (_, _) => OnNetworkChanged();
+        System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += (_, _) => OnNetworkChanged();
+    }
+
+    DispatcherQueueTimer? _networkTimer;
+
+    void OnNetworkChanged() => Dispatcher.TryEnqueue(() =>
+    {
+        _networkTimer ??= Dispatcher.CreateTimer();
+        _networkTimer.Interval = TimeSpan.FromSeconds(1);
+        _networkTimer.IsRepeating = false;
+        _networkTimer.Tick -= NetworkTimerTick;
+        _networkTimer.Tick += NetworkTimerTick;
+        _networkTimer.Stop();
+        _networkTimer.Start();
+    });
+
+    void NetworkTimerTick(DispatcherQueueTimer sender, object args)
+    {
+        Log.Write("network changed");
+        Node.NetworkChanged();
     }
 
     public void Start(string[] args)

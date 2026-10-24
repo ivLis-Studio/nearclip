@@ -154,16 +154,16 @@ section). Copy (EN / KO):
 |---|---|---|
 | Group title | Remote connection | 원격 연결 |
 | Toggle | Sync across networks | 다른 네트워크에서도 동기화 |
-| Explanation (always shown under the toggle) | Keeps your devices connected on different networks — home, office or mobile data. Uses a free Tailscale account; clips stay end-to-end encrypted. | 집, 회사, 모바일 데이터처럼 서로 다른 네트워크에서도 기기끼리 연결돼요. 무료 Tailscale 계정을 사용하고, 클립은 계속 종단 간 암호화돼요. |
+| Explanation (always shown under the toggle) | Keeps your devices connected on different networks — home, office or mobile data. Uses a free Tailscale account; clips stay end-to-end encrypted. | 집, 회사, 모바일 데이터처럼 서로 다른 네트워크에서도 기기끼리 연결됩니다. 무료 Tailscale 계정을 사용하며, 클립은 계속 종단 간 암호화됩니다. |
 | starting | Starting… | 준비 중… |
-| needsLogin | Sign in to Tailscale to finish turning this on. | Tailscale에 로그인하면 켜져요. |
+| needsLogin | Sign in to Tailscale to finish turning this on. | Tailscale에 로그인하면 켜집니다. |
 | Login button | Sign in with Tailscale | Tailscale로 로그인 |
 | Waiting after the button | Waiting for sign-in… | 로그인 기다리는 중… |
-| needsApproval | Approve this device in the Tailscale admin console. | Tailscale 관리 콘솔에서 이 기기를 승인해 주세요. |
+| needsApproval | Approve this device in the Tailscale admin console. | Tailscale 관리 콘솔에서 이 기기를 승인하세요. |
 | running (title) | On · {account} | 켜짐 · {account} |
-| running (detail) | This device: {ip} | 이 기기 주소: {ip} |
+| running (detail) | This device: {ip} | 이 기기: {ip} |
 | running (hint) | Sign in with the same account on your other devices. | 다른 기기에서도 같은 계정으로 로그인하세요. |
-| error | Couldn't start remote connection. {error} | 원격 연결을 시작하지 못했어요. {error} |
+| error | Couldn't start remote connection. {error} | 원격 연결을 시작할 수 없습니다. {error} |
 | Retry | Try again | 다시 시도 |
 | Sign out | Sign out of Tailscale | Tailscale에서 로그아웃 |
 

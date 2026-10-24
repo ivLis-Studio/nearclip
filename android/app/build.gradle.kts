@@ -38,10 +38,26 @@ android {
         generateLocaleConfig = true
     }
 
+    // Licenses of the embedded Tailscale node (tailnet/build.sh notices) for Settings › Open-source licenses.
+    sourceSets.getByName("main").assets.srcDir(rootProject.file("../tailnet/notices"))
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+        // The embedded Tailscale node (tailnet/build.sh android) is ~21 MB per ABI; compressing it in the APK
+        // keeps the download small (the installer extracts only the device's ABI).
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+}
+
+// The native library is built outside Gradle (Go + NDK): fail early with a clear message when it is missing.
+val tailnetLib = rootProject.file("app/src/main/jniLibs/arm64-v8a/libnctailnet.so")
+tasks.named("preBuild") {
+    doFirst {
+        check(tailnetLib.exists()) { "Missing ${tailnetLib.path} — run tailnet/build.sh android first." }
     }
 }
 

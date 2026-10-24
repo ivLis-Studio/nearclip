@@ -69,10 +69,14 @@ final class AppEnvironment {
     init() {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Nearclip", isDirectory: true)
+        // Remote connection: embedded Tailscale node. NC_TAILNET_CONTROL points it at a test control server.
+        let env = ProcessInfo.processInfo.environment
+        let tailnet = TailnetOptions(directory: dir.appendingPathComponent("tailnet", isDirectory: true),
+                                     controlURL: env["NC_TAILNET_CONTROL"], testMode: env["NC_TAILNET_CONTROL"] != nil)
         func makeNode(_ store: SecretStore) throws -> NearclipNode {
             try NearclipNode(config: .init(stateDirectory: dir, deviceName: IOSSystem.defaultName, platform: "ios",
                                            model: IOSSystem.model, appVersion: IOSSystem.appVersion, port: 45821,
-                                           bonjour: true, secretStore: store))
+                                           bonjour: true, secretStore: store, tailnet: tailnet))
         }
         let node: NearclipNode
         if let n = try? makeNode(KeychainSecretStore()) {

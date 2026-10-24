@@ -20,7 +20,7 @@ internal sealed record Notice(string Text, NoticeTone Tone);
 internal enum ModelChange
 {
     None = 0, History = 1, Members = 2, Online = 4, Nearby = 8, Ticket = 16, Join = 32, Prompt = 64, Notice = 128,
-    Settings = 256, Network = 512, Identity = 1024, All = 0x7FFF,
+    Settings = 256, Network = 512, Identity = 1024, Remote = 2048, All = 0x7FFF,
 }
 
 /// <summary>The UI-facing state of the engine (port of apple/Shared/AppModel.swift). UI thread only.</summary>
@@ -60,6 +60,12 @@ internal sealed class AppModel
     public JoinState Join { get; private set; } = JoinState.Idle;
     public Notice? Notice { get; private set; }
     public string? JustJoined { get; private set; }
+    /// <summary>Route of every connected device (same network / remote).</summary>
+    public Dictionary<string, PeerRoute> Routes { get; private set; } = [];
+    /// <summary>The embedded Tailscale node (remote connection).</summary>
+    public TailnetStatus Tailnet { get; private set; } = TailnetStatus.Off;
+    /// <summary>The Tailscale sign-in page was opened and the node is not running yet.</summary>
+    public bool TailnetSigningIn { get; private set; }
 
     public AppModel(NearclipNode node, AppSettings settings, DispatcherQueue ui)
     {
@@ -82,6 +88,7 @@ internal sealed class AppModel
         _node.SetRetention(Settings.RetentionDays);
         _node.SetSyncImages(Settings.SyncImages);
         _node.SetPaused(Settings.Paused);
+        _node.SetRemoteEnabled(Settings.RemoteEnabled);
         _node.Start();
     }
 
@@ -101,6 +108,8 @@ internal sealed class AppModel
         Nearby = snap.Nearby.ToList();
         Port = snap.Port;
         Addresses = snap.Addresses.ToList();
+        Routes = snap.Routes.ToDictionary();
+        Tailnet = snap.Tailnet;
         RebuildItems();
     }
 
@@ -113,6 +122,77 @@ internal sealed class AppModel
     public int ConnectedCount => OtherMembers.Count(m => Online.Contains(m.Id));
     public bool IsOnline(string id) => Online.Contains(id);
     public string ThisDeviceLabel => Loc.S("ThisPC");
+
+    public PeerRoute? Route(string id) => Online.Contains(id) && Routes.TryGetValue(id, out var r) ? r : null;
+
+    /// <summary>"Connected · Same network" / "Connected · Remote" (DESIGN.md §4.7).</summary>
+    public string ConnectionText(string id)
+    {
+        if (!Online.Contains(id)) return Format.LastSeen(LastSeen.TryGetValue(id, out var seen) ? seen : null);
+        return Route(id) switch
+        {
+            PeerRoute.Remote => Loc.S("Connected_Remote"),
+            PeerRoute.Lan => Loc.S("Connected_SameNetwork"),
+            _ => Loc.S("Connected"),
+        };
+    }
+
+    // ------------------------------------------------------------------ remote connection
+
+    public bool RemoteAvailable => _node.TailnetAvailable;
+
+    /// <summary>Remote connection is off and a device is out of reach: suggest turning it on.</summary>
+    public bool SuggestsRemote => RemoteAvailable && !Settings.RemoteEnabled && OtherMembers.Any(m => !Online.Contains(m.Id));
+
+    public void SetRemoteEnabled(bool on)
+    {
+        Settings.RemoteEnabled = on;
+        SaveSettings();
+        _node.SetRemoteEnabled(on);
+        if (!on)
+        {
+            Tailnet = TailnetStatus.Off;
+            TailnetSigningIn = false;
+        }
+        Raise(ModelChange.Remote);
+    }
+
+    /// <summary>Opens Tailscale's sign-in page in the default browser (asks the node for one first when needed).</summary>
+    public async Task SignInToTailscaleAsync()
+    {
+        TailnetSigningIn = true;
+        Raise(ModelChange.Remote);
+        var url = Tailnet.AuthUrl;
+        if (url is null)
+        {
+            var st = await _node.TailnetLoginAsync();
+            Tailnet = st;
+            url = st.AuthUrl;
+        }
+        if (url is not null && Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            try { await Windows.System.Launcher.LaunchUriAsync(uri); } catch (Exception e) { Log.Write("open sign-in page failed: " + e.Message); }
+        }
+        else
+        {
+            TailnetSigningIn = false;
+        }
+        Raise(ModelChange.Remote);
+    }
+
+    public void SignOutOfTailscale()
+    {
+        TailnetSigningIn = false;
+        _node.TailnetLogout();
+        Raise(ModelChange.Remote);
+    }
+
+    /// <summary>Restarts the node after an error.</summary>
+    public void RetryRemote()
+    {
+        _node.SetRemoteEnabled(false);
+        _node.SetRemoteEnabled(true);
+    }
 
     public string StatusLine
     {
@@ -437,12 +517,14 @@ internal sealed class AppModel
                 break;
             case NodeEvent.PeerUp u:
                 Online.Add(u.Member.Id);
+                Routes[u.Member.Id] = u.Route;
                 var idx = Members.FindIndex(m => m.Id == u.Member.Id);
                 if (idx >= 0) Members[idx] = u.Member; else Members.Add(u.Member);
                 Raise(ModelChange.Online | ModelChange.Members);
                 break;
             case NodeEvent.PeerDown d:
                 Online.Remove(d.Id);
+                Routes.Remove(d.Id);
                 LastSeen[d.Id] = Clock.NowMs();
                 Raise(ModelChange.Online);
                 break;
@@ -485,6 +567,7 @@ internal sealed class AppModel
             case NodeEvent.Left l:
                 Refresh();
                 Online = [];
+                Routes = [];
                 if (l.Reason == "removed") Show(Loc.S("Removed_Notice"), NoticeTone.Warning);
                 Raise(ModelChange.All);
                 break;
@@ -493,6 +576,11 @@ internal sealed class AppModel
                 break;
             case NodeEvent.PausedChanged:
                 Raise(ModelChange.Settings);
+                break;
+            case NodeEvent.TailnetChanged tc:
+                Tailnet = tc.Status;
+                if (tc.Status.IsRunning || tc.Status.State == "off") TailnetSigningIn = false;
+                Raise(ModelChange.Remote);
                 break;
             case NodeEvent.Log l:
                 Log.Write("engine: " + l.Message);

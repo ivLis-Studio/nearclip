@@ -1,8 +1,9 @@
 # Nearclip for Windows
 
 Native Windows app (WinUI 3 / Windows App SDK, C#), the shared C# protocol engine, its tests and the interop CLI.
-Nearclip keeps the clipboard of your own devices in sync over the local network: no server, no account
-(see ../docs/PROTOCOL.md and ../docs/DESIGN.md).
+Nearclip keeps the clipboard of your own devices in sync over the local network and, with Remote connection on, across
+networks through an embedded Tailscale node: no Nearclip server, no Nearclip account (see ../docs/PROTOCOL.md and
+../docs/DESIGN.md).
 
 ```
 windows/
@@ -12,6 +13,7 @@ windows/
   src/Nearclip.Cli/                 net10.0 console peer for tools/interop (PROTOCOL.md §9)
   src/Nearclip.App/                 WinUI 3 app (net10.0-windows10.0.22621.0, unpackaged, self-contained, x64 + ARM64)
   tests/Nearclip.Core.Tests/        xUnit v3: every spec/test-vectors.json value + real loopback scenarios
+  native/win-{x64,arm64}/           nctailnet.dll, the embedded Tailscale node (tailnet/build.sh windows; gitignored)
   scripts/vm/                       UI helpers used for screenshots in the Parallels test VM
   NOTES.md                          worklog: decisions, VM workflow, verification history
 ```
@@ -22,7 +24,7 @@ Requires the .NET 10 SDK.
 
 ```sh
 cd windows
-dotnet test --project tests/Nearclip.Core.Tests/Nearclip.Core.Tests.csproj   # 26 tests
+dotnet test --project tests/Nearclip.Core.Tests/Nearclip.Core.Tests.csproj   # 28 tests
 dotnet build Nearclip.slnx                                                   # Core + CLI + tests (the app is skipped for Any CPU)
 dotnet build src/Nearclip.Cli/Nearclip.Cli.csproj -c Release
 ```
@@ -47,6 +49,10 @@ python3 tools/interop/run.py --only swift,dotnet
 
 Only the .NET 10 SDK is required — the XAML compiler and the Windows SDK projections come from NuGet
 (Microsoft.WindowsAppSDK 2.5.1, Microsoft.Windows.SDK.BuildTools). No Visual Studio workload is needed.
+The app also needs `native\win-x64\nctailnet.dll` and `native\win-arm64\nctailnet.dll` (remote connection), built on a Mac
+with `tailnet/build.sh windows` (Go + llvm-mingw). The build copies the one for its RID next to Nearclip.exe together
+with `tailnet/notices/THIRD_PARTY_NOTICES.txt` (Settings › About › View license texts), and stops with a message when the
+DLL is missing.
 
 ```powershell
 cd windows
@@ -59,7 +65,7 @@ dotnet publish src\Nearclip.App\Nearclip.App.csproj -c Release -p:Platform=ARM64
 ```
 
 The output folder is self-contained (the .NET runtime and Windows App SDK are inside it), so it can be zipped and run
-on a clean PC (about 230–250 MB, 530 files). The executable is `Nearclip.exe`. Nearclip runs once per user and data
+on a clean PC (about 250–270 MB, 535 files). The executable is `Nearclip.exe`. Nearclip runs once per user and data
 directory, from whatever folder: a second launch sends its command line to the running instance (named mutex +
 WM_COPYDATA to its hidden window) and exits.
 
@@ -72,14 +78,18 @@ WM_COPYDATA to its hidden window) and exits.
 | `--quit` | quit the running instance (sends `bye` and withdraws the DNS-SD advertisement) |
 
 Environment: `NEARCLIP_DATA` (data directory, default `%LOCALAPPDATA%\Nearclip`), `NEARCLIP_PORT` (default 45821, any free port
-if taken). Data: `settings.json`, `state\` (identity, group, members, history, blobs, tombstones; the group key is
-encrypted with DPAPI for the current user), `logs\nearclip.log`.
+if taken), `NEARCLIP_TAILNET_CONTROL` (a test Tailscale control server; Debug builds also read
+`%LOCALAPPDATA%\Nearclip\tailnet-control.txt`), `NEARCLIP_TAILNET_LOG` (the node's log file). Data: `settings.json`,
+`state\` (identity, group, members, history, blobs, tombstones; the group key is encrypted with DPAPI for the current
+user), `tailnet\` (the embedded node's keys and state), `logs\nearclip.log`.
 
 **Windows Firewall.** The first time Nearclip listens, Windows asks whether to allow it. If that prompt is dismissed,
 Windows adds block rules and other devices cannot connect to this PC (this PC can still connect out). Onboarding,
 Settings › Devices and Add device show the state ("Blocked") and offer **Allow…**, which asks for elevation and
 replaces the rules with one inbound allow rule for Nearclip.exe. On a network marked Public (common in VMs), the
 allow rule must cover the Public profile; the app's rule covers all profiles.
+Remote connection only connects out, so it works without the rule; when a direct path is blocked, Tailscale relays
+the traffic instead.
 
 ## Architecture
 
@@ -130,4 +140,6 @@ Screenshots of every surface in English/Korean × light/dark are in ../docs/scre
 * Ignoring apps matches the executable name of the clipboard owner; apps that copy through a helper process are not
   matched. Password managers that set the exclusion formats are always skipped.
 * Pairing screens were exercised in an ARM64 VM at 200 % scale; x64 was build-verified (not run).
+* Remote connection was verified in the ARM64 VM against a throwaway control server (Devices showed the Mac as
+  *Connected · Remote*, its clip reached the clipboard). Against the real Tailscale service and on x64 it is untested.
 * The unpackaged app has no MSIX/Store identity: no Start-menu tile is created by the build; use the published folder.

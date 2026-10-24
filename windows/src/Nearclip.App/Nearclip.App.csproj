@@ -37,4 +37,18 @@
   <ItemGroup>
     <Content Include="Assets\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- Embedded Tailscale node (tailnet/build.sh windows): nctailnet.dll next to Nearclip.exe. -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-arm64'">
+    <None Include="..\..\native\win-arm64\nctailnet.dll" Link="nctailnet.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <None Include="..\..\native\win-x64\nctailnet.dll" Link="nctailnet.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="CheckTailnetLibrary" BeforeTargets="Build" Condition="'$(RuntimeIdentifier)' != ''">
+    <Error Condition="!Exists('..\..\native\$(RuntimeIdentifier)\nctailnet.dll')" Text="Missing native\$(RuntimeIdentifier)\nctailnet.dll — run tailnet/build.sh windows first." />
+  </Target>
+  <!-- Licenses of everything inside nctailnet.dll (tailnet/build.sh notices); Settings › About opens it. -->
+  <ItemGroup>
+    <Content Include="..\..\..\tailnet\notices\THIRD_PARTY_NOTICES.txt" Link="THIRD_PARTY_NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

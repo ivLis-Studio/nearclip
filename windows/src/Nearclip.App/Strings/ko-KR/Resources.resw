@@ -36,7 +36,7 @@
   <data name="TooLarge" xml:space="preserve"><value>너무 커서 동기화할 수 없음</value></data>
   <data name="Fail_Declined" xml:space="preserve"><value>상대 기기에서 거절했습니다.</value></data>
   <data name="Fail_Expired" xml:space="preserve"><value>코드가 만료되었습니다. 다른 기기에서 새 코드를 표시하세요.</value></data>
-  <data name="Fail_Unreachable" xml:space="preserve"><value>기기에 연결할 수 없습니다. 두 기기가 같은 Wi-Fi에 있는지 확인하세요.</value></data>
+  <data name="Fail_Unreachable" xml:space="preserve"><value>기기에 연결할 수 없습니다. 두 기기가 같은 Wi-Fi에 있는지 확인하거나, 두 기기 모두 원격 연결을 켜세요.</value></data>
   <data name="Fail_Timeout" xml:space="preserve"><value>상대 기기가 제시간에 응답하지 않았습니다.</value></data>
   <data name="Fail_Busy" xml:space="preserve"><value>상대 기기가 다른 기기와 연결 중입니다. 잠시 후 다시 시도하세요.</value></data>
   <data name="Fail_Self" xml:space="preserve"><value>이 기기입니다.</value></data>
@@ -205,7 +205,7 @@
   <data name="Priv_Ignore" xml:space="preserve"><value>다음 앱에서 복사한 내용 무시</value></data>
   <data name="Priv_AddApp" xml:space="preserve"><value>앱 추가…</value></data>
   <data name="Priv_Encryption" xml:space="preserve"><value>암호화</value></data>
-  <data name="Priv_EncryptionBody" xml:space="preserve"><value>내 기기들은 로컬 네트워크에서 서로 직접 통신합니다. 모든 내용은 내 기기만 가진 키로 종단 간 암호화되며, 서버도 계정도 없습니다.</value></data>
+  <data name="Priv_EncryptionBody" xml:space="preserve"><value>내 기기들은 로컬 네트워크에서, 원격 연결을 켜면 Tailscale을 통해 서로 직접 통신합니다. 모든 내용은 내 기기만 가진 키로 종단 간 암호화되며, Nearclip 서버는 없습니다.</value></data>
   <data name="Hist_1Day" xml:space="preserve"><value>1일</value></data>
   <data name="Hist_7Days" xml:space="preserve"><value>7일</value></data>
   <data name="Hist_30Days" xml:space="preserve"><value>30일</value></data>
@@ -222,4 +222,24 @@
   <data name="Hist_ClearBody" xml:space="preserve"><value>모든 기기에서 모든 클립을 삭제합니다.</value></data>
   <data name="About_Version" xml:space="preserve"><value>버전 {0}</value></data>
   <data name="About_OpenSource" xml:space="preserve"><value>오픈 소스 소프트웨어</value></data>
+  <data name="About_LicenseTexts" xml:space="preserve"><value>라이선스 전문 보기</value></data>
+  <data name="Remote_Section" xml:space="preserve"><value>원격 연결</value></data>
+  <data name="Remote_Toggle" xml:space="preserve"><value>다른 네트워크에서도 동기화</value></data>
+  <data name="Remote_Body" xml:space="preserve"><value>집, 회사, 모바일 데이터처럼 서로 다른 네트워크에서도 기기끼리 연결됩니다. 무료 Tailscale 계정을 사용하며, 클립은 계속 종단 간 암호화됩니다.</value></data>
+  <data name="Remote_Starting" xml:space="preserve"><value>준비 중…</value></data>
+  <data name="Remote_NeedsLogin" xml:space="preserve"><value>Tailscale에 로그인하면 켜집니다.</value></data>
+  <data name="Remote_Waiting" xml:space="preserve"><value>로그인 기다리는 중…</value></data>
+  <data name="Remote_SignIn" xml:space="preserve"><value>Tailscale로 로그인</value></data>
+  <data name="Remote_NeedsApproval" xml:space="preserve"><value>Tailscale 관리 콘솔에서 이 기기를 승인하세요.</value></data>
+  <data name="Remote_On" xml:space="preserve"><value>켜짐</value></data>
+  <data name="Remote_OnAccount" xml:space="preserve"><value>켜짐 · {0}</value></data>
+  <data name="Remote_ThisDevice" xml:space="preserve"><value>이 기기: {0}</value></data>
+  <data name="Remote_Hint" xml:space="preserve"><value>다른 기기에서도 같은 계정으로 로그인하세요.</value></data>
+  <data name="Remote_Error" xml:space="preserve"><value>원격 연결을 시작할 수 없습니다. {0}</value></data>
+  <data name="Remote_Retry" xml:space="preserve"><value>다시 시도</value></data>
+  <data name="Remote_SignOut" xml:space="preserve"><value>Tailscale에서 로그아웃</value></data>
+  <data name="Remote_Suggest" xml:space="preserve"><value>다른 네트워크에 있나요? 원격 연결을 켜 보세요.</value></data>
+  <data name="Connected_SameNetwork" xml:space="preserve"><value>연결됨 · 같은 네트워크</value></data>
+  <data name="Connected_Remote" xml:space="preserve"><value>연결됨 · 원격</value></data>
+  <data name="About_Direct" xml:space="preserve"><value>기기 간 직접 연결</value></data>
 </root>

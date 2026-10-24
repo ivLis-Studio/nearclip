@@ -24,6 +24,9 @@ targets:
     sources:
       - path: macOS
       - path: Shared
+      - path: ../tailnet/notices/THIRD_PARTY_NOTICES.txt
+        group: Shared
+        buildPhase: resources
     dependencies:
       - package: NearclipKit
         product: NearclipKit
@@ -65,6 +68,9 @@ targets:
     sources:
       - path: iOS
       - path: Shared
+      - path: ../tailnet/notices/THIRD_PARTY_NOTICES.txt
+        group: Shared
+        buildPhase: resources
     dependencies:
       - package: NearclipKit
         product: NearclipKit

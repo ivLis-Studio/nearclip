@@ -66,6 +66,7 @@ private struct GeneralSettings: View {
                 Toggle("Copy incoming clips automatically", isOn: $settings.autoApply)
                 Toggle("Sync images", isOn: $settings.syncImages)
             }
+            if model.remoteAvailable { RemoteSection(model: model) }
             Section("Mac") {
                 Toggle("Open at login", isOn: Binding(get: { opensAtLogin }, set: { on in
                     if MacSystem.setOpensAtLogin(on) { opensAtLogin = on } else { loginError = true }
@@ -110,6 +111,63 @@ private struct GeneralSettings: View {
 
 // MARK: - Devices
 
+/// Remote connection through the embedded Tailscale node (DESIGN.md §4.7).
+private struct RemoteSection: View {
+    let model: AppModel
+
+    var body: some View {
+        Section {
+            Toggle(isOn: Binding(get: { model.settings.remoteEnabled }, set: { model.setRemoteEnabled($0) })) {
+                Text("Sync across networks")
+                Text("Keeps your devices connected on different networks — home, office or mobile data. Uses a free Tailscale account; clips stay end-to-end encrypted.")
+            }
+            .accessibilityIdentifier("remote.toggle")
+            if model.settings.remoteEnabled {
+                let st = RemoteStatus(model)
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(st.color)
+                        .frame(width: 22)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: st.title).font(.system(size: 13, weight: .medium))
+                        if let d = st.detail {
+                            Text(verbatim: d).font(.system(size: 11.5)).foregroundStyle(.secondary).textSelection(.enabled)
+                        }
+                        if let h = st.hint {
+                            Text(verbatim: h).font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    if st.busy { ProgressView().controlSize(.small) }
+                    switch st.action {
+                    case .signIn:
+                        Button("Sign in with Tailscale") { model.signInToTailscale() }
+                            .buttonStyle(.borderedProminent)
+                            .tint(Brand.iris)
+                            .accessibilityIdentifier("remote.signin")
+                    case .retry:
+                        Button("Try again") { model.retryRemote() }
+                    case .none:
+                        EmptyView()
+                    }
+                }
+                .padding(.vertical, 2)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("remote.status")
+                if st.canSignOut {
+                    HStack {
+                        Spacer()
+                        Button("Sign out of Tailscale") { model.signOutOfTailscale() }
+                    }
+                }
+            }
+        } header: {
+            Text("Remote connection")
+        }
+    }
+}
+
 struct DeviceRow: View {
     let model: AppModel
     let member: MemberRecord
@@ -138,7 +196,10 @@ struct DeviceRow: View {
                 HStack(spacing: 5) {
                     if !isSelf {
                         Circle().fill(online ? Brand.online : Color.secondary.opacity(0.5)).frame(width: 6, height: 6)
-                        Text(verbatim: online ? String(localized: "Connected") : Format.lastSeen(model.lastSeen[member.id]))
+                        Text(verbatim: model.connectionText(member.id))
+                        if model.route(member.id) == .remote {
+                            Image(systemName: "globe").font(.system(size: 10, weight: .semibold))
+                        }
                     } else {
                         Text(verbatim: DeviceStyle.platformName(member.platform, model: member.model))
                     }
@@ -195,7 +256,14 @@ private struct DevicesSettings: View {
             } header: {
                 Text("My devices")
             } footer: {
-                HStack {
+                HStack(alignment: .firstTextBaseline) {
+                    if model.suggestsRemote {
+                        Text("On another network? Turn on Remote connection.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        Button("General…") { windows.nav.page = .general }
+                            .buttonStyle(.link)
+                    }
                     Spacer()
                     Button {
                         windows.showAddDevice()
@@ -427,6 +495,8 @@ private struct HistorySettings: View {
 // MARK: - About
 
 private struct AboutSettings: View {
+    @State private var showLicenses = false
+
     var body: some View {
         VStack(spacing: 14) {
             Spacer()
@@ -441,12 +511,15 @@ private struct AboutSettings: View {
                 .font(.callout)
                 .foregroundStyle(.tertiary)
             HStack(spacing: 18) {
-                Label("Local network only", systemImage: "wifi")
+                Label("Direct device-to-device", systemImage: "arrow.left.arrow.right")
                 Label("End-to-end encrypted", systemImage: "lock.fill")
             }
             .font(.callout)
             .foregroundStyle(.secondary)
             .padding(.top, 6)
+            Button("Open-source licenses…") { showLicenses = true }
+                .buttonStyle(.link)
+                .font(.callout)
             Spacer()
             Text(verbatim: "© 2026 ivLis Studio · MIT License")
                 .font(.footnote)
@@ -454,6 +527,69 @@ private struct AboutSettings: View {
                 .padding(.bottom, 18)
         }
         .frame(maxWidth: .infinity)
+        .sheet(isPresented: $showLicenses) { LicensesSheet() }
+    }
+}
+
+/// The software inside the embedded Tailscale node and its licenses (tailnet/notices/THIRD_PARTY_NOTICES.txt).
+private struct LicensesSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var notices: [OpenSourceNotice] = []
+    @State private var expanded: Set<String> = []
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section {
+                    ForEach(OpenSourceNotice.mainComponents, id: \.name) { c in
+                        LabeledContent {
+                            Text(verbatim: c.license)
+                        } label: {
+                            Text(verbatim: c.name)
+                            Text(verbatim: c.owner)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                } header: {
+                    Text("Remote connection (Tailscale)")
+                } footer: {
+                    Text("Remote connection runs an embedded Tailscale node, which includes this open-source software.")
+                        .foregroundStyle(.secondary)
+                }
+                Section("License texts") {
+                    ForEach(notices) { n in
+                        DisclosureGroup(isExpanded: isExpanded(n.id)) {
+                            Text(verbatim: n.text)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                        } label: {
+                            // The whole row toggles, not only the chevron.
+                            Text(verbatim: n.id)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                                .onTapGesture { withAnimation(.snappy) { isExpanded(n.id).wrappedValue.toggle() } }
+                        }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            Divider()
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(12)
+        }
+        .frame(width: 640, height: 620)
+        .task { notices = OpenSourceNotice.load() }
+    }
+
+    private func isExpanded(_ id: String) -> Binding<Bool> {
+        Binding(get: { expanded.contains(id) }, set: { if $0 { expanded.insert(id) } else { expanded.remove(id) } })
     }
 }
 

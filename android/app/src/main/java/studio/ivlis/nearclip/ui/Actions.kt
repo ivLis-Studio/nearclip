@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
@@ -32,6 +33,18 @@ object Actions {
         true
     } catch (_: Exception) {
         false
+    }
+
+    /**
+     * Tailscale's sign-in page in a Custom Tab (in-app browser; sign-in providers reject WebViews). Built by hand —
+     * the Custom Tabs protocol is just these extras — so no androidx.browser dependency is needed.
+     */
+    fun openSignIn(context: Context, url: String) {
+        val intent = Intent(Intent.ACTION_VIEW, url.toUri()).addCategory(Intent.CATEGORY_BROWSABLE)
+            .putExtras(Bundle().apply { putBinder("android.support.customtabs.extra.SESSION", null) })
+            .putExtra("android.support.customtabs.extra.TITLE_VISIBILITY", 1)
+            .putExtra("androidx.browser.customtabs.extra.SHARE_STATE", 2)
+        try { context.startActivity(intent) } catch (_: Exception) { openLink(context, url) }
     }
 
     /**
