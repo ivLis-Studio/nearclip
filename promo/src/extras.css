@@ -28,7 +28,7 @@
 .wb-url { flex: 1; height: 30px; border-radius: 15px; background: #202124; display: flex; align-items: center; gap: 8px; padding: 0 14px; font-size: 13.5px; color: #e8eaed; }
 .wb-page { position: absolute; left: 0; right: 0; top: 86px; bottom: 0; display: flex; align-items: center; justify-content: center; }
 .wb-card { width: 440px; padding: 30px 34px 26px; border-radius: 16px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 10px 30px rgba(20,30,60,0.08); position: relative; }
-.wb-logo { width: 34px; height: 34px; border-radius: 50%; margin-bottom: 14px; background: #15171c; color: #fff; display: flex; align-items: center; justify-content: center; font: 700 18px/1 var(--win); }
+.wb-logo { width: 34px; height: 34px; border-radius: 50%; margin-bottom: 14px; background: #15171c; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; line-height: 1; }
 .wb-card h1 { font-size: 23px; font-weight: 700; margin-bottom: 6px; }
 .wb-card p { font-size: 13.5px; color: #626570; margin-bottom: 20px; }
 .wb-boxes { display: flex; gap: 9px; margin-bottom: 18px; }
@@ -86,4 +86,77 @@
 .chip-brand { width: 30px; height: 30px; border-radius: 9px; overflow: hidden; flex: none; }
 .chip-brand svg { width: 100%; height: 100%; display: block; }
 .chip-img { width: 132px; height: 92px; border-radius: 10px; object-fit: cover; display: block; }
+
+/* ---------------------------------------------------------------- Mac browser (Safari-like) */
+.mb { position: absolute; border-radius: 12px; overflow: hidden; background: #f5f6f8; font-family: var(--apple); color: #1d1d1f;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.16), 0 26px 60px rgba(10,12,30,0.32); }
+.mb-tb { height: 52px; display: flex; align-items: center; gap: 18px; padding: 0 18px; background: #ececee; border-bottom: 1px solid #dadadc; color: #6e6e73; }
+.mb-nav { display: flex; gap: 16px; align-items: center; margin-left: 8px; }
+.mb-url { flex: 1; max-width: 440px; margin: 0 auto; height: 32px; border-radius: 9px; background: #fff; display: flex; align-items: center; justify-content: center; gap: 7px;
+  font-size: 14px; color: #1d1d1f; box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.1); }
+.mb-tools { display: flex; gap: 18px; align-items: center; }
+.mb-page { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; display: flex; align-items: center; justify-content: center; }
+.mb .wb-ok { color: #1f9d5a; }
+
+/* ---------------------------------------------------------------- Windows 11 app window */
+.ww { position: absolute; border-radius: 8px; overflow: hidden; background: #f3f3f3; font-family: var(--win); color: #1b1b1b;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.12), 0 26px 60px rgba(0,0,0,0.45); }
+.ww-tb { position: relative; height: 40px; display: flex; align-items: center; gap: 10px; padding-left: 14px; background: #ededed; font-size: 12.5px; color: #1b1b1b; }
+.ww-ic { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; color: var(--iris); }
+.ww-title { flex: 1; }
+.ww-ctl { align-self: stretch; display: flex; align-items: center; gap: 32px; padding: 0 18px; color: #3b3b3b; }
+.ww-body { position: absolute; left: 0; right: 0; top: 40px; bottom: 0; overflow: hidden; }
+
+/* map */
+.map { position: absolute; inset: 0; background: #ebe9e1; overflow: hidden; }
+.map-river { position: absolute; left: -10%; right: -10%; top: 72%; height: 96px; background: #c6dcf2; transform: rotate(-7deg); }
+.map-park { position: absolute; border-radius: 26px; background: #d2e6c9; }
+.map-road { position: absolute; height: 12px; background: #fff; border-radius: 6px; transform-origin: 0 50%; }
+.map-road.main { height: 18px; background: #f5d987; border-radius: 9px; }
+.map-pinwrap { position: absolute; width: 0; height: 0; }
+.map-pin { position: absolute; left: -24px; top: -60px; width: 48px; height: 60px; transform-origin: 50% 100%; }
+.map-pin svg { width: 100%; height: 100%; display: block; }
+.map-shadow { position: absolute; left: -16px; top: -6px; width: 32px; height: 12px; border-radius: 50%; background: rgba(30,35,60,0.22); }
+.map-ripple { position: absolute; left: -44px; top: -18px; width: 88px; height: 36px; border-radius: 50%; border: 3px solid var(--iris); opacity: 0; }
+.map-panel { position: absolute; left: 18px; top: 18px; width: 390px; display: flex; flex-direction: column; gap: 10px; }
+.map-search { position: relative; height: 54px; border-radius: 12px; background: #fff; display: flex; align-items: center; gap: 12px; padding: 0 16px; color: #5f6368; font-size: 16px; }
+.map-q { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-q.typed { color: #1b1b1b; }
+.map-caret { width: 2px; height: 22px; background: var(--iris); margin-left: -9px; flex: none; }
+.map-res { border-radius: 12px; background: #fff; padding: 16px 18px; box-shadow: 0 2px 10px rgba(20,25,40,0.12); opacity: 0; }
+.map-res-top { display: flex; gap: 12px; align-items: flex-start; }
+.map-res-ic { width: 36px; height: 36px; border-radius: 50%; background: #eceefe; color: var(--iris); display: flex; align-items: center; justify-content: center; flex: none; }
+.map-res-col { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.map-res-col b { font-size: 16px; font-weight: 600; }
+.map-res-col span { font-size: 13.5px; color: #5f6368; }
+.map-res-btns { display: flex; gap: 8px; margin-top: 14px; }
+.map-res-btns > span { height: 34px; border-radius: 17px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; }
+.map-go { background: var(--iris); color: #fff; }
+.map-save { background: #eef0f6; color: #3c3f4a; }
+
+/* chat */
+.wc-head { position: absolute; left: 0; right: 0; top: 0; height: 64px; display: flex; align-items: center; gap: 12px; padding: 0 20px; background: #fafafa; border-bottom: 1px solid #e4e4e4; }
+.wc-avs { display: flex; }
+.wc-avs span { width: 34px; height: 34px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: -8px; box-shadow: 0 0 0 2px #fafafa; }
+.wc-hcol { flex: 1; display: flex; flex-direction: column; gap: 2px; margin-left: 14px; }
+.wc-hcol b { font-size: 15px; font-weight: 600; }
+.wc-hcol span { font-size: 12px; color: #6b6b6b; }
+.wc-people { color: #5d5d5d; display: inline-flex; }
+.wc-list { position: absolute; left: 0; right: 0; top: 64px; bottom: 72px; padding: 16px 22px; display: flex; flex-direction: column; gap: 14px; background: #f3f3f3; overflow: hidden; }
+.wc-day { align-self: center; font-size: 12px; color: #6b6b6b; background: #e6e6e6; border-radius: 10px; padding: 3px 12px; }
+.wc-row { display: flex; align-items: flex-start; gap: 10px; transform-origin: 0 100%; }
+.wc-row.out { justify-content: flex-end; transform-origin: 100% 100%; }
+.wc-av { width: 34px; height: 34px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex: none; }
+.wc-col { display: flex; flex-direction: column; gap: 4px; }
+.wc-who { font-size: 12px; color: #6b6b6b; }
+.wc-line { display: flex; align-items: flex-end; gap: 8px; }
+.wc-bubble { max-width: 440px; padding: 10px 14px; border-radius: 4px 16px 16px 16px; background: #fff; font-size: 14.5px; line-height: 1.45; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.wc-time { font-size: 11px; color: #8a8a8a; white-space: nowrap; }
+.wc-photo { width: 300px; height: 196px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.14); }
+.wc-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wc-input { position: absolute; left: 0; right: 0; bottom: 0; height: 72px; display: flex; align-items: center; gap: 14px; padding: 0 18px; background: #fafafa; border-top: 1px solid #e4e4e4; color: #5f5f5f; }
+.wc-field { position: relative; flex: 1; height: 44px; border-radius: 8px; background: #fff; box-shadow: inset 0 0 0 1px #dcdcdc, inset 0 -2px 0 var(--iris); display: flex; align-items: center; padding: 0 16px 0 20px; font-size: 14px; color: #8a8a8a; }
+.wc-caret { position: absolute; left: 14px; top: 12px; width: 2px; height: 20px; background: var(--iris); }
+.wc-send { width: 40px; height: 40px; border-radius: 8px; background: var(--iris); color: #fff; display: flex; align-items: center; justify-content: center; }
+
 

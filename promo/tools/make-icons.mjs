@@ -26,7 +26,9 @@ const FLUENT = ["search_20_regular", "more_horizontal_20_regular", "laptop_20_re
   "wifi_1_20_regular", "speaker_2_20_regular", "battery_10_20_regular", "arrow_left_20_regular", "arrow_right_20_regular",
   "arrow_clockwise_20_regular", "star_20_regular", "subtract_20_regular", "square_20_regular", "shield_lock_20_regular",
   "person_20_regular", "folder_20_filled", "document_20_regular", "window_20_regular", "grid_20_regular", "mail_20_regular",
-  "settings_20_regular", "home_20_regular", "lock_closed_16_filled", "info_20_regular", "add_16_regular", "chevron_down_20_regular"];
+  "settings_20_regular", "home_20_regular", "lock_closed_16_filled", "info_20_regular", "add_16_regular", "chevron_down_20_regular",
+  "chat_20_filled", "location_20_filled", "directions_20_regular", "send_20_filled", "attach_20_regular", "emoji_20_regular",
+  "people_20_regular"];
 
 // Android vector drawable → SVG (groups with translate/scale, paths with fill/stroke and alphas).
 function vectorToSvg(xml) {

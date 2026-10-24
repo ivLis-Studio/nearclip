@@ -145,9 +145,9 @@
   })();
 
   // m2: another network
-  function netCard(parent, symName, name, netSym, net) {
+  function netCard(parent, drawIcon, name, netSym, net) {
     const root = el("div.netcard", { style: { width: (V ? 300 : 320) + "px" } }, parent);
-    sym(symName, 40, "currentColor", el("div.nc-ic", {}, root));
+    drawIcon(el("div.nc-ic", {}, root));
     el("b", { text: name }, root);
     const row = el("div.nc-net", {}, root);
     sym(netSym, 22, "currentColor", row);
@@ -155,8 +155,8 @@
     return root;
   }
   const M2 = (function () {
-    const a = netCard(SC[1].world, "laptopcomputer", DEV.name.mac, "wifi", C.home);
-    const c = netCard(SC[1].world, "iphone", DEV.name.iphone, "cellularbars", C.lte);
+    const a = netCard(SC[1].world, (n) => sym("laptopcomputer", 40, "currentColor", n), DEV.name.mac, "wifi", C.home);
+    const c = netCard(SC[1].world, (n) => icon("m", "smartphone", 40, n), DEV.name.android, "cellularbars", C.lte);
     const svg = el("svg.netline", { width: W, height: H, viewBox: "0 0 " + W + " " + H }, SC[1].world);
     const path = el("path", { fill: "none", stroke: "rgba(255,255,255,0.7)", "stroke-width": "4", "stroke-linecap": "round", "stroke-dasharray": "2 14" }, svg);
     const maskPath = el("path", { fill: "none", stroke: "#fff", "stroke-width": "10" }, el("mask", { id: "m2mask" }, el("defs", {}, svg)));
@@ -174,9 +174,9 @@
   // m3: end-to-end encryption
   const PLAIN = TXT.all1;
   const M3 = (function () {
-    const devA = el("div.e2e-dev", {}, SC[2].world); sym("laptopcomputer", 86, INK, devA);
+    const devA = el("div.e2e-dev", {}, SC[2].world); icon("f", "desktop", 84, devA);
     const devB = el("div.e2e-dev", {}, SC[2].world); sym("iphone", 78, INK, devB);
-    const nA = el("div.e2e-name", { text: DEV.name.mac }, SC[2].world);
+    const nA = el("div.e2e-name", { text: DEV.name.win }, SC[2].world);
     const nB = el("div.e2e-name", { text: DEV.name.iphone }, SC[2].world);
     const track = el("div.e2e-track", {}, SC[2].world);
     const pill = el("div.cipher", {}, SC[2].world);
@@ -228,7 +228,6 @@
 
   // ================================================================== hook: rolling platform names
   const SH = S.SH, hookBox = SH.querySelector(".hook-box");
-  S.ptr2.root.classList.add("win");
   const STEPS = S.SEQ.map((s) => b(s[0]));
   S.slots.forEach((sl, k) => {
     sl.pill.textContent = "";
@@ -263,8 +262,8 @@
 
   function d1(t) {
     const L = LY.d1;
+    S.pc1.place(...L.pc);
     S.mac1.place(...L.mac);
-    S.ip1.place(...L.phone);
     const u = E.outCubic(prog(t, 3.02, 4.25));
     const z = Math.pow(LY.zoom, 1 - u);
     const fx = lerp(M.macC[0], W / 2, u), fy = lerp(M.macC[1], H / 2, u);
@@ -277,22 +276,26 @@
     const tr = toStage(M.selText, S.mac1.screen);
     const wr = toStage(S.note1.root, S.mac1.screen);
     const x0 = tr.x - 2, x1 = tr.x + tr.w + 2;
-    const mv = E.inOutCubic(prog(t, t1.ptr, t1.ptr + 0.32));
+    const mv = E.inOutCubic(prog(t, t1.ptr, t1.ptr + 0.3));
     let p = [lerp(wr.x + wr.w * 0.8, x0, mv), lerp(wr.y + wr.h * 0.86, tr.cy, mv)];
     if (t >= t1.dragA) p = [lerp(x0, x1, selU), tr.cy];
-    S.ptr1.update(t, { x: p[0], y: p[1], show: t >= t1.ptr && t < 8.7, beam: mv > 0.7 });
-    const kc = LY.keys.d1, kx = kc[0] - 105;
-    S.keyCmd1.update(t, { show: t1.cmd - 0.22, hide: t1.up + 0.45, down: t1.cmd, up: t1.up, x: kx, y: kc[1] });
-    S.keyC1.update(t, { show: t1.cmd - 0.16, hide: t1.up + 0.49, down: t1.c, up: t1.up, x: kx + 118, y: kc[1] });
-    const box = toStage(S.ios1.box, S.ip1.screen);
-    S.chip1.update(t, { start: t1.launch, end: t1.land, from: [tr.cx, tr.cy], to: [box.cx, box.y + 33 * box.k], text: TXT.address, arc: V ? -130 : -170, toScale: 0.55 });
-    S.ios1.update(t, { pasteState: IDLE, toastState: { start: t1.land + 0.05, end: t1.land + 1.9, text: T.copiedFrom(DEV.name.mac), symbol: "laptopcomputer" } });
-    S.cap1.update(t, [4.3, t1.land + 0.03], 8.5, 0.3);
+    S.ptr1.update(t, { x: p[0], y: p[1], show: t >= t1.ptr && t < 8.7, beam: mv > 0.7, s: tr.k / 0.74 });
+    const km = LY.keys.d1mac, kp = LY.keys.d1pc;
+    S.keyCmd1.update(t, { show: t1.cmd - 0.22, hide: t1.up + 0.42, down: t1.cmd, up: t1.up, x: km[0] - 105, y: km[1] });
+    S.keyC1.update(t, { show: t1.cmd - 0.16, hide: t1.up + 0.46, down: t1.c, up: t1.up, x: km[0] + 13, y: km[1] });
+    const pr = rect(S.pc1.screen), pk = pr.w / S.pc1.screen.offsetWidth;
+    const toast = [pr.x + pr.w - (12 + 172) * pk, pr.y + pr.h - (60 + 34) * pk];
+    S.chip1.update(t, { start: t1.launch, end: t1.land, from: [tr.cx, tr.cy], to: toast, text: TXT.address, arc: V ? -150 : -190, toScale: 0.6 });
+    S.winToast1.update(t, { start: t1.land, end: t1.land + 2.0, from: T.copiedFrom(DEV.name.mac), preview: TXT.address, dev: "mac" });
+    S.keyCtrl1.update(t, { show: t1.ctrl - 0.24, hide: t1.vup + 0.42, down: t1.ctrl, up: t1.vup, x: kp[0] - 119, y: kp[1] });
+    S.keyV1.update(t, { show: t1.ctrl - 0.18, hide: t1.vup + 0.46, down: t1.v, up: t1.vup, x: kp[0] + 27, y: kp[1] });
+    S.map1.update(t, { pasteAt: t1.paste, pinAt: t1.pin });
+    S.cap1.update(t, [4.3, t1.paste + 0.04], 8.5, 0.3);
   }
 
   function d2(t) {
     const L = LY.d2;
-    S.pc2.place(...L.pc);
+    S.mac2.place(...L.mac);
     S.px2.place(...L.phone);
     const u = E.inOutCubic(prog(t, 8.45, 8.95));
     set(S.S2.root, { clipPath: u < 1 ? "inset(0px 0px 0px " + ((1 - u) * W).toFixed(1) + "px)" : "none" });
@@ -304,25 +307,25 @@
     S.andToast2.update(t, { start: 10.74, end: 12.2, text: T.sent(3) });
     const sr = rect(S.px2.screen), ps = sr.w / S.px2.screen.offsetWidth;
     const from = [sr.x + send.cx * ps, sr.y + send.cy * ps];
-    const pr = rect(S.pc2.screen), pk = pr.w / S.pc2.screen.offsetWidth;
-    const to = [pr.x + pr.w - (12 + 172) * pk, pr.y + pr.h - (60 + 34) * pk];
-    S.chip2.update(t, { start: t2.launch, end: t2.land, from, to, text: "482913", arc: V ? -150 : -210, toScale: 0.6 });
-    S.winToast2.update(t, { start: t2.land, end: 14.2, from: T.copiedFrom(DEV.name.android), preview: "482913" });
-    const kc = LY.keys.d2, kx = kc[0] - 119;
-    S.keyCtrl2.update(t, { show: t2.ctrl - 0.24, hide: t2.up + 0.42, down: t2.ctrl, up: t2.up, x: kx, y: kc[1] });
-    S.keyV2.update(t, { show: t2.ctrl - 0.18, hide: t2.up + 0.46, down: t2.v, up: t2.up, x: kx + 146, y: kc[1] });
-    S.browser.update(t, { code: "482913", pasteAt: t2.paste, okAt: t2.ok });
+    const mr = rect(S.mac2.screen), mk = mr.w / S.mac2.screen.offsetWidth;
+    const to = [mr.x + mr.w - (14 + 160) * mk, mr.y + (40 + 26) * mk];
+    S.chip2.update(t, { start: t2.launch, end: t2.land, from, to, text: "482913", arc: V ? -160 : -230, toScale: 0.6 });
+    S.macToast2.update(t, { start: t2.land, end: t2.land + 2.3, from: T.copiedFrom(DEV.name.android), preview: "482913", dev: "android" });
+    const kc = LY.keys.d2, kx = kc[0] - 105;
+    S.keyCmd2.update(t, { show: t2.cmd - 0.24, hide: t2.up + 0.42, down: t2.cmd, up: t2.up, x: kx, y: kc[1] });
+    S.keyV2.update(t, { show: t2.cmd - 0.18, hide: t2.up + 0.46, down: t2.v, up: t2.up, x: kx + 118, y: kc[1] });
+    S.browser2.update(t, { code: "482913", pasteAt: t2.paste, okAt: t2.ok });
     const btn = M.btnLocal, bx = M.boxesLocal;
     const mv = E.inOutCubic(prog(t, 12.42, 12.9));
     const px = lerp(bx.x + bx.w + 40, btn.cx + 18, mv), py = lerp(bx.cy + 30, btn.cy + 6, mv);
     const press = win(t, 12.93, 13.02, 0.04, 0.1);
-    S.ptr2.update(t, { x: px, y: py, show: t >= 12.36 && t < 14.6, s: 1.3 * (1 - 0.1 * press) });
+    S.ptr2.update(t, { x: px, y: py, show: t >= 12.36 && t < 14.6, s: 1.15 * (1 - 0.1 * press) });
     S.cap2.update(t, [9.15, t2.paste + 0.05], 14.55, 0.3);
   }
 
   function d3(t) {
     const L = LY.d3;
-    S.mac3.place(...L.mac);
+    S.pc3.place(...L.pc);
     S.ip3.place(...L.phone);
     const k = 1 + 0.035 * (1 - clamp(spring(t - 15.0, 0.55, 0.9), 0, 1.1));
     set(S.S3.world, { transform: "translate(" + (W / 2 * (1 - k)).toFixed(2) + "px," + (H / 2 * (1 - k)).toFixed(2) + "px) scale(" + k.toFixed(5) + ")" });
@@ -333,16 +336,15 @@
     const pb = local(S.ios3.pasteBtn, S.ip3.screen);
     S.touch3.update(t, { x: pb.cx, y: pb.cy, show: 15.42, hide: 15.98, down: 15.68, up: 15.8 });
     const pi = toStage(S.ios3.pasteBar, S.ip3.screen);
-    const mr = rect(S.mac3.screen), mk = mr.w / S.mac3.screen.offsetWidth;
-    const to = [mr.x + mr.w - (14 + 160) * mk, mr.y + (40 + 26) * mk];
-    S.chip3.update(t, { start: t3.launch, end: t3.land, from: [pi.x + 34 * pi.k, pi.cy], to, image: PHOTO, arc: V ? -170 : -210, toScale: 0.42 });
-    S.macToast3.update(t, { start: t3.land, end: 18.7, from: T.copiedFrom(DEV.name.iphone), preview: T.image + " · 4032×3024", img: PHOTO, dev: "iphone" });
-    const kc = LY.keys.d3, kx = kc[0] - 105;
-    S.keyCmd3.update(t, { show: t3.cmd - 0.23, hide: t3.up + 0.45, down: t3.cmd, up: t3.up, x: kx, y: kc[1] });
-    S.keyV3.update(t, { show: t3.cmd - 0.17, hide: t3.up + 0.49, down: t3.v, up: t3.up, x: kx + 118, y: kc[1] });
-    const g = t < t3.drop ? 0 : clamp(spring(t - t3.drop, 0.5, 0.78), 0, 1.06);
-    set(S.note3.refs.fig, { height: (220 * Math.min(1, g)).toFixed(1) + "px", opacity: (t < t3.drop ? 0 : Math.min(1, (t - t3.drop) / 0.12)).toFixed(3), transform: "scale(" + (0.9 + 0.1 * g).toFixed(4) + ")" });
-    S.cap3.update(t, [15.15, t3.drop + 0.05], 19.55, 0.3);
+    const pr = rect(S.pc3.screen), pk = pr.w / S.pc3.screen.offsetWidth;
+    const to = [pr.x + pr.w - (12 + 172) * pk, pr.y + pr.h - (60 + 34) * pk];
+    S.chip3.update(t, { start: t3.launch, end: t3.land, from: [pi.x + 34 * pi.k, pi.cy], to, image: PHOTO, arc: V ? -170 : -220, toScale: 0.42 });
+    S.winToast3.update(t, { start: t3.land, end: t3.land + 2.0, from: T.copiedFrom(DEV.name.iphone), preview: T.image + " · 4032×3024", img: PHOTO, dev: "iphone" });
+    const kc = LY.keys.d3, kx = kc[0] - 119;
+    S.keyCtrl3.update(t, { show: t3.ctrl - 0.24, hide: t3.up + 0.42, down: t3.ctrl, up: t3.up, x: kx, y: kc[1] });
+    S.keyV3.update(t, { show: t3.ctrl - 0.18, hide: t3.up + 0.46, down: t3.v, up: t3.up, x: kx + 146, y: kc[1] });
+    S.chat3.update(t, { pasteAt: t3.paste, replyAt: t3.reply });
+    S.cap3.update(t, [15.15, t3.paste + 0.05], 19.55, 0.3);
   }
 
   function all(t) {
@@ -510,14 +512,18 @@
   [1.0, 1.5, 2.0, 2.5].forEach((tt, i) => sfx("roll", tt, { i }));
   sfx("hookout", 2.9);
   sfx("zoomout", 3.05);
-  sfx("open", t1.win, { pan: -0.15 });
-  sfx("click", t1.dragA, { pan: -0.15 });
-  sfx("select", t1.dragB, { pan: -0.1 });
+  sfx("open", t1.win, { pan: -0.3 });
+  sfx("click", t1.dragA, { pan: -0.3 });
+  sfx("select", t1.dragB, { pan: -0.25 });
   sfx("key", t1.cmd, { big: true });
   sfx("key", t1.c);
-  sfx("fly", t1.launch, { from: -0.3, to: 0.55 });
+  sfx("fly", t1.launch, { from: -0.35, to: 0.55 });
   sfx("land", t1.land, { pan: 0.55 });
-  sfx("receive", t1.land + 0.03, { i: 0, pan: 0.55 });
+  sfx("toast", t1.land + 0.02, { pan: 0.55 });
+  sfx("key", t1.ctrl, { big: true });
+  sfx("key", t1.v);
+  sfx("paste", t1.paste, { pan: 0.4 });
+  sfx("pindrop", t1.pin, { pan: 0.45 });
   sfx("wipe", 8.45);
   sfx("tap", t2.down, { pan: -0.55, long: true });
   sfx("select", t2.select, { pan: -0.55 });
@@ -526,7 +532,7 @@
   sfx("fly", t2.launch, { from: -0.55, to: 0.5 });
   sfx("land", t2.land, { pan: 0.5 });
   sfx("toast", t2.land + 0.02, { pan: 0.5 });
-  sfx("key", t2.ctrl, { big: true });
+  sfx("key", t2.cmd, { big: true });
   sfx("key", t2.v);
   sfx("digits", t2.paste, { pan: 0.15 });
   sfx("click", 12.94, { pan: 0.2 });
@@ -537,9 +543,10 @@
   sfx("fly", t3.launch, { from: -0.5, to: 0.55 });
   sfx("land", t3.land, { pan: 0.55 });
   sfx("toast", t3.land + 0.02, { pan: 0.55 });
-  sfx("key", t3.cmd, { big: true });
+  sfx("key", t3.ctrl, { big: true });
   sfx("key", t3.v);
-  sfx("paste", t3.drop, { pan: 0.15 });
+  sfx("bubble", t3.paste, { pan: 0.3 });
+  sfx("reply", t3.reply, { pan: 0.25 });
   [0, 1, 2, 3].forEach((i) => sfx("tile", 20.0 + 0.06 * i, { i, pan: [-0.55, -0.18, 0.18, 0.55][i] }));
   sfx("key", ALL.ctrl, { big: true });
   sfx("key", ALL.c);
@@ -571,6 +578,7 @@
   blur(8.4, 9.0, 6);
   blur(t2.launch - 0.25, t2.land + 0.06, 5);
   blur(t3.launch - 0.25, t3.land + 0.06, 5);
+  blur(t1.pin - 0.02, t1.pin + 0.3, 4);
   blur(20.0, 20.7, 5);
   blur(28.66, 29.3, 4);
   blur(30.6, 31.35, 4);
@@ -604,9 +612,8 @@
     M.macC = [L1.mac[0] + (S.mac1.B + S.mac1.SW / 2) * L1.mac[2], L1.mac[1] + (S.mac1.B + S.mac1.SH / 2) * L1.mac[2]];
     const tb = S.sms.toolbar, it = S.sms.sendItem;
     M.sendLocal = { cx: tb.offsetLeft - tb.offsetWidth / 2 + it.offsetLeft + it.offsetWidth / 2, cy: tb.offsetTop + it.offsetTop + it.offsetHeight / 2 };
-    const btnN = S.browser.root.querySelector(".wb-btn"), boxN = S.browser.root.querySelector(".wb-boxes");
-    M.btnLocal = local(btnN, S.pc2.screen);
-    M.boxesLocal = local(boxN, S.pc2.screen);
+    M.btnLocal = local(S.browser2.btn, S.mac2.screen);
+    M.boxesLocal = local(S.browser2.boxes, S.mac2.screen);
     M.okW = M1.ok.offsetWidth;
     M.pillW = M2.pill.offsetWidth; M.netW = M2.a.offsetWidth; M.netH = M2.a.offsetHeight;
     const pw = M3.plain.offsetWidth;

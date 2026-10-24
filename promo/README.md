@@ -21,14 +21,17 @@ Outputs land in `promo/out/`, all 60 fps with AAC 256 kb/s audio:
 One beat grid (120 BPM, a bar is 2 s, `window.MUSIC`) is shared by the cuts and the score. Flat colour only — Iris
 (`#4C5BF5`), ink and paper — real UI rebuilt from the four apps, no gradients or glows.
 
+Every demo crosses ecosystems. Mac ↔ iPhone and Windows ↔ Android already share a clipboard through their makers, so
+the film shows the pairs nothing else connects.
+
 | Beats | Scene |
 | --- | --- |
-| 0–8 | Hook on Iris: "[Mac]에서 복사하고, [iPhone]에서 붙여넣기." — the platform names roll, then the camera pulls back out of the Mac's wallpaper |
-| 8–17 | Mac → iPhone: select an address in a note, ⌘C, the clip flies into the iPhone's history |
-| 18–29 | Android → Windows (colour wipe): "Send to my devices" on a sign-in code, Ctrl+V fills the code on the PC |
-| 30–39 | iPhone → Mac: the Paste button sends a photo, ⌘V drops it into a note |
+| 0–8 | Hook on Iris: "[Mac]에서 복사하고, [Windows]에서 붙여넣기." — the names roll through mixed pairs only, then the camera pulls back out of the Mac's wallpaper |
+| 8–17 | Mac → Windows: select an address in a note, ⌘C, Ctrl+V into a map search on the PC, the place drops a pin |
+| 18–29 | Android → Mac (colour wipe): "Send to my devices" on a sign-in code, ⌘V fills the code in Safari |
+| 30–39 | iPhone → Windows: the Paste button sends a photo, Ctrl+V answers "Got the Lisbon photo?" in a chat on the PC |
 | 40–51 | All four: the same history in the macOS panel, the Windows flyout and the Android and iOS apps; a clip copied on Windows ripples into the other three |
-| 52–67 | Four cards, one bar each, on the drop: QR pairing · another network (remote connection) · end-to-end encryption · one history (search, pin) |
+| 52–67 | Four cards, one bar each, on the drop: QR pairing · another network (Mac ↔ Galaxy, remote connection) · end-to-end encryption (PC ↔ iPhone) · one history (search, pin) |
 | 67–78 | The last card folds into the app icon: name, "여기서 복사하고, 저기서 붙여넣기.", the four platforms, by ivLis STUDIO |
 
 ## How it works
@@ -36,8 +39,9 @@ One beat grid (120 BPM, a bar is 2 s, `window.MUSIC`) is shared by the cuts and 
 - `index.html` + `src/` draw the stage; `renderAt(t)` is a pure function of time, so every frame is reproducible.
   `src/devices.js` draws the flat MacBook, monitor, Pixel and iPhone; `src/apps.js` rebuilds Nearclip's own UI on each
   platform from the apps (`apple/macOS/HistoryView.swift`, `apple/iOS/HomeView.swift`, `android/.../ui/home`,
-  `windows/.../Views/FlyoutWindow.xaml`) with their real strings; `src/extras.js` has the apps around it (a note,
-  a sign-in page, a text message) and the keycaps, pointers, touches and the travelling clip; `src/scene-a.js` builds
+  `windows/.../Views/FlyoutWindow.xaml`) with their real strings; `src/extras.js` has the apps around it (a note
+  on the Mac, a map and a chat in Windows 11 windows, a sign-in page in Safari, a text message on Android) and the
+  keycaps, pointers, touches and the travelling clip; `src/scene-a.js` builds
   the hook and the three demos, `src/scene-b.js` the four-platform grid, the cards, the end card and the timeline.
 - `render.mjs` drives headless Chrome, averages sub-frames for motion blur and encodes chunks in parallel. The stage
   records its own sound cues (`window.AUDIO_EVENTS`) from the timeline constants.

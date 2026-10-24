@@ -839,6 +839,17 @@ def build(events, duration, music, parts=False):
         elif name == "paste":
             sfx.add(sfx_whoosh(0.3, 900, 3800, 0.13, 1.1), t - 0.12, 1.0, pan=p)
             sfx.add(sfx_pop(420, 900, 0.09, 0.2), t, 1.0, pan=p)
+        elif name == "pindrop":
+            tt_ = tt(0.18)
+            thud = np.sin(2 * np.pi * (95 + 120 * np.exp(-tt_ / 0.02)) * tt_) * np.exp(-tt_ / 0.05) * 0.32
+            sfx.add(fade(thud, 0.0005, 0.02), t + 0.12, 1.0, pan=p)
+            sfx.add(sfx_pop(330, 760, 0.1, 0.24), t + 0.1, 1.0, pan=p)
+        elif name == "bubble":
+            sfx.add(sfx_whoosh(0.22, 1000, 3200, 0.1, 1.2), t - 0.08, 1.0, pan=p)
+            sfx.add(sfx_pop(520, 1150, 0.09, 0.26), t, 1.0, pan=p)
+        elif name == "reply":
+            sfx.add(sfx_pop(820, 1300, 0.07, 0.18), t, 1.0, pan=p)
+            sfx.add(sfx_ping(1), t + 0.02, 0.9, pan=p)
         elif name == "tile":
             sfx.add(sfx_whoosh(0.3, 600 * 2 ** (i * 0.12), 3400 * 2 ** (i * 0.12), 0.22, 1.2), t - 0.04, 1.0, pan=p)
         elif name == "card":

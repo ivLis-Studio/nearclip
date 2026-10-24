@@ -221,18 +221,21 @@
   A.winToast = function (parent, { dark = false } = {}) {
     const root = el("div.win-toast" + (dark ? ".dark" : ""), {}, parent);
     const ic = el("div.win-toast-ic", {}, root);
-    const icNode = icon("f", "phone", 18, ic);
+    const icPhone = icon("f", "phone", 18, ic);
+    const icLaptop = icon("f", "laptop", 18, ic);
     const col = el("div.win-toast-col", {}, root);
     const title = el("span.t", {}, col);
     const sub = el("span.s", {}, col);
     const thumb = el("img.win-toast-thumb", {}, root);
     return {
       root,
-      update(t, { start, end = start + 2.6, from, preview, img }) {
+      update(t, { start, end = start + 2.6, from, preview, img, dev = "phone" }) {
         const on = NC.win(t, start, end, 0.01, 0.3);
         if (on <= 0) { set(root, { display: "none" }); return; }
         const s = spring(t - start, 0.45, 0.85);
         txt(title, from); txt(sub, preview);
+        set(icPhone, { display: dev === "mac" ? "none" : "" });
+        set(icLaptop, { display: dev === "mac" ? "" : "none" });
         if (img) { if (thumb.getAttribute("src") !== img) thumb.setAttribute("src", img); set(thumb, { display: "" }); } else set(thumb, { display: "none" });
         const out = t > end ? E.inCubic(prog(t, end, end + 0.3)) : 0;
         set(root, { display: "", opacity: (Math.min(1, prog(t, start, start + 0.15)) * (1 - out)).toFixed(3), transform: "translateY(" + ((1 - s) * 40 + out * 20).toFixed(1) + "px)" });
