@@ -55,10 +55,10 @@ everything is **end-to-end encrypted** with keys only your devices hold.
 
 <table>
   <tr>
-    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-mac-en.webp" height="300" alt="Nearclip's history panel under the Mac menu bar"><br><b>macOS</b><br><sub>Menu bar app · <kbd>⌃⌘V</kbd> opens the history panel</sub></td>
-    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-win-en.webp" height="300" alt="Nearclip's flyout above the Windows taskbar"><br><b>Windows</b><br><sub>Tray app · <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd> opens the flyout</sub></td>
-    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-android-en.webp" height="300" alt="Nearclip's history on an Android phone"><br><b>Android</b><br><sub>Receives in the background · send from a tile, Share or the text menu</sub></td>
-    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-ios-en.webp" height="300" alt="Nearclip's history on an iPhone"><br><b>iPhone &amp; iPad</b><br><sub>Tap Paste to send · catches up the moment it opens</sub></td>
+    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-mac-en.webp" height="260" alt="Nearclip's history panel under the Mac menu bar"><br><b>macOS</b><br><sub>Menu bar app · <kbd>⌃⌘V</kbd> opens the history panel</sub></td>
+    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-win-en.webp" height="260" alt="Nearclip's flyout above the Windows taskbar"><br><b>Windows</b><br><sub>Tray app · <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd> opens the flyout</sub></td>
+    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-android-en.webp" height="260" alt="Nearclip's history on an Android phone"><br><b>Android</b><br><sub>Receives in the background · send from a tile, Share or the text menu</sub></td>
+    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-ios-en.webp" height="260" alt="Nearclip's history on an iPhone"><br><b>iPhone &amp; iPad</b><br><sub>Tap Paste to send · catches up the moment it opens</sub></td>
   </tr>
 </table>
 <p align="center"><sub>The same history in all four apps, as drawn in the launch film. Real screenshots are <a href="#screenshots">below</a> and in <a href="docs/screenshots">docs/screenshots</a>.</sub></p>

@@ -54,10 +54,10 @@ Mac과 iPhone, 일부 Windows PC와 Android 폰끼리는 이미 클립보드를 
 
 <table>
   <tr>
-    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-mac-ko.webp" height="300" alt="Mac 메뉴 막대 아래에 열린 Nearclip 기록 패널"><br><b>macOS</b><br><sub>메뉴 막대 앱 · <kbd>⌃⌘V</kbd>로 기록 패널 열기</sub></td>
-    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-win-ko.webp" height="300" alt="Windows 작업 표시줄 위에 열린 Nearclip 플라이아웃"><br><b>Windows</b><br><sub>알림 영역 앱 · <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd>로 플라이아웃 열기</sub></td>
-    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-android-ko.webp" height="300" alt="Android 폰의 Nearclip 기록 화면"><br><b>Android</b><br><sub>백그라운드에서 받기 · 타일, 공유, 텍스트 메뉴로 보내기</sub></td>
-    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-ios-ko.webp" height="300" alt="iPhone의 Nearclip 기록 화면"><br><b>iPhone &amp; iPad</b><br><sub>붙여넣기를 탭해 보내기 · 열자마자 밀린 내용 받기</sub></td>
+    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-mac-ko.webp" height="260" alt="Mac 메뉴 막대 아래에 열린 Nearclip 기록 패널"><br><b>macOS</b><br><sub>메뉴 막대 앱 · <kbd>⌃⌘V</kbd>로 기록 패널 열기</sub></td>
+    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-win-ko.webp" height="260" alt="Windows 작업 표시줄 위에 열린 Nearclip 플라이아웃"><br><b>Windows</b><br><sub>알림 영역 앱 · <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd>로 플라이아웃 열기</sub></td>
+    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-android-ko.webp" height="260" alt="Android 폰의 Nearclip 기록 화면"><br><b>Android</b><br><sub>백그라운드에서 받기 · 타일, 공유, 텍스트 메뉴로 보내기</sub></td>
+    <td align="center" valign="top" width="25%"><img src="website/public/assets/media/app-ios-ko.webp" height="260" alt="iPhone의 Nearclip 기록 화면"><br><b>iPhone &amp; iPad</b><br><sub>붙여넣기를 탭해 보내기 · 열자마자 밀린 내용 받기</sub></td>
   </tr>
 </table>
 <p align="center"><sub>소개 영상에 그린, 네 앱의 같은 기록. 실제 앱 화면은 <a href="#스크린샷">아래</a>와 <a href="docs/screenshots">docs/screenshots</a>에 있습니다.</sub></p>
