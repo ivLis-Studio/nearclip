@@ -73,6 +73,12 @@ public static class TailnetBridge
 
     static TailnetBridge()
     {
+        // Go's asynchronous preemption suspends threads and rewrites their context. In an x64 process emulated on ARM64
+        // Windows that kills the process without a trace (seen in a Windows 11 ARM64 VM: the x64 build died right after
+        // starting with remote connection on, and ran with it off or with asyncpreemptoff=1). The arm64 build runs
+        // natively; for the x64 build on ARM64, turn it off before the Go runtime in nctailnet.dll reads GODEBUG.
+        if (OperatingSystem.IsWindows() && EmulatedOnArm64())
+            Environment.SetEnvironmentVariable("GODEBUG", MergeGoDebug(Environment.GetEnvironmentVariable("GODEBUG"), "asyncpreemptoff=1"));
         // Tests and the CLI on macOS load the desktop build from NEARCLIP_TAILNET_LIB; the app ships nctailnet.dll next to the exe.
         try
         {
@@ -86,6 +92,28 @@ public static class TailnetBridge
         }
         catch (InvalidOperationException) { /* a resolver is already set */ }
     }
+
+    /// <summary>GODEBUG with one more "name=value" setting; an existing setting of that name wins.</summary>
+    public static string MergeGoDebug(string? current, string setting)
+    {
+        if (string.IsNullOrWhiteSpace(current)) return setting;
+        var name = setting.Split('=')[0];
+        foreach (var part in current.Split(','))
+            if (part.Trim().Split('=')[0] == name) return current;
+        return current + "," + setting;
+    }
+
+    /// <summary>An x64 process running under emulation on an ARM64 PC.</summary>
+    static bool EmulatedOnArm64()
+    {
+        if (RuntimeInformation.ProcessArchitecture != Architecture.X64) return false;
+        try { return IsWow64Process2(GetCurrentProcess(), out _, out var native) && native == ImageFileMachineArm64; }
+        catch (Exception) { return false; } // IsWow64Process2 needs Windows 10 1709
+    }
+
+    const ushort ImageFileMachineArm64 = 0xAA64;
+    [DllImport("kernel32.dll", SetLastError = true)] static extern bool IsWow64Process2(IntPtr process, out ushort processMachine, out ushort nativeMachine);
+    [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
 
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)] static extern IntPtr NCTailnetStart([MarshalAs(UnmanagedType.LPUTF8Str)] string config);
     [DllImport(Lib, CallingConvention = CallingConvention.Cdecl)] static extern IntPtr NCTailnetStatus();

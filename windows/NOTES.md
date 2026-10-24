@@ -170,3 +170,21 @@ Nearclip.slnx includes the app only for the ARM64/x64 solution platforms (Any CP
   toast stayed away until "Galaxy S25에서 복사됨".
 - Release (17:20, from this source): Debug ARM64 0 warnings / 0 errors; publish win-arm64 533 files, win-x64 537 files;
   dist zips rewritten with `/` separators (earlier zips in ~/.Trash/nearclip-windows-zips-*).
+
+## x64 build with remote connection on, under emulation (found in the final test, 2026-10-24)
+
+- Symptom (Windows 11 ARM64 VM, x64 build emulated): with remote connection on, Nearclip.exe logged "starting" and
+  within 3 s was left with one thread that `Stop-Process -Force` could not end; its main thread was gone, so the
+  single-instance mutex was abandoned and the next launch became a second primary (one on 45821, one on a fallback
+  port, same state directory). No .NET or WER crash record. Remote connection off: the x64 build ran normally.
+- Cause: Go's asynchronous preemption in nctailnet.dll (it suspends threads and rewrites their context) kills an x64
+  process emulated on ARM64. The x64 CLI with `--tailnet` behaved the same; with `GODEBUG=asyncpreemptoff=1` both
+  ran. Fix: TailnetBridge sets that GODEBUG before the DLL loads, only for an x64 process on an ARM64 machine
+  (IsWow64Process2); the arm64 build and real x64 PCs are unchanged. Not verified on a real x64 PC.
+- Also found: the CLI had no application manifest, so GetVersionEx reported Windows 8 and the embedded node panicked
+  ("incoherent Windows version -- missing/outdated manifest?", tailscale.com/net/tshttpproxy via wingoes) on the
+  arm64 CLI with `--tailnet`. The app always had the manifest. Nearclip.Cli now has one (supportedOS Windows 10).
+- After the fix, in the VM: x64 build with remote on keeps running (51 threads, advertises on 45821, node state
+  written); published arm64 and x64 builds pair through a nearclip:// link and sync text both ways through the
+  Windows clipboard; x64 and arm64 CLIs with `--tailnet` reach needsLogin without errors and exit cleanly. The stuck
+  processes from before the fix only went away with a VM restart.

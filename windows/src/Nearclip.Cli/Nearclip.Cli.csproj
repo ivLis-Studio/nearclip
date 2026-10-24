@@ -8,6 +8,8 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <UseAppHost>true</UseAppHost>
     <TieredPGO>true</TieredPGO>
+    <!-- Windows: declares Windows 10 support, which the embedded Tailscale node's version check needs (tailnet option). -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nearclip.Core\Nearclip.Core.csproj" />
