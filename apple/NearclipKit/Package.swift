@@ -9,7 +9,10 @@ let package = Package(
         .executable(name: "nearclip-cli", targets: ["nearclip-cli"]),
     ],
     targets: [
-        .target(name: "NearclipKit"),
+        // Embedded Tailscale node (tailnet/build.sh apple). Static library; Go needs these system libraries.
+        .binaryTarget(name: "NCTailnet", path: "Binaries/NCTailnet.xcframework"),
+        .target(name: "NearclipKit", dependencies: ["NCTailnet"],
+                linkerSettings: [.linkedFramework("CoreFoundation"), .linkedFramework("Security"), .linkedLibrary("resolv")]),
         .executableTarget(name: "nearclip-cli", dependencies: ["NearclipKit"]),
         .testTarget(name: "NearclipKitTests", dependencies: ["NearclipKit"]),
     ],

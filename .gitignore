@@ -25,6 +25,11 @@ node_modules/
 __pycache__/
 # Release artifacts
 dist/
+# Embedded Tailscale builds (tailnet/build.sh)
+tailnet/out/
+apple/NearclipKit/Binaries/
+android/app/src/main/jniLibs/
+windows/native/
 # OS
 .DS_Store
 

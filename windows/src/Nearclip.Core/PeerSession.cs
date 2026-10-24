@@ -31,7 +31,7 @@ internal sealed class PeerSession
     sealed record OutFrame(byte[] Bytes, bool CloseAfter);
 
     readonly NearclipNode _node;
-    readonly IReadOnlyList<Endpoint> _targets;
+    readonly IReadOnlyList<DialCandidate> _targets;
     readonly EphemeralKey _eph = new();
     readonly byte[] _myNonce = NcCrypto.Random(16);
     readonly Channel<OutFrame> _outbox = Channel.CreateUnbounded<OutFrame>(new UnboundedChannelOptions { SingleReader = true });
@@ -59,6 +59,10 @@ internal sealed class PeerSession
     public MemberRecord? PeerRecord { get; private set; }
     public string? ExpectedPeerId { get; init; }
     public Endpoint? DialedEndpoint { get; private set; }
+    /// <summary>Accepted from the tailnet bridge's loopback forwarder (its remote address is meaningless).</summary>
+    public bool ViaTailnet { get; }
+    /// <summary>The session runs over the tailnet (PROTOCOL.md §10.3).</summary>
+    public PeerRoute Route { get; private set; }
     public bool ReceivedWelcome { get; private set; }
     public bool GotPeerHello { get; private set; }
     public byte[]? PairSecret { get; set; }
@@ -78,10 +82,10 @@ internal sealed class PeerSession
     public bool Detached { get; set; }
     public bool IsMember => Mode == SessionMode.Member && Phase == SessionPhase.Established && !_closed && !_closing;
     public bool IsPairing => Mode is SessionMode.PairQr or SessionMode.PairCode;
-    public IReadOnlyList<Endpoint> Targets => _targets;
+    public IEnumerable<Endpoint> Targets => _targets.Select(t => t.Address);
 
     /// <summary>Client (dialer).</summary>
-    public PeerSession(NearclipNode node, SessionMode mode, IReadOnlyList<Endpoint> targets)
+    public PeerSession(NearclipNode node, SessionMode mode, IReadOnlyList<DialCandidate> targets)
     {
         _node = node;
         _targets = targets;
@@ -91,7 +95,7 @@ internal sealed class PeerSession
     }
 
     /// <summary>Server (accepted connection).</summary>
-    public PeerSession(NearclipNode node, Socket accepted)
+    public PeerSession(NearclipNode node, Socket accepted, bool viaTailnet = false)
     {
         _node = node;
         _targets = [];
@@ -100,6 +104,8 @@ internal sealed class PeerSession
         Mode = SessionMode.None;
         Phase = SessionPhase.AwaitHello;
         RemoteHost = Dialer.RemoteHost(accepted);
+        ViaTailnet = viaTailnet;
+        Route = viaTailnet || TailnetAddress.Contains(RemoteHost) ? PeerRoute.Remote : PeerRoute.Lan;
         Dialer.Configure(accepted);
     }
 
@@ -124,12 +130,13 @@ internal sealed class PeerSession
         {
             try
             {
-                var (socket, endpoint) = await Dialer.ConnectAnyAsync(_targets, TimeSpan.FromSeconds(6), _cts.Token).ConfigureAwait(false);
+                var (socket, winner) = await Dialer.RaceAsync(_targets, TimeSpan.FromSeconds(6), _cts.Token).ConfigureAwait(false);
                 _node.Q.Post(() =>
                 {
                     if (_closed) { socket.Dispose(); return; }
                     _socket = socket;
-                    DialedEndpoint = endpoint;
+                    DialedEndpoint = winner.Address;
+                    Route = winner.Remote ? PeerRoute.Remote : PeerRoute.Lan;
                     RemoteHost = Dialer.RemoteHost(socket);
                     StartIo();
                     Connected();

@@ -158,7 +158,7 @@ public enum NodeEvent: Sendable {
     case pairPromptDismissed
     case paired(groupId: String, peerId: String, peerName: String, joined: Bool)
     case pairFailed(reason: String)
-    case peerUp(MemberRecord)
+    case peerUp(MemberRecord, PeerRoute)
     case peerDown(String)
     /// `local`: produced on this device. `apply`: a live clip from another device that should go to the system clipboard.
     case clipAdded(StoredClip, live: Bool, apply: Bool, local: Bool)
@@ -168,6 +168,8 @@ public enum NodeEvent: Sendable {
     case nearbyChanged([NearbyDevice])
     case left(reason: String)
     case tooLarge(kind: String)
+    /// The embedded Tailscale node changed state (remote connection).
+    case tailnetChanged(TailnetStatus)
     case log(String)
 }
 
@@ -184,5 +186,9 @@ public struct NodeSnapshot: Sendable {
     public var port: UInt16
     public var paused: Bool
     public var addresses: [String]
+    /// Route of every connected member.
+    public var routes: [String: PeerRoute]
+    public var remoteEnabled: Bool
+    public var tailnet: TailnetStatus
 }
 

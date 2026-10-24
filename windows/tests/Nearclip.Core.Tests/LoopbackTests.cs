@@ -180,6 +180,38 @@ public sealed class LoopbackTests : IDisposable
         Assert.Equal("unreachable", a.Wait<NodeEvent.PairFailed>("qr pairing to a dead port").Reason);
     }
 
+    /// <summary>PROTOCOL.md §4.5: all addresses are tried at once, so an address that never answers costs nothing.</summary>
+    [Fact]
+    public void DeadAddress_DoesNotDelayPairing()
+    {
+        var a = Peer("Race A");
+        var b = Peer("Race B");
+        _ = a.Port;
+        var ticket = a.Node.CreateTicket();
+        var invite = ticket.Invite with { Hosts = ["192.0.2.1", "127.0.0.1"] };  // TEST-NET-1 never answers
+        var started = DateTime.UtcNow;
+        b.Mark();
+        b.Node.Join(invite);
+        b.Wait<NodeEvent.Paired>("paired", e => e.Joined);
+        Assert.True((DateTime.UtcNow - started).TotalSeconds < 3, "pairing waited for the dead address");
+        var up = b.Wait<NodeEvent.PeerUp>("peer up", e => e.Member.Id == a.Id);
+        Assert.Equal(PeerRoute.Lan, up.Route);
+        Assert.Equal(PeerRoute.Lan, b.Node.Snapshot().Routes[a.Id]);
+    }
+
+    [Fact]
+    public void TailnetAddresses_AreRecognized()
+    {
+        Assert.True(TailnetAddress.Contains("100.64.0.1"));
+        Assert.True(TailnetAddress.Contains("100.127.255.254"));
+        Assert.False(TailnetAddress.Contains("100.63.255.255"));
+        Assert.False(TailnetAddress.Contains("100.128.0.1"));
+        Assert.False(TailnetAddress.Contains("192.168.0.2"));
+        Assert.False(TailnetAddress.Contains("127.0.0.1"));
+        Assert.True(TailnetAddress.Contains("fd7a:115c:a1e0::1"));
+        Assert.False(TailnetAddress.Contains("fe80::1"));
+    }
+
     [Fact]
     public void MeshForwarding_ThroughMiddleNode()
     {

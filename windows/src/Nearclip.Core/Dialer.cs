@@ -1,17 +1,40 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 
 namespace Nearclip.Core;
 
+/// <summary>One way to reach a peer during a dial race (PROTOCOL.md §4.5, §10.3).</summary>
+/// <param name="ConnectTo">TCP target: the peer itself, or the tailnet bridge proxy (127.0.0.1:proxyPort).</param>
+/// <param name="Address">The peer address this candidate stands for (remembered when it wins).</param>
+/// <param name="ProxyRequest">"NCTN1 &lt;token&gt; &lt;ip&gt;:&lt;port&gt;\n" when dialing through the tailnet bridge.</param>
+/// <param name="Delay">Tailnet candidates start after the LAN candidates.</param>
+internal sealed record DialCandidate(Endpoint ConnectTo, Endpoint Address, string? ProxyRequest = null, TimeSpan Delay = default, bool Remote = false)
+{
+    public static DialCandidate Direct(Endpoint e) => new(e, e);
+}
+
 internal static class Dialer
 {
+    static readonly TimeSpan ProxyTimeout = TimeSpan.FromSeconds(15);
+
     /// <summary>Connects to every endpoint in parallel and keeps the first that answers.</summary>
     public static async Task<(Socket Socket, Endpoint Endpoint)> ConnectAnyAsync(IReadOnlyList<Endpoint> targets, TimeSpan timeout, CancellationToken ct)
     {
-        if (targets.Count == 0) throw NearclipException.Io("no address");
+        var (s, c) = await RaceAsync(targets.Distinct().Select(DialCandidate.Direct).ToList(), timeout, ct).ConfigureAwait(false);
+        return (s, c.Address);
+    }
+
+    /// <summary>Starts every candidate (after its delay) in parallel and keeps the first connection that opens — for
+    /// proxied candidates once the tailnet bridge answered 0. The others are closed.</summary>
+    public static async Task<(Socket Socket, DialCandidate Candidate)> RaceAsync(IReadOnlyList<DialCandidate> candidates, TimeSpan timeout, CancellationToken ct)
+    {
+        if (candidates.Count == 0) throw NearclipException.Io("no address");
+        var maxDelay = candidates.Max(c => c.Delay);
+        var budget = timeout + maxDelay + (candidates.Any(c => c.ProxyRequest is not null) ? ProxyTimeout : TimeSpan.Zero);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        cts.CancelAfter(timeout);
-        var pending = targets.Distinct().Select(t => ConnectOneAsync(t, cts.Token)).ToList();
+        cts.CancelAfter(budget);
+        var pending = candidates.Distinct().Select(c => AttemptAsync(c, timeout, cts.Token)).ToList();
         Exception? last = null;
         while (pending.Count > 0)
         {
@@ -29,6 +52,30 @@ internal static class Dialer
         if (ct.IsCancellationRequested) throw new NearclipException(ErrorKind.Cancelled);
         if (cts.IsCancellationRequested && last is OperationCanceledException) throw NearclipException.TimedOut();
         throw NearclipException.Io(last?.Message ?? "unreachable");
+    }
+
+    static async Task<(Socket Socket, DialCandidate Candidate)> AttemptAsync(DialCandidate c, TimeSpan timeout, CancellationToken ct)
+    {
+        if (c.Delay > TimeSpan.Zero) await Task.Delay(c.Delay, ct).ConfigureAwait(false);
+        using var one = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        one.CancelAfter(timeout);
+        var (socket, _) = await ConnectOneAsync(c.ConnectTo, one.Token).ConfigureAwait(false);
+        if (c.ProxyRequest is null) return (socket, c);
+        try
+        {
+            using var wait = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            wait.CancelAfter(ProxyTimeout);
+            await socket.SendAsync(Encoding.ASCII.GetBytes(c.ProxyRequest), SocketFlags.None, wait.Token).ConfigureAwait(false);
+            var status = new byte[1];
+            var n = await socket.ReceiveAsync(status, SocketFlags.None, wait.Token).ConfigureAwait(false);
+            if (n != 1 || status[0] != 0) throw NearclipException.Io($"tailnet dial failed ({(n == 1 ? status[0] : -1)})");
+            return (socket, c);
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
     }
 
     static async Task<(Socket Socket, Endpoint Endpoint)> ConnectOneAsync(Endpoint ep, CancellationToken ct)

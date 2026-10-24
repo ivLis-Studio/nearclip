@@ -66,6 +66,10 @@ internal class MemberSession(
     val clientId: String,
     val groupId: String,
     val dialed: Endpoint?,
+    /** Accepted from the tailnet bridge's loopback forwarder (its remote address is meaningless). */
+    val viaTailnet: Boolean = false,
+    /** The session runs over the tailnet (PROTOCOL §10.3). */
+    val remote: Boolean = false,
 ) {
     private class Out(val plain: ByteArray, val final: Boolean)
     private class BlobJob(val clipId: String, val file: File, val size: Long)

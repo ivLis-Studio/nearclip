@@ -13,12 +13,15 @@ public final class NearclipNode: @unchecked Sendable {
         public var port: UInt16
         public var bonjour: Bool
         public var secretStore: SecretStore
+        /// Embedded Tailscale node (remote connection, PROTOCOL.md §10). nil = not available.
+        public var tailnet: TailnetOptions?
 
         public init(stateDirectory: URL, deviceName: String, platform: String, model: String? = nil,
-                    appVersion: String? = nil, port: UInt16 = 45821, bonjour: Bool = true, secretStore: SecretStore) {
+                    appVersion: String? = nil, port: UInt16 = 45821, bonjour: Bool = true, secretStore: SecretStore,
+                    tailnet: TailnetOptions? = nil) {
             self.stateDirectory = stateDirectory; self.deviceName = deviceName; self.platform = platform
             self.model = model; self.appVersion = appVersion; self.port = port; self.bonjour = bonjour
-            self.secretStore = secretStore
+            self.secretStore = secretStore; self.tailnet = tailnet
         }
     }
 
@@ -57,7 +60,6 @@ public final class NearclipNode: @unchecked Sendable {
     private var online: [String: PeerSession] = [:]
     private var dialing: [String: Date] = [:]
     private var backoff: [String: (next: Date, delay: TimeInterval)] = [:]
-    private var attempt: [String: Int] = [:]
     private var discovered: [String: Discovered] = [:]
     private var ticket: Ticket?
     private var codeSession: PeerSession?
@@ -69,6 +71,22 @@ public final class NearclipNode: @unchecked Sendable {
     private var running = false
     private var timer: DispatchSourceTimer?
     private var newestLocalTs: Int64 = 0
+
+    // Remote connection (embedded Tailscale node, PROTOCOL.md §10).
+    /// Tailnet port every Nearclip node accepts connections on.
+    static let tailnetPort = 45821
+    /// Tailnet candidates start this much later than LAN candidates (§10.3).
+    static let tailnetDelay: TimeInterval = 0.4
+    private var remoteEnabled = false
+    private var tailnetStatus = TailnetStatus.off
+    private var tailnetListener: NWListener?
+    private var tailnetForwardPort: UInt16 = 0
+    private var tailnetGeneration = 0
+    private var tailnetReach = ""
+    private let tailnetQueue = DispatchQueue(label: "studio.ivlis.nearclip.tailnet")
+    private var pathMonitor: NWPathMonitor?
+    private var pathSignature: String?
+    private var pathWork: DispatchWorkItem?
 
     public init(config: Config) throws {
         self.config = config
@@ -107,10 +125,14 @@ public final class NearclipNode: @unchecked Sendable {
             guard running else { store.saveNow(); return }
             running = false
             stopNetworking(reason: "shutdown")
+            pathMonitor?.cancel()
+            pathMonitor = nil
             timer?.cancel()
             timer = nil
             store.saveNow()
         }
+        // Let the embedded node shut down cleanly (bounded by the bridge's own timeout).
+        tailnetQueue.sync {}
     }
 
     public func snapshot() -> NodeSnapshot { queue.sync { snapshotInternal() } }
@@ -230,15 +252,16 @@ public final class NearclipNode: @unchecked Sendable {
     public func pairWithCode(nearbyId: String) {
         queue.async {
             guard let d = self.discovered[nearbyId.lowercased()] else { self.emit(.pairFailed(reason: "unreachable")); return }
-            self.startCodeJoin([(d.endpoint, nil)])
+            self.startCodeJoin([DialCandidate(endpoint: d.endpoint, address: nil, proxyRequest: nil, delay: 0, route: .lan)])
         }
     }
 
     /// Joiner: numeric-comparison pairing with an explicit address.
     public func pairWithCode(host: String, port: UInt16) {
         queue.async {
-            guard let p = NWEndpoint.Port(rawValue: port) else { self.emit(.pairFailed(reason: "unreachable")); return }
-            self.startCodeJoin([(.hostPort(host: NWEndpoint.Host(host), port: p), Endpoint(h: host, p: Int(port)))])
+            let targets = self.candidates(for: [Endpoint(h: host, p: Int(port))], fallback: true)
+            guard !targets.isEmpty else { self.emit(.pairFailed(reason: "unreachable")); return }
+            self.startCodeJoin(targets)
         }
     }
 
@@ -267,22 +290,57 @@ public final class NearclipNode: @unchecked Sendable {
     /// Dial a member session at an explicit address.
     public func connect(host: String, port: UInt16) {
         queue.async {
-            guard let p = NWEndpoint.Port(rawValue: port) else { return }
-            self.dialMember(peerId: nil, endpoint: .hostPort(host: NWEndpoint.Host(host), port: p), address: Endpoint(h: host, p: Int(port)))
+            self.dialMember(peerId: nil, candidates: self.candidates(for: [Endpoint(h: host, p: Int(port))], fallback: true))
         }
     }
 
     /// Call after wake from sleep / network changes: drop sessions that went silent, forget back-off and redial now.
     public func nudge() {
+        queue.async { self.networkChanged() }
+    }
+
+    // MARK: - Remote connection (public)
+
+    /// Whether this build can run the embedded Tailscale node.
+    public var isTailnetAvailable: Bool { config.tailnet != nil }
+
+    /// Remote connection on/off (the app persists the choice). The node runs only while networking runs.
+    public func setRemoteEnabled(_ on: Bool) {
         queue.async {
-            guard self.running, !self.paused else { return }
-            let now = Date()
-            for s in self.online.values where now.timeIntervalSince(s.lastReceived) > 20 { s.close() }
-            self.backoff = [:]
-            if self.listener == nil { self.startListener(port: self.config.port) }
-            if self.config.bonjour && self.browser == nil { self.startBrowser() }
-            for s in self.online.values { s.sendJSON(SimpleMsg(t: "ping")) }
-            self.tick()
+            guard self.remoteEnabled != on else { return }
+            self.remoteEnabled = on
+            if on { self.startTailnetIfNeeded() } else { self.stopTailnet() }
+        }
+    }
+
+    /// Makes sure a Tailscale sign-in URL exists. The completion runs on `eventQueue` with the fresh status.
+    public func tailnetLogin(_ completion: @escaping @Sendable (TailnetStatus) -> Void) {
+        queue.async {
+            let gen = self.tailnetGeneration
+            guard self.tailnetListener != nil else {
+                let st = self.tailnetStatus
+                self.eventQueue.async { completion(st) }
+                return
+            }
+            self.tailnetQueue.async {
+                let st = TailnetBridge.login()
+                self.queue.async {
+                    if gen == self.tailnetGeneration { self.applyTailnet(st) }
+                    self.eventQueue.async { completion(st) }
+                }
+            }
+        }
+    }
+
+    /// Signs this device out of Tailscale (remote connection then needs a new sign-in).
+    public func tailnetLogout() {
+        queue.async {
+            let gen = self.tailnetGeneration
+            guard self.tailnetListener != nil else { return }
+            self.tailnetQueue.async {
+                let st = TailnetBridge.logout()
+                self.queue.async { if gen == self.tailnetGeneration { self.applyTailnet(st) } }
+            }
         }
     }
 
@@ -314,7 +372,8 @@ public final class NearclipNode: @unchecked Sendable {
         NodeSnapshot(deviceId: deviceId, deviceName: deviceName, platform: platform, groupId: store.state.groupId,
                      members: memberList(), online: Set(online.keys), lastSeen: store.state.lastSeen,
                      history: store.history, nearby: nearbyList(), port: port, paused: paused,
-                     addresses: LocalAddresses.ipv4())
+                     addresses: LocalAddresses.ipv4(), routes: online.mapValues { $0.route },
+                     remoteEnabled: remoteEnabled, tailnet: tailnetStatus)
     }
 
     private func emit(_ e: NodeEvent) {
@@ -336,6 +395,7 @@ public final class NearclipNode: @unchecked Sendable {
         t.setEventHandler { [weak self] in self?.tick() }
         t.resume()
         timer = t
+        startPathMonitor()
     }
 
     private func startNetworking() {
@@ -351,6 +411,7 @@ public final class NearclipNode: @unchecked Sendable {
         for s in sessions {
             if s.isMember { s.bye(reason) } else { s.close() }
         }
+        stopTailnet()
         discovered = [:]
         emit(.nearbyChanged([]))
     }
@@ -371,6 +432,7 @@ public final class NearclipNode: @unchecked Sendable {
             case .ready:
                 self.port = l.port?.rawValue ?? 0
                 self.emit(.ready(port: self.port, groupId: self.store.state.groupId, groupTag: self.groupTag))
+                self.startTailnetIfNeeded()
             case .failed(let error):
                 l.cancel()
                 self.listener = nil
@@ -467,46 +529,90 @@ public final class NearclipNode: @unchecked Sendable {
     private func considerDial(_ d: Discovered) {
         guard running, !paused, online[d.id] == nil, dialing[d.id] == nil, store.members[d.id]?.removed != true else { return }
         if deviceId < d.id {
-            dialMember(peerId: d.id, endpoint: d.endpoint, address: nil)
+            dialMember(peerId: d.id, candidates: dialCandidates(for: d.id))
         } else {
             queue.asyncAfter(deadline: .now() + 3) { [weak self] in
-                guard let self, let d2 = self.discovered[d.id], d2.gt == self.groupTag,
+                guard let self, let d2 = self.discovered[d.id], d2.gt == self.groupTag, self.running, !self.paused,
                       self.online[d.id] == nil, self.dialing[d.id] == nil else { return }
-                self.dialMember(peerId: d.id, endpoint: d2.endpoint, address: nil)
+                self.dialMember(peerId: d2.id, candidates: self.dialCandidates(for: d2.id))
             }
         }
     }
 
-    private func dialMember(peerId: String?, endpoint: NWEndpoint, address: Endpoint?) {
-        guard running, !paused else { return }
+    /// All ways to reach a member: the discovered service, remembered endpoints and its tailnet node.
+    private func dialCandidates(for id: String) -> [DialCandidate] {
+        var out: [DialCandidate] = []
+        if let d = discovered[id], d.gt == groupTag {
+            out.append(DialCandidate(endpoint: d.endpoint, address: nil, proxyRequest: nil, delay: 0, route: .lan))
+        }
+        var eps = store.state.endpoints[id] ?? []
+        if tailnetStatus.isRunning {
+            let id8 = String(id.replacingOccurrences(of: "-", with: "").prefix(8))
+            for p in tailnetStatus.peers where p.idPrefix == id8 { eps.append(Endpoint(h: p.ip, p: Self.tailnetPort)) }
+        }
+        return out + candidates(for: eps)
+    }
+
+    /// Direct candidates for LAN endpoints; tailnet endpoints go through the bridge proxy (and through the
+    /// OS when the Tailscale app itself is connected) and start a little later (PROTOCOL.md §10.3).
+    private func candidates(for eps: [Endpoint], fallback: Bool = false) -> [DialCandidate] {
+        var out: [DialCandidate] = []
+        var seen = Set<Endpoint>()
+        let st = tailnetStatus
+        var osTailnet: Bool?
+        for e in eps where !e.h.isEmpty && seen.insert(e).inserted {
+            guard TailnetAddress.contains(e.h) else {
+                if let c = DialCandidate.direct(e) { out.append(c) }
+                continue
+            }
+            if e.h == st.ip { continue }
+            if st.isRunning, let pp = st.proxyPort, let token = st.token, let proxy = NWEndpoint.Port(rawValue: UInt16(clamping: pp)) {
+                out.append(DialCandidate(endpoint: .hostPort(host: "127.0.0.1", port: proxy), address: e,
+                                         proxyRequest: "NCTN1 \(token) \(e.h):\(e.p)\n", delay: Self.tailnetDelay, route: .remote))
+            }
+            if osTailnet == nil { osTailnet = LocalAddresses.ipv4().contains(where: TailnetAddress.contains) }
+            if osTailnet == true, let c = DialCandidate.direct(e, delay: Self.tailnetDelay, route: .remote) { out.append(c) }
+        }
+        if out.isEmpty, fallback, let e = eps.first, let c = DialCandidate.direct(e) { out.append(c) }
+        return out
+    }
+
+    private func dialMember(peerId: String?, candidates: [DialCandidate]) {
+        guard running, !paused, !candidates.isEmpty else { return }
         if let pid = peerId {
             guard online[pid] == nil, dialing[pid] == nil else { return }
             dialing[pid] = Date()
         }
-        let conn = FramedConnection(nw: NWConnection(to: endpoint, using: FramedConnection.parameters()), queue: queue)
+        let conn = FramedConnection(candidates: candidates, queue: queue)
         let s = PeerSession(role: .client, mode: .member, connection: conn, node: self)
         s.expectedPeerId = peerId
-        s.dialedEndpoint = address
         sessions.insert(s)
         s.start()
     }
 
-    private func accept(_ nw: NWConnection) {
+    private func accept(_ nw: NWConnection, viaTailnet: Bool = false) {
         guard running, !paused else { nw.cancel(); return }
-        let s = PeerSession(role: .server, mode: nil, connection: FramedConnection(nw: nw, queue: queue), node: self)
+        let conn = FramedConnection(nw: nw, queue: queue)
+        conn.viaTailnet = viaTailnet
+        let s = PeerSession(role: .server, mode: nil, connection: conn, node: self)
         sessions.insert(s)
         s.start()
     }
 
     private func ownEndpoints() -> [Endpoint] {
         guard port > 0 else { return [] }
-        return LocalAddresses.ipv4().map { Endpoint(h: $0, p: Int(port)) }
+        var eps = LocalAddresses.ipv4().map { Endpoint(h: $0, p: Int(port)) }
+        if tailnetStatus.isRunning, let ip = tailnetStatus.ip { eps.append(Endpoint(h: ip, p: Self.tailnetPort)) }
+        return eps
     }
 
+    /// Keeps up to 6 LAN and 2 tailnet endpoints per member, newest first (PROTOCOL.md §4.5).
     private func rememberEndpoints(_ peerId: String, _ eps: [Endpoint]) {
         var seen = Set<Endpoint>()
-        let merged = (eps + (store.state.endpoints[peerId] ?? [])).filter { seen.insert($0).inserted }
-        store.state.endpoints[peerId] = Array(merged.prefix(6))
+        let merged = (eps + (store.state.endpoints[peerId] ?? [])).filter { !$0.h.isEmpty && seen.insert($0).inserted }
+        let lan = merged.filter { !TailnetAddress.contains($0.h) }.prefix(6)
+        let tail = merged.filter { TailnetAddress.contains($0.h) }.prefix(2)
+        store.state.endpoints[peerId] = Array(lan) + Array(tail)
         store.saveSoon()
     }
 
@@ -521,19 +627,154 @@ public final class NearclipNode: @unchecked Sendable {
         for (id, rec) in store.members where id != deviceId && !rec.removed && online[id] == nil && dialing[id] == nil {
             let b = backoff[id] ?? (next: .distantPast, delay: 10)
             guard now >= b.next else { continue }
-            var target: (NWEndpoint, Endpoint?)?
-            if let d = discovered[id], d.gt == groupTag {
-                target = (d.endpoint, nil)
-            } else if let eps = store.state.endpoints[id], !eps.isEmpty {
-                let n = attempt[id, default: 0]
-                attempt[id] = n + 1
-                let a = eps[n % eps.count]
-                if let p = NWEndpoint.Port(rawValue: UInt16(clamping: a.p)) { target = (.hostPort(host: NWEndpoint.Host(a.h), port: p), a) }
-            }
-            guard let target else { continue }
+            // Every known way to reach the member at once; the first connection wins (PROTOCOL.md §4.5).
+            let targets = dialCandidates(for: id)
+            guard !targets.isEmpty else { continue }
             backoff[id] = (next: now.addingTimeInterval(b.delay), delay: min(b.delay * 2, 300))
-            dialMember(peerId: id, endpoint: target.0, address: target.1)
+            dialMember(peerId: id, candidates: targets)
         }
+    }
+
+    // MARK: - Network changes
+
+    private func startPathMonitor() {
+        let m = NWPathMonitor()
+        m.pathUpdateHandler = { [weak self] path in
+            guard let self else { return }
+            let sig = "\(path.status)|" + path.availableInterfaces.map { "\($0.name)" }.joined(separator: ",")
+                + "|" + LocalAddresses.ipv4().joined(separator: ",")
+            guard sig != self.pathSignature else { return }
+            let first = self.pathSignature == nil
+            self.pathSignature = sig
+            guard !first else { return }
+            self.pathWork?.cancel()
+            let w = DispatchWorkItem { [weak self] in
+                self?.log("network changed")
+                self?.networkChanged()
+            }
+            self.pathWork = w
+            self.queue.asyncAfter(deadline: .now() + 1, execute: w)
+        }
+        m.start(queue: queue)
+        pathMonitor = m
+    }
+
+    /// Wake from sleep, app back in the foreground, interface change: drop sessions that went silent,
+    /// forget back-off and redial now (PROTOCOL.md §4.5, §10.4).
+    private func networkChanged() {
+        guard running, !paused else { return }
+        let now = Date()
+        for s in online.values where now.timeIntervalSince(s.lastReceived) > 20 { s.close() }
+        backoff = [:]
+        if listener == nil { startListener(port: config.port) }
+        if config.bonjour && browser == nil { startBrowser() }
+        if tailnetListener != nil { tailnetQueue.async { TailnetBridge.networkChanged() } }
+        for s in online.values { s.sendJSON(SimpleMsg(t: "ping")) }
+        tick()
+    }
+
+    // MARK: - Embedded Tailscale node
+
+    private func startTailnetIfNeeded() {
+        guard remoteEnabled, running, !paused, let opts = config.tailnet, port > 0 else { return }
+        guard let _ = tailnetListener else { startTailnetListener(); return }
+        guard tailnetForwardPort > 0 else { return }  // continues when the loopback listener is ready
+        var cfg: [String: Any] = ["dir": opts.directory.path, "deviceId": deviceId, "deviceName": deviceName,
+                                  "ports": [Int(port)], "forward": "127.0.0.1:\(tailnetForwardPort)"]
+        if let c = opts.controlURL { cfg["controlURL"] = c }
+        if let l = opts.logPath { cfg["logPath"] = l }
+        if opts.testMode { cfg["testMode"] = true }
+        Self.excludeFromBackup(opts.directory)
+        tailnetGeneration += 1
+        let gen = tailnetGeneration
+        if !tailnetStatus.isRunning { applyTailnet(TailnetStatus(state: "starting")) }
+        tailnetQueue.async { [weak self] in
+            let st = TailnetBridge.start(cfg)
+            guard let self else { return }
+            self.queue.async {
+                guard gen == self.tailnetGeneration else { return }
+                self.applyTailnet(st)
+                self.scheduleTailnetPoll(gen)
+            }
+        }
+    }
+
+    /// Inbound tailnet connections arrive here from the bridge (loopback only).
+    private func startTailnetListener() {
+        let params = FramedConnection.parameters()
+        params.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: .any)
+        guard let l = try? NWListener(using: params) else {
+            applyTailnet(TailnetStatus(state: "error", error: "loopback listener"))
+            return
+        }
+        tailnetListener = l
+        l.newConnectionHandler = { [weak self] nw in self?.accept(nw, viaTailnet: true) }
+        l.stateUpdateHandler = { [weak self, weak l] state in
+            guard let self, let l, self.tailnetListener === l else { return }
+            switch state {
+            case .ready:
+                self.tailnetForwardPort = l.port?.rawValue ?? 0
+                self.startTailnetIfNeeded()
+            case .failed(let error):
+                self.log("tailnet listener failed: \(error)")
+                l.cancel()
+                self.tailnetListener = nil
+                self.tailnetForwardPort = 0
+                self.applyTailnet(TailnetStatus(state: "error", error: error.localizedDescription))
+            default:
+                break
+            }
+        }
+        l.start(queue: queue)
+    }
+
+    private func stopTailnet() {
+        let active = tailnetListener != nil || tailnetStatus.state != "off"
+        tailnetListener?.cancel()
+        tailnetListener = nil
+        tailnetForwardPort = 0
+        tailnetGeneration += 1
+        guard active else { return }
+        tailnetQueue.async { _ = TailnetBridge.stop() }
+        applyTailnet(.off)
+    }
+
+    private func scheduleTailnetPoll(_ gen: Int) {
+        let delay: TimeInterval = tailnetStatus.isRunning ? 5 : 1.5
+        queue.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, gen == self.tailnetGeneration, self.tailnetListener != nil else { return }
+            self.tailnetQueue.async {
+                let st = TailnetBridge.status()
+                self.queue.async {
+                    guard gen == self.tailnetGeneration else { return }
+                    self.applyTailnet(st)
+                    self.scheduleTailnetPoll(gen)
+                }
+            }
+        }
+    }
+
+    private func applyTailnet(_ st: TailnetStatus) {
+        let old = tailnetStatus
+        tailnetStatus = st
+        if !old.sameEssentials(st) { emit(.tailnetChanged(st)) }
+        // New ways to reach members (node came up, other nodes appeared): dial at once.
+        let reach = st.isRunning ? (st.ip ?? "") + "|" + st.peers.map { "\($0.idPrefix ?? "")@\($0.ip)" }.joined(separator: ",") : ""
+        if reach != tailnetReach {
+            tailnetReach = reach
+            if st.isRunning {
+                backoff = [:]
+                tick()
+            }
+        }
+    }
+
+    private static func excludeFromBackup(_ url: URL) {
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        var u = url
+        var v = URLResourceValues()
+        v.isExcludedFromBackup = true
+        try? u.setResourceValues(v)
     }
 
     // MARK: - Session callbacks
@@ -552,7 +793,8 @@ public final class NearclipNode: @unchecked Sendable {
         var eps = (msg.addrs ?? []).filter { !$0.h.isEmpty && $0.p > 0 && $0.p < 65536 }
         if let a = s.dialedEndpoint {
             eps.insert(a, at: 0)
-        } else if s.role == .server, let host = s.conn.remoteHost, let p = msg.addrs?.first?.p {
+        } else if s.role == .server, !s.conn.viaTailnet, let host = s.conn.remoteHost, let p = msg.addrs?.first?.p {
+            // Never remember the loopback address of connections relayed by the tailnet bridge (§10.1).
             eps.insert(Endpoint(h: host, p: p), at: 0)
         }
         rememberEndpoints(pid, eps)
@@ -563,7 +805,6 @@ public final class NearclipNode: @unchecked Sendable {
         if store.members[pid]?.removed == true { s.bye("removed"); return }
         guard registerOnline(s) else { return }
         backoff[pid] = nil
-        attempt[pid] = 0
         sendInventory(s)
     }
 
@@ -583,7 +824,7 @@ public final class NearclipNode: @unchecked Sendable {
         online[pid] = s
         store.state.lastSeen[pid] = nowMs()
         store.saveSoon()
-        if let rec = store.members[pid] { emit(.peerUp(rec)) }
+        if let rec = store.members[pid] { emit(.peerUp(rec, s.route)) }
         return true
     }
 
@@ -836,7 +1077,6 @@ public final class NearclipNode: @unchecked Sendable {
         online = [:]
         dialing = [:]
         backoff = [:]
-        attempt = [:]
         switchGroup(id: newNearclipId(), key: NCCrypto.random(32))
         let now = nowMs()
         store.members = [deviceId: MemberRecord(id: deviceId, name: deviceName, platform: platform, model: config.model,
@@ -854,8 +1094,11 @@ public final class NearclipNode: @unchecked Sendable {
 
     private func createTicketInternal() -> PairingTicket {
         let secret = NCCrypto.random(16)
+        var hosts = LocalAddresses.ipv4()
+        // A joiner in the same tailnet can pair from another network (the node also listens on `port`).
+        if tailnetStatus.isRunning, let ip = tailnetStatus.ip, !hosts.contains(ip) { hosts.append(ip) }
         let invite = PairingInvite(inviterId: deviceId, name: deviceName, platform: platform,
-                                   hosts: LocalAddresses.ipv4(), port: port, secret: secret)
+                                   hosts: hosts, port: port, secret: secret)
         let t = Ticket(secret: secret, expires: Date().addingTimeInterval(600), failures: 0)
         ticket = t
         let pt = PairingTicket(invite: invite, expiresAt: t.expires)
@@ -918,49 +1161,53 @@ public final class NearclipNode: @unchecked Sendable {
     private func joinInternal(_ invite: PairingInvite) {
         guard !joining else { emit(.pairFailed(reason: "busy")); return }
         guard invite.inviterId != deviceId else { emit(.pairFailed(reason: "self")); return }
-        var targets: [(NWEndpoint, Endpoint?)] = []
-        if let p = NWEndpoint.Port(rawValue: invite.port) {
-            targets = invite.hosts.map { (.hostPort(host: NWEndpoint.Host($0), port: p), Endpoint(h: $0, p: Int(invite.port))) }
+        var targets: [DialCandidate] = []
+        if let d = discovered[invite.inviterId] {
+            targets.append(DialCandidate(endpoint: d.endpoint, address: nil, proxyRequest: nil, delay: 0, route: .lan))
         }
-        if let d = discovered[invite.inviterId] { targets.insert((d.endpoint, nil), at: 0) }
+        var eps = invite.hosts.map { Endpoint(h: $0, p: Int(invite.port)) }
+        if tailnetStatus.isRunning {
+            let id8 = String(invite.inviterId.replacingOccurrences(of: "-", with: "").prefix(8))
+            for p in tailnetStatus.peers where p.idPrefix == id8 { eps.append(Endpoint(h: p.ip, p: Int(invite.port))) }
+        }
+        targets += candidates(for: eps)
         guard !targets.isEmpty else { emit(.pairFailed(reason: "unreachable")); return }
         joining = true
-        attemptJoin(mode: .pairQR, secret: invite.secret, targets: targets, index: 0, lastError: nil)
+        attemptJoin(mode: .pairQR, secret: invite.secret, targets: targets)
     }
 
-    private func startCodeJoin(_ targets: [(NWEndpoint, Endpoint?)]) {
+    private func startCodeJoin(_ targets: [DialCandidate]) {
         guard !joining else { emit(.pairFailed(reason: "busy")); return }
         joining = true
-        attemptJoin(mode: .pairCode, secret: nil, targets: targets, index: 0, lastError: nil)
+        attemptJoin(mode: .pairCode, secret: nil, targets: targets)
     }
 
-    private func attemptJoin(mode: PeerSession.Mode, secret: Data?, targets: [(NWEndpoint, Endpoint?)], index: Int, lastError: NearclipError?) {
+    /// Races all targets (PROTOCOL.md §4.5); the first that opens carries the pairing.
+    private func attemptJoin(mode: PeerSession.Mode, secret: Data?, targets: [DialCandidate]) {
         guard joining else { return }
-        guard index < targets.count else {
-            joining = false
-            emit(.pairFailed(reason: lastError.map { $0 == .timeout ? "timeout" : $0.code == "io" ? "unreachable" : $0.code } ?? "unreachable"))
-            return
-        }
-        let (endpoint, address) = targets[index]
-        let conn = FramedConnection(nw: NWConnection(to: endpoint, using: FramedConnection.parameters()), queue: queue)
+        let conn = FramedConnection(candidates: targets, queue: queue)
         let s = PeerSession(role: .client, mode: mode, connection: conn, node: self)
         s.pairSecret = secret
-        s.dialedEndpoint = address
         s.onPairResult = { [weak self, weak s] result in
             guard let self else { return }
             switch result {
             case .success(let accept):
                 self.completeJoin(accept, via: s)
             case .failure(let error):
+                self.joining = false
                 let reachedInviter = s?.gotPeerHello ?? false
-                if !reachedInviter && (error.code == "io" || error == .timeout) {
-                    self.attemptJoin(mode: mode, secret: secret, targets: targets, index: index + 1, lastError: error)
-                } else {
-                    self.joining = false
+                let reason: String
+                if error == .timeout {
+                    reason = "timeout"
+                } else if !reachedInviter && error.code == "io" {
+                    reason = "unreachable"
+                } else if mode == .pairQR && error.code == "io" {
                     // A QR inviter silently closes on an expired, used or wrong ticket.
-                    let reason = error == .timeout ? "timeout" : (mode == .pairQR && error.code == "io" ? "no_ticket" : error.code)
-                    self.emit(.pairFailed(reason: reason))
+                    reason = "no_ticket"
+                } else {
+                    reason = error.code
                 }
+                self.emit(.pairFailed(reason: reason))
             }
         }
         joinSession = s
@@ -979,7 +1226,6 @@ public final class NearclipNode: @unchecked Sendable {
         online = [:]
         dialing = [:]
         backoff = [:]
-        attempt = [:]
         switchGroup(id: accept.group.id.lowercased(), key: key)
         var members: [String: MemberRecord] = [:]
         for var r in (accept.members ?? []) + [accept.device] {
@@ -1003,11 +1249,7 @@ public final class NearclipNode: @unchecked Sendable {
         emit(.membersChanged(memberList()))
         emit(.nearbyChanged(nearbyList()))
         emit(.paired(groupId: store.state.groupId, peerId: inviter, peerName: accept.device.name, joined: true))
-        if let a = s?.dialedEndpoint, let p = NWEndpoint.Port(rawValue: UInt16(clamping: a.p)) {
-            dialMember(peerId: inviter, endpoint: .hostPort(host: NWEndpoint.Host(a.h), port: p), address: a)
-        } else if let d = discovered[inviter] {
-            dialMember(peerId: inviter, endpoint: d.endpoint, address: nil)
-        }
+        dialMember(peerId: inviter, candidates: dialCandidates(for: inviter))
         for d in discovered.values where d.gt == groupTag && d.id != inviter { considerDial(d) }
     }
 }

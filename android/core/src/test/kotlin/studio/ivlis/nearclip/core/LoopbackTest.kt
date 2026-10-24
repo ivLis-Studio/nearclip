@@ -9,6 +9,8 @@ import studio.ivlis.nearclip.core.model.Endpoint
 import studio.ivlis.nearclip.core.model.Platform
 import studio.ivlis.nearclip.core.pairing.PairingUri
 import studio.ivlis.nearclip.core.store.FileStore
+import studio.ivlis.nearclip.core.tailnet.PeerRoute
+import studio.ivlis.nearclip.core.tailnet.TailnetAddress
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
@@ -247,5 +249,33 @@ class LoopbackTest {
         a.engine.sendText("private")
         Thread.sleep(500)
         assertTrue(c.events.drop(c.cursor).none { it is EngineEvent.ClipAdded })
+    }
+
+    /** PROTOCOL §4.5: all addresses are tried at once, so an address that never answers costs nothing. */
+    @Test
+    fun deadAddressDoesNotDelayPairing() {
+        val a = Node("Race A")
+        val b = Node("Race B")
+        val ticket = PairingUri.parse(a.engine.createTicket().uri)!!
+        val started = System.currentTimeMillis()
+        b.mark()
+        b.engine.joinWithUri(ticket.copy(hosts = listOf("192.0.2.1", "127.0.0.1")))  // TEST-NET-1 never answers
+        b.await<EngineEvent.Paired>("paired") { it is EngineEvent.Paired && it.joined }
+        assertTrue(System.currentTimeMillis() - started < 3_000, "pairing waited for the dead address")
+        val up = b.await<EngineEvent.PeerUp>("peer_up") { it is EngineEvent.PeerUp && it.record.id == a.id }
+        assertEquals(PeerRoute.LAN, up.route)
+        assertEquals(PeerRoute.LAN, b.engine.snapshot().routes[a.id])
+    }
+
+    @Test
+    fun tailnetAddresses() {
+        assertTrue(TailnetAddress.contains("100.64.0.1"))
+        assertTrue(TailnetAddress.contains("100.127.255.254"))
+        assertFalse(TailnetAddress.contains("100.63.255.255"))
+        assertFalse(TailnetAddress.contains("100.128.0.1"))
+        assertFalse(TailnetAddress.contains("192.168.0.2"))
+        assertFalse(TailnetAddress.contains("127.0.0.1"))
+        assertTrue(TailnetAddress.contains("fd7a:115c:a1e0::1"))
+        assertFalse(TailnetAddress.contains("fe80::1"))
     }
 }

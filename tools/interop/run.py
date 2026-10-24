@@ -12,6 +12,23 @@ import argparse, hashlib, itertools, json, os, queue, random, shlex, shutil, sub
 from urllib.parse import urlsplit, parse_qsl, urlencode, urlunsplit, quote
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+TAILNET_LIB = os.path.join(ROOT, "tailnet/out/desktop/libnctailnet.dylib")
+TESTCONTROL = os.path.join(ROOT, "tailnet/out/nctestcontrol")
+
+# The Kotlin and C# CLIs load the embedded Tailscale library from here (the Swift CLI links it statically).
+os.environ.setdefault("NEARCLIP_TAILNET_LIB", TAILNET_LIB)
+
+_control = {}
+
+def control_url():
+    """Starts tailnet/out/nctestcontrol once (a throwaway Tailscale control server that approves every node)."""
+    if "url" not in _control:
+        if not os.path.exists(TESTCONTROL):
+            subprocess.run([os.path.join(ROOT, "tailnet/build.sh"), "testcontrol"], check=True)
+        proc = subprocess.Popen([TESTCONTROL], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        _control["proc"] = proc
+        _control["url"] = json.loads(proc.stdout.readline())["controlURL"]
+    return _control["url"]
 
 def detect():
     found = {}
@@ -31,9 +48,10 @@ def detect():
     return found
 
 class Peer:
-    def __init__(self, impl, cmd, name, state=None):
+    def __init__(self, impl, cmd, name, state=None, tailnet=False):
         self.impl, self.cmd, self.name = impl, cmd, name
         self.state = state or tempfile.mkdtemp(prefix=f"nearclip-{impl}-")
+        self.tailnet = tailnet
         self.events = []
         self.cond = threading.Condition()
         self.cursor = 0
@@ -42,6 +60,8 @@ class Peer:
 
     def start(self):
         args = f"{self.cmd} --state {shlex.quote(self.state)} --name {shlex.quote(self.name)} --port 0"
+        if self.tailnet:
+            args += f" --tailnet {shlex.quote(os.path.join(self.state, 'tailnet'))} --tailnet-control {shlex.quote(control_url())}"
         self.proc = subprocess.Popen(args, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE, text=True, bufsize=1)
         threading.Thread(target=self._read, args=(self.proc.stdout, False), daemon=True).start()
@@ -93,8 +113,10 @@ class Peer:
             except Exception:
                 self.proc.kill()
 
-    def restart(self):
+    def restart(self, tailnet=None):
         self.quit()
+        if tailnet is not None:
+            self.tailnet = tailnet
         self.events, self.cursor = [], 0
         self.start()
 
@@ -250,10 +272,34 @@ def scenario_mesh(impls, tmp):
     finally:
         a.quit(); b.quit(); c.quit()
 
+def scenario_remote(x_impl, x_cmd, y_impl, y_cmd, tmp):
+    """PROTOCOL §10: X and Y pair on the LAN with remote connection off, then restart with it on and new ports.
+    Their remembered LAN endpoints are dead and hold no tailnet address, so they can only meet through tailnet
+    discovery and the bridge; the session must be remote and carry clips both ways."""
+    x = Peer(x_impl, x_cmd, f"{x_impl}-home"); y = Peer(y_impl, y_cmd, f"{y_impl}-away")
+    try:
+        pair_qr(x, y)
+        x.restart(tailnet=True); y.restart(tailnet=True)
+        for p in (x, y):
+            st = p.expect("tailnet running", lambda e: e.get("ev") == "tailnet" and e.get("state") == "running", timeout=60)
+            assert st.get("ip", "").startswith("100."), st
+        for a, b in ((x, y), (y, x)):
+            up = a.expect("remote peer_up", lambda e: e.get("ev") == "peer_up" and e.get("id") == b.id, timeout=60)
+            assert up.get("route") == "remote", f"{a.name} reached {b.name} via {up.get('route')}"
+        for a, b in ((x, y), (y, x)):
+            b.mark()
+            text = f"remote {a.impl}->{b.impl} 원격 {random.randint(0, 1 << 30)}"
+            a.send(cmd="send_text", text=text)
+            ev = b.expect("live text over the tailnet", is_clip(text=text), timeout=30)
+            assert ev.get("live") is True and ev.get("src") == a.id, ev
+    finally:
+        x.quit(); y.quit()
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--impl", action="append", default=[], help="name=command")
     ap.add_argument("--only", default="")
+    ap.add_argument("--scenarios", default="", help="comma-separated subset: pair,code,mesh,readd,remote")
     ap.add_argument("--keep", action="store_true", help="keep temp state dirs")
     args = ap.parse_args()
     impls = detect()
@@ -272,6 +318,7 @@ def main():
     for (xi, xc), (yi, yc) in itertools.product(names, names):
         cases.append((f"pair-qr+sync  {xi:>6} invites {yi:<6}", scenario_pair, (xi, xc, yi, yc, tmp)))
         cases.append((f"pair-code     {xi:>6} invites {yi:<6}", scenario_code, (xi, xc, yi, yc, tmp)))
+        cases.append((f"remote        {xi:>6} meets   {yi:<6}", scenario_remote, (xi, xc, yi, yc, tmp)))
     if len(names) >= 3:
         for perm in itertools.permutations(names, 3):
             cases.append(("mesh forward  " + " -> ".join(p[0] for p in perm), scenario_mesh, (list(perm), tmp)))
@@ -282,6 +329,11 @@ def main():
     else:
         cases.append(("mesh forward  " + names[0][0] + " x3", scenario_mesh, ([names[0]] * 3, tmp)))
         cases.append(("re-add        " + names[0][0] + " x3", scenario_readd, ([names[0]] * 3, tmp)))
+    if args.scenarios:
+        wanted = {"pair": scenario_pair, "code": scenario_code, "mesh": scenario_mesh, "readd": scenario_readd,
+                  "remote": scenario_remote}
+        keep = {wanted[s] for s in args.scenarios.split(",") if s in wanted}
+        cases = [c for c in cases if c[1] in keep]
     failed = 0
     for title, fn, fargs in cases:
         t0 = time.time()
@@ -292,6 +344,8 @@ def main():
             failed += 1
             print(f"FAIL  {title}  ({time.time() - t0:.1f}s)\n      {e}", flush=True)
     print(f"\n{len(cases) - failed}/{len(cases)} passed")
+    if "proc" in _control:
+        _control["proc"].stdin.close()
     if not args.keep:
         shutil.rmtree(tmp, ignore_errors=True)
     return 1 if failed else 0

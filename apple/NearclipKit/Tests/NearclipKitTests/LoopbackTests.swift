@@ -76,8 +76,8 @@ final class LoopbackTests: XCTestCase {
         b.node.join(invite: invite)
         b.wait("paired") { if case .paired(_, let peer, _, true) = $0, peer == a.node.deviceId { return true } else { return nil } }
         a.wait("paired") { if case .paired(_, let peer, _, false) = $0, peer == b.node.deviceId { return true } else { return nil } }
-        b.wait("peerUp alpha") { if case .peerUp(let r) = $0, r.id == a.node.deviceId { return true } else { return nil } }
-        a.wait("peerUp bravo") { if case .peerUp(let r) = $0, r.id == b.node.deviceId { return true } else { return nil } }
+        b.wait("peerUp alpha") { if case .peerUp(let r, _) = $0, r.id == a.node.deviceId { return true } else { return nil } }
+        a.wait("peerUp bravo") { if case .peerUp(let r, _) = $0, r.id == b.node.deviceId { return true } else { return nil } }
         XCTAssertEqual(a.node.snapshot().groupId, b.node.snapshot().groupId)
 
         // Live text.
@@ -154,6 +154,40 @@ final class LoopbackTests: XCTestCase {
         let reason = b.wait("declined") { if case .pairFailed(let r) = $0 { return r } else { return nil } }
         XCTAssertEqual(reason, "declined")
         a.node.stop(); b.node.stop()
+    }
+
+    /// PROTOCOL.md §4.5: all addresses are tried at once, so an address that never answers costs nothing.
+    func testDeadAddressDoesNotDelayPairingOrReconnect() throws {
+        let a = try Peer("Alpha"), b = try Peer("Bravo")
+        a.node.start(); b.node.start()
+        _ = a.port
+        var invite = a.node.createTicket().invite
+        invite.hosts = ["192.0.2.1", "127.0.0.1"]  // TEST-NET-1 never answers
+        let started = Date()
+        b.node.join(invite: invite)
+        b.wait("paired") { if case .paired(_, _, _, true) = $0 { return true } else { return nil } }
+        XCTAssertLessThan(Date().timeIntervalSince(started), 4)
+        let route = b.wait("peerUp") { if case .peerUp(let r, let route) = $0, r.id == a.node.deviceId { return route } else { return nil } }
+        XCTAssertEqual(route, .lan)
+        XCTAssertEqual(b.node.snapshot().routes[a.node.deviceId], .lan)
+
+        // After a restart Bravo knows several endpoints of Alpha; it must reconnect at once.
+        try b.restart()
+        let again = Date()
+        b.wait("peerUp after restart", timeout: 10) { if case .peerUp(let r, _) = $0, r.id == a.node.deviceId { return true } else { return nil } }
+        XCTAssertLessThan(Date().timeIntervalSince(again), 4)
+        a.node.stop(); b.node.stop()
+    }
+
+    func testTailnetAddresses() {
+        XCTAssertTrue(TailnetAddress.contains("100.64.0.1"))
+        XCTAssertTrue(TailnetAddress.contains("100.127.255.254"))
+        XCTAssertFalse(TailnetAddress.contains("100.63.255.255"))
+        XCTAssertFalse(TailnetAddress.contains("100.128.0.1"))
+        XCTAssertFalse(TailnetAddress.contains("192.168.0.2"))
+        XCTAssertFalse(TailnetAddress.contains("127.0.0.1"))
+        XCTAssertTrue(TailnetAddress.contains("fd7a:115c:a1e0::1"))
+        XCTAssertFalse(TailnetAddress.contains("fe80::1"))
     }
 }
 

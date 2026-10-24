@@ -1,8 +1,10 @@
-# Nearclip Protocol v1 (LAN only)
+# Nearclip Protocol v1
 
 Nearclip keeps the clipboard and clipboard history in sync between a user's own devices
-(macOS, Windows, Android, iOS) **on the local network only**. There is no server of any kind:
-devices discover each other with DNS-SD (Bonjour/mDNS) and talk directly over TCP.
+(macOS, Windows, Android, iOS). By default it works **on the local network only**: devices discover
+each other with DNS-SD (Bonjour/mDNS) and talk directly over TCP. Optionally (section 10) each app runs
+an embedded Tailscale node so the same devices also reach each other across networks; Nearclip itself
+never runs or needs a server.
 All application data is end-to-end encrypted with keys that only paired devices hold.
 
 This document is normative. The Swift (`apple/`), Kotlin (`android/`) and C# (`windows/`)
@@ -97,7 +99,8 @@ devices** (candidates for code pairing).
 
 mDNS is often unreliable (guest Wi-Fi, VLANs, emulators, VMs), so implementations MUST also dial
 explicit `host:port` endpoints: the addresses in a pairing QR code, the addresses a peer reported in
-`welcome.addrs` (remembered per member) and addresses the user types in.
+`welcome.addrs` (remembered per member), addresses the user types in and, with remote connection on,
+the members found in the tailnet (10.2).
 
 ## 3. Transport and framing
 
@@ -148,6 +151,9 @@ explicit `host:port` endpoints: the addresses in a pairing QR code, the addresse
 
 `addrs` lists the sender's reachable listener endpoints (IPv4, no loopback, no link-local). The
 receiver merges `members` (1.1), remembers `addrs` as the peer's endpoints, then sends its inventory (6.2).
+With remote connection on, `addrs` also contains the sender's tailnet endpoint (10.2). A server MAY also
+remember the remote address of the TCP connection, but never a loopback address that came from its own
+tailnet bridge (10.1).
 
 ### 4.3 Removed devices
 
@@ -171,6 +177,13 @@ If a session with peer P completes while another session with P is open, keep th
   if it is still not connected 3 s later.
 * Every 20 s, dial disconnected members at their remembered endpoints (exponential back-off per
   member up to 5 min; reset when discovery sees the member again).
+* A dial attempt starts **all** candidate endpoints of the member at once (the discovered service,
+  every remembered endpoint, tailnet candidates) and keeps the first connection that opens; the other
+  attempts are cancelled. Tailnet candidates (10.3) start 400 ms after the others so a reachable LAN
+  path wins. Pairing connections (section 5) race their targets the same way.
+* Remember up to 6 LAN endpoints and up to 2 tailnet endpoints per member (newest first).
+* On a network change (interface up/down, Wi-Fi ↔ cellular, wake from sleep, app back in the
+  foreground): close sessions that received nothing for 20 s, reset all back-off and dial at once.
 * Never dial tombstoned members.
 
 ## 5. Pairing
@@ -189,6 +202,8 @@ nearclip://pair?v=1&id=<inviter id>&nm=<name>&pf=<platform>&h=<ip1>,<ip2>&p=<por
 ```
 
 (query values percent-encoded; `h` is a comma-separated list of IPv4 addresses and may be empty).
+With remote connection on, `h` also lists the inviter's tailnet IPv4 (its tailnet node listens on `p`
+as well, 10.1), so a joiner in the same tailnet can pair from another network.
 
 1. The joiner dials one of the addresses (or the discovered service with that `id`) and sends
    `helloC = {"t":"hello","v":1,"mode":"pair-qr","id":<joiner id>,"e":b64u(EC),"n":b64u(NC)}`
@@ -341,6 +356,7 @@ Every implementation ships a headless peer that `tools/interop/run.py` drives:
 
 ```
 <cli> --state <dir> --name <name> [--port <n>]     # port 0 = OS-assigned; no DNS-SD
+      [--tailnet <dir> [--tailnet-control <url>]]  # remote connection (section 10) with its own state dir
 ```
 
 It prints one JSON object per line on **stdout** (events, flushed immediately) and reads one JSON
@@ -354,7 +370,8 @@ object per line on **stdin** (commands). stderr is free-form logging.
 | `pair_prompt` | `peer`, `name`, `sas` (inviter side) |
 | `paired` | `group`, `peer` (the other side's id) — emitted by both sides |
 | `pair_failed` | `reason`: `declined`, `no_ticket` (QR ticket expired/used/wrong — the inviter closed after the hellos), `busy`, `commit`, `timeout`, `unreachable` (no address answered), `io` (other connection errors) |
-| `peer_up` / `peer_down` | `id` (+ `name` for `peer_up`) |
+| `peer_up` / `peer_down` | `id` (+ `name` and `route`: `lan` or `remote` for `peer_up`) |
+| `tailnet` | `state`, `ip`, `peers` (number of Nearclip nodes seen in the tailnet) — whenever one of them changes |
 | `clip` | `id`, `src`, `kind`, `live`, `ts` + `text` (text) or `size`, `sha`, `mime` (image) |
 | `deleted` | `id` |
 | `members` | `members` (the full current list) |
@@ -376,8 +393,67 @@ object per line on **stdin** (commands). stderr is free-form logging.
 | `rename` | `name` | rename this device (bumps its record, broadcasts `members`) |
 | `list` | | emit `history` |
 | `members` | | emit `members` |
+| `tailnet` | | emit `tailnet` |
 | `quit` | | send `bye` (shutdown) on all sessions and exit 0 |
 
 The CLI keeps all state (identity, group, members, known endpoints, history, blobs, tombstones) in
 `--state`, so it can be restarted to test catch-up. It never touches a system clipboard.
+
+With `--tailnet`, the CLI starts the embedded node as soon as its listener is up (node state in the given
+directory, verbose node logs in `<dir>/tailnet.log`). `--tailnet-control` points it at a test control
+server (`tailnet/out/nctestcontrol`, which approves every node) and enables the node's test mode.
+
+## 10. Remote connections (embedded Tailscale)
+
+Optional, **off by default**. When the user turns on *Remote connection*, the app runs an embedded
+Tailscale node (`tailnet/`, built on tsnet) and the user signs in to Tailscale with the **same account on
+each device**. Tailscale's coordination service distributes WireGuard keys and endpoints; devices then
+connect directly (NAT traversal) or, when no direct path exists, through Tailscale's DERP relays. Nearclip
+runs no server. Nearclip frames stay end-to-end encrypted exactly as on the LAN (sections 3–6);
+WireGuard is an additional outer layer, and DERP relays only ever see WireGuard ciphertext.
+
+### 10.1 The node and the bridge
+
+* Hostname `nearclip-<slug>-<id8>`: `slug` = the device name in lowercase with every run of characters
+  outside `a–z 0–9` replaced by `-` (≤ 40 chars, may be empty), `id8` = the first 8 hex digits of the
+  deviceId. Reference: `tailnet/bridge/hostname.go`.
+* The node's state (its keys and login) lives in an app-private directory that is excluded from backups.
+  No logs are uploaded to Tailscale (`TS_NO_LOGS_NO_SUPPORT`).
+* The node accepts tailnet TCP connections on port **45821** and on the device's LAN listener port and
+  relays each to the engine's **loopback listener** (`127.0.0.1`, any port). Engines treat sessions accepted
+  there as remote and never remember their (loopback) remote address.
+* Outbound, the engine connects to the bridge proxy `127.0.0.1:<proxyPort>` and sends one ASCII line
+  `NCTN1 <token> <tailnet-ip>:<port>\n` (`proxyPort` and `token` come from the node status). The bridge
+  answers one byte: `0` = connected (from now on the socket is a plain TCP stream to the peer), `1` = bad
+  request (wrong token or not a tailnet address), `2` = unreachable, `3` = node not running; on non-zero it
+  closes. The proxy only reaches tailnet addresses.
+* Mobile apps stop the node whenever their networking pauses (backgrounded) and start a fresh one when they
+  become active: iOS reclaims the sockets of suspended apps (tailscale/tailscale#20060).
+* Android apps report the device's interfaces and default route to the node
+  (`NCTailnetSetNetwork`), because Go cannot enumerate them inside the Android app sandbox
+  (tailscale/tailscale#17311).
+
+### 10.2 Addresses and discovery
+
+* A **tailnet address** is an address in `100.64.0.0/10` or `fd7a:115c:a1e0::/48`. While its node runs, a
+  device adds `{"h":<its tailnet IPv4>,"p":45821}` to `welcome.addrs` and its tailnet IPv4 to QR `h` lists.
+* **Tailnet discovery:** the node lists the other nodes of the tailnet. A node whose hostname is a Nearclip
+  hostname with an `id8` equal to the first 8 hex digits of a member's id is a candidate `<ip>:45821`
+  for that member. (Presence flags are not required; dialing an absent node simply fails.)
+
+### 10.3 Dialing through the tailnet
+
+* Tailnet candidates (remembered tailnet endpoints and discovered nodes) start 400 ms after the LAN
+  candidates of the same attempt (4.5).
+* Each tailnet candidate is dialed through the bridge proxy when the node is running, and additionally
+  directly when the device itself has a tailnet address on an OS interface (the Tailscale app is
+  installed and connected to the same tailnet).
+* A session is **remote** when it runs over the tailnet (proxied, dialed at a tailnet address, accepted on
+  the loopback listener or accepted from a tailnet address) and **lan** otherwise. Apps show the route of
+  every connected device.
+
+### 10.4 Network changes
+
+In addition to 4.5, a network change tells the node (`NCTailnetNetworkChanged`; on Android
+`NCTailnetSetNetwork` with the current interfaces) so it re-binds its sockets and finds new paths at once.
 

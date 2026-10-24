@@ -134,7 +134,7 @@ public abstract record NodeEvent
     public sealed record PairPromptDismissed : NodeEvent;
     public sealed record Paired(string GroupId, string PeerId, string PeerName, string PeerPlatform, bool Joined) : NodeEvent;
     public sealed record PairFailed(string Reason, string? PeerName) : NodeEvent;
-    public sealed record PeerUp(MemberRecord Member) : NodeEvent;
+    public sealed record PeerUp(MemberRecord Member, PeerRoute Route = PeerRoute.Lan) : NodeEvent;
     public sealed record PeerDown(string Id) : NodeEvent;
     /// <summary><paramref name="Local"/>: produced on this device. <paramref name="Apply"/>: a live clip from another device
     /// that is newer than anything copied here, i.e. it should go to the system clipboard.</summary>
@@ -148,6 +148,8 @@ public abstract record NodeEvent
     public sealed record Left(string Reason) : NodeEvent;
     public sealed record TooLarge(string Kind) : NodeEvent;
     public sealed record PausedChanged(bool Paused) : NodeEvent;
+    /// <summary>The embedded Tailscale node changed state (remote connection).</summary>
+    public sealed record TailnetChanged(TailnetStatus Status) : NodeEvent;
     public sealed record Log(string Message) : NodeEvent;
 }
 
@@ -165,4 +167,8 @@ public sealed record NodeSnapshot(
     int Port,
     bool Paused,
     bool PairingMode,
-    IReadOnlyList<string> Addresses);
+    IReadOnlyList<string> Addresses,
+    /// <summary>Route of every connected member.</summary>
+    IReadOnlyDictionary<string, PeerRoute> Routes,
+    bool RemoteEnabled,
+    TailnetStatus Tailnet);

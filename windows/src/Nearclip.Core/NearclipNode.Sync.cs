@@ -278,7 +278,10 @@ public sealed partial class NearclipNode
     PairingTicket CreateTicketInternal()
     {
         var secret = NcCrypto.Random(16);
-        var invite = new PairingInvite(DeviceId, DeviceName, Platform, _o.AddressProvider(), _port, secret);
+        var hosts = _o.AddressProvider().ToList();
+        // A joiner in the same tailnet can pair from another network (the node also listens on the LAN port).
+        if (_tailnet.IsRunning && _tailnet.Ip is { } tip && !hosts.Contains(tip)) hosts.Add(tip);
+        var invite = new PairingInvite(DeviceId, DeviceName, Platform, hosts, _port, secret);
         var t = new Ticket { Secret = secret, Expires = DateTimeOffset.UtcNow.AddMinutes(10) };
         _ticket = t;
         var pt = new PairingTicket(invite, t.Expires);
@@ -367,12 +370,19 @@ public sealed partial class NearclipNode
         var targets = new List<Endpoint>();
         if (_discovered.TryGetValue(invite.InviterId, out var d)) targets.AddRange(d.Endpoints);
         targets.AddRange(invite.Hosts.Select(h => new Endpoint(h, invite.Port)));
-        if (targets.Count == 0)
+        if (_tailnet.IsRunning)
+        {
+            var raw = invite.InviterId.Replace("-", "");
+            var id8 = raw[..Math.Min(8, raw.Length)];
+            targets.AddRange(_tailnet.Peers.Where(p => p.IdPrefix == id8).Select(p => new Endpoint(p.Ip, invite.Port)));
+        }
+        var candidates = CandidatesFor(targets);
+        if (candidates.Count == 0)
         {
             Emit(new NodeEvent.PairFailed("unreachable", invite.Name));
             return;
         }
-        StartJoin(PeerSession.SessionMode.PairQr, invite.Secret, targets.Distinct().ToList(), invite.Name);
+        StartJoin(PeerSession.SessionMode.PairQr, invite.Secret, candidates, invite.Name);
     }
 
     void StartCodeJoin(IReadOnlyList<Endpoint> targets, string? peerName)
@@ -382,10 +392,16 @@ public sealed partial class NearclipNode
             Emit(new NodeEvent.PairFailed("busy", peerName));
             return;
         }
-        StartJoin(PeerSession.SessionMode.PairCode, null, targets, peerName);
+        var candidates = CandidatesFor(targets, fallback: true);
+        if (candidates.Count == 0)
+        {
+            Emit(new NodeEvent.PairFailed("unreachable", peerName));
+            return;
+        }
+        StartJoin(PeerSession.SessionMode.PairCode, null, candidates, peerName);
     }
 
-    void StartJoin(PeerSession.SessionMode mode, byte[]? secret, IReadOnlyList<Endpoint> targets, string? peerName)
+    void StartJoin(PeerSession.SessionMode mode, byte[]? secret, IReadOnlyList<DialCandidate> targets, string? peerName)
     {
         _joining = true;
         var s = new PeerSession(this, mode, targets) { PairSecret = secret };
@@ -448,10 +464,7 @@ public sealed partial class NearclipNode
         Emit(new NodeEvent.MembersChanged(MemberList()));
         Emit(new NodeEvent.NearbyChanged(NearbyList()));
         Emit(new NodeEvent.Paired(GroupId, inviter, accept.Device.Name, accept.Device.Platform, true));
-        var targets = new List<Endpoint>();
-        if (s.DialedEndpoint is { } ep) targets.Add(ep);
-        if (_discovered.TryGetValue(inviter, out var d)) targets.AddRange(d.Endpoints);
-        if (targets.Count > 0) DialMember(inviter, targets.Distinct().ToList());
+        DialMember(inviter, DialCandidates(inviter));
         foreach (var d2 in _discovered.Values.Where(x => x.Gt == GroupTag && x.Id != inviter).ToList()) ConsiderDial(d2);
     }
 }

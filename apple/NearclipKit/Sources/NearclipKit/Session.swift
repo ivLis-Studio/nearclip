@@ -30,7 +30,9 @@ final class PeerSession: Hashable {
     var peerPlatform: String?
     var peerRecord: MemberRecord?
     var expectedPeerId: String?
-    var dialedEndpoint: Endpoint?
+    /// The peer address the winning dial candidate stood for (client sessions).
+    var dialedEndpoint: Endpoint? { conn.winner?.address }
+    var route: PeerRoute { conn.route }
     var receivedWelcome = false
     var gotPeerHello = false
     var pairSecret: Data?

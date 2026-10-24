@@ -11,6 +11,19 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
+/** One way to reach a peer during a dial race (PROTOCOL §4.5, §10.3). */
+internal data class DialCandidate(
+    /** TCP target: the peer itself, or the tailnet bridge proxy (127.0.0.1:proxyPort). */
+    val connectTo: Endpoint,
+    /** The peer address this candidate stands for (remembered when it wins). */
+    val address: Endpoint,
+    /** "NCTN1 <token> <ip>:<port>\n" when dialing through the tailnet bridge. */
+    val proxyRequest: String? = null,
+    /** Tailnet candidates start after the LAN candidates. */
+    val delayMs: Long = 0,
+    val remote: Boolean = false,
+)
+
 /** A TCP connection with u32-length framing. Reads happen on one thread, writes are serialized. */
 internal class Conn(val socket: Socket) {
     private val reader = Framing.Reader(socket.getInputStream())
@@ -73,30 +86,59 @@ internal class Conn(val socket: Socket) {
          * Throws [IOException] when none is reachable.
          */
         fun connectFirst(endpoints: List<Endpoint>, timeoutMs: Int, pool: ExecutorService): Pair<Socket, Endpoint> {
-            require(endpoints.isNotEmpty())
-            if (endpoints.size == 1) return connect(endpoints[0], timeoutMs) to endpoints[0]
-            val winner = AtomicReference<Pair<Socket, Endpoint>?>(null)
+            val (s, c) = race(endpoints.map { DialCandidate(it, it) }, timeoutMs, pool)
+            return s to c.address
+        }
+
+        private const val PROXY_TIMEOUT_MS = 15_000
+
+        /**
+         * Starts every candidate (after its delay) in parallel and returns the first connection that opens —
+         * for proxied candidates, once the tailnet bridge answered 0. The others are closed.
+         * Throws [IOException] when none is reachable.
+         */
+        fun race(candidates: List<DialCandidate>, timeoutMs: Int, pool: ExecutorService): Pair<Socket, DialCandidate> {
+            require(candidates.isNotEmpty())
+            val winner = AtomicReference<Pair<Socket, DialCandidate>?>(null)
             val closedOut = java.util.concurrent.atomic.AtomicBoolean(false)
             val done = CountDownLatch(1)
-            val remaining = AtomicInteger(endpoints.size)
-            for (ep in endpoints) {
+            val remaining = AtomicInteger(candidates.size)
+            val lastError = AtomicReference<String?>(null)
+            for (c in candidates) {
                 pool.execute {
                     try {
-                        val s = connect(ep, timeoutMs)
+                        if (c.delayMs > 0) Thread.sleep(c.delayMs)
+                        if (winner.get() != null || closedOut.get()) return@execute
+                        val s = connect(c.connectTo, timeoutMs)
+                        if (c.proxyRequest != null) {
+                            try {
+                                s.soTimeout = PROXY_TIMEOUT_MS
+                                s.getOutputStream().apply { write(c.proxyRequest.toByteArray(Charsets.US_ASCII)); flush() }
+                                val status = s.getInputStream().read()
+                                if (status != 0) throw IOException("tailnet dial failed ($status)")
+                                s.soTimeout = 0
+                            } catch (e: Exception) {
+                                try { s.close() } catch (_: Exception) {}
+                                throw e
+                            }
+                        }
                         synchronized(winner) {
                             if (closedOut.get() || winner.get() != null) s.close()
-                            else { winner.set(s to ep); done.countDown() }
+                            else { winner.set(s to c); done.countDown() }
                         }
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        lastError.set(e.message ?: e.javaClass.simpleName)
                     } finally {
                         if (remaining.decrementAndGet() == 0) done.countDown()
                     }
                 }
             }
-            done.await(timeoutMs.toLong() + 1_000, TimeUnit.MILLISECONDS)
+            val maxDelay = candidates.maxOf { it.delayMs }
+            val proxyWait = if (candidates.any { it.proxyRequest != null }) PROXY_TIMEOUT_MS.toLong() else 0L
+            done.await(maxDelay + timeoutMs + proxyWait + 1_000, TimeUnit.MILLISECONDS)
             synchronized(winner) {
                 closedOut.set(true)
-                return winner.get() ?: throw IOException("no endpoint reachable")
+                return winner.get() ?: throw IOException(lastError.get() ?: "no endpoint reachable")
             }
         }
     }

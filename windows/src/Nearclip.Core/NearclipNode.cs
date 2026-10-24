@@ -22,6 +22,8 @@ public sealed partial class NearclipNode : IDisposable
         public required ISecretStore SecretStore { get; init; }
         public IDiscovery? Discovery { get; init; }
         public Func<IReadOnlyList<string>> AddressProvider { get; init; } = LocalAddresses.Ipv4;
+        /// <summary>Embedded Tailscale node for remote connection (PROTOCOL.md §10). null = not available.</summary>
+        public TailnetOptions? Tailnet { get; init; }
     }
 
     sealed record Discovered(string Id, string Name, string Platform, string Gt, bool Pm, IReadOnlyList<Endpoint> Endpoints);
@@ -60,6 +62,19 @@ public sealed partial class NearclipNode : IDisposable
     Timer? _timer;
     long _tick;
     long _newestLocalTs;
+
+    // Remote connection (embedded Tailscale node, PROTOCOL.md §10).
+    /// <summary>Tailnet port every Nearclip node accepts connections on.</summary>
+    internal const int TailnetPort = 45821;
+    /// <summary>Tailnet candidates start this much later than LAN candidates (§10.3).</summary>
+    static readonly TimeSpan TailnetDelay = TimeSpan.FromMilliseconds(400);
+    readonly SerialQueue _tq = new("nearclip-tailnet");
+    bool _remoteEnabled;
+    TailnetStatus _tailnet = TailnetStatus.Off;
+    Socket? _tailnetListener;
+    CancellationTokenSource? _tailnetCts;
+    int _tailnetGeneration;
+    string _tailnetReach = "";
 
     public string DeviceId { get; }
     internal string DeviceName { get; private set; }
@@ -127,6 +142,8 @@ public sealed partial class NearclipNode : IDisposable
             return pending;
         });
         try { Task.WaitAll(drains.ToArray(), TimeSpan.FromSeconds(1.5)); } catch (AggregateException) { }
+        // Let the embedded node shut down cleanly (bounded by the bridge's own timeout).
+        try { _tq.InvokeAsync(() => 0).Wait(TimeSpan.FromSeconds(10)); } catch (Exception) { }
     }
 
     public void Dispose()
@@ -137,6 +154,7 @@ public sealed partial class NearclipNode : IDisposable
         Q.Invoke(() => _store.Dispose());
         Q.Dispose();
         _events.Dispose();
+        _tq.Dispose();
     }
 
     public NodeSnapshot Snapshot() => Q.Invoke(SnapshotInternal);
@@ -335,7 +353,64 @@ public sealed partial class NearclipNode : IDisposable
     public void Connect(string host, int port) => Q.Post(() =>
     {
         if (port is < 1 or > 65535 || string.IsNullOrWhiteSpace(host)) return;
-        DialMember(null, [new Endpoint(host.Trim(), port)]);
+        DialMember(null, CandidatesFor([new Endpoint(host.Trim(), port)], fallback: true));
+    });
+
+    // ================================================================ remote connection (public)
+
+    /// <summary>Whether this build can run the embedded Tailscale node.</summary>
+    public bool TailnetAvailable => _o.Tailnet is not null && TailnetBridge.Available;
+
+    /// <summary>Remote connection on/off (the app persists the choice). The node runs only while networking runs.</summary>
+    public void SetRemoteEnabled(bool on) => Q.Post(() =>
+    {
+        if (_remoteEnabled == on) return;
+        _remoteEnabled = on;
+        if (on) StartTailnetIfNeeded();
+        else StopTailnet();
+    });
+
+    /// <summary>Makes sure a Tailscale sign-in URL exists; completes with the fresh status.</summary>
+    public Task<TailnetStatus> TailnetLoginAsync()
+    {
+        var tcs = new TaskCompletionSource<TailnetStatus>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Q.Post(() =>
+        {
+            if (_tailnetListener is null) { tcs.TrySetResult(_tailnet); return; }
+            var gen = _tailnetGeneration;
+            _tq.Post(() =>
+            {
+                var st = TailnetBridge.Login();
+                Q.Post(() => { if (gen == _tailnetGeneration) ApplyTailnet(st); });
+                tcs.TrySetResult(st);
+            });
+        });
+        return tcs.Task;
+    }
+
+    /// <summary>Signs this device out of Tailscale (remote connection then needs a new sign-in).</summary>
+    public void TailnetLogout() => Q.Post(() =>
+    {
+        if (_tailnetListener is null) return;
+        var gen = _tailnetGeneration;
+        _tq.Post(() =>
+        {
+            var st = TailnetBridge.Logout();
+            Q.Post(() => { if (gen == _tailnetGeneration) ApplyTailnet(st); });
+        });
+    });
+
+    /// <summary>The device's network changed (wake, interface up/down): drop sessions that went silent, forget back-off
+    /// and redial now (PROTOCOL.md §4.5, §10.4).</summary>
+    public void NetworkChanged() => Q.Post(() =>
+    {
+        if (_tailnetListener is not null) _tq.Post(TailnetBridge.NetworkChanged);
+        if (!_running || _paused) return;
+        var now = DateTime.UtcNow;
+        foreach (var s in _online.Values.ToList()) if ((now - s.LastReceived).TotalSeconds > 20) s.Close();
+        _backoff.Clear();
+        foreach (var s in _online.Values.ToList()) s.SendJson(Simple("ping"));
+        RedialDisconnected(now);
     });
 
     // ================================================================ internal state
@@ -373,7 +448,7 @@ public sealed partial class NearclipNode : IDisposable
     NodeSnapshot SnapshotInternal() => new(
         DeviceId, DeviceName, Platform, GroupId, GroupTag, MemberList(), _online.Keys.ToHashSet(),
         new Dictionary<string, long>(_store.State.LastSeen), _store.History.ToList(), NearbyList(), _port, _paused,
-        _pairingMode, _o.AddressProvider());
+        _pairingMode, _o.AddressProvider(), _online.ToDictionary(kv => kv.Key, kv => kv.Value.Route), _remoteEnabled, _tailnet);
 
     void Emit(NodeEvent e)
     {
@@ -408,6 +483,7 @@ public sealed partial class NearclipNode : IDisposable
         _listener = null;
         _listenCts = null;
         StopDiscovery();
+        StopTailnet();
         foreach (var s in _sessions.ToList())
         {
             if (s.IsMember) s.Bye(reason);
@@ -473,11 +549,12 @@ public sealed partial class NearclipNode : IDisposable
         _port = ((IPEndPoint)listener.LocalEndPoint!).Port;
         var cts = new CancellationTokenSource();
         _listenCts = cts;
-        _ = Task.Run(() => AcceptLoop(listener, cts.Token));
+        _ = Task.Run(() => AcceptLoop(listener, false, cts.Token));
         Emit(new NodeEvent.Ready(_port, GroupId, GroupTag));
+        StartTailnetIfNeeded();
     }
 
-    async Task AcceptLoop(Socket listener, CancellationToken ct)
+    async Task AcceptLoop(Socket listener, bool viaTailnet, CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
@@ -491,20 +568,154 @@ public sealed partial class NearclipNode : IDisposable
                 await Task.Delay(200, CancellationToken.None).ConfigureAwait(false);
                 continue;
             }
-            Q.Post(() => Accept(client));
+            Q.Post(() => Accept(client, viaTailnet));
         }
     }
 
-    void Accept(Socket client)
+    void Accept(Socket client, bool viaTailnet)
     {
         if (!_running || _paused)
         {
             client.Dispose();
             return;
         }
-        var s = new PeerSession(this, client);
+        var s = new PeerSession(this, client, viaTailnet);
         _sessions.Add(s);
         s.Start();
+    }
+
+    // ================================================================ embedded Tailscale node
+
+    void StartTailnetIfNeeded()
+    {
+        if (_o.Tailnet is not { } opts || !_remoteEnabled || !_running || _paused || _port <= 0) return;
+        if (_tailnetListener is null)
+        {
+            // Inbound tailnet connections arrive here from the bridge (loopback only).
+            try
+            {
+                var l = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                l.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+                l.Listen(64);
+                _tailnetListener = l;
+                var cts = new CancellationTokenSource();
+                _tailnetCts = cts;
+                _ = Task.Run(() => AcceptLoop(l, true, cts.Token));
+            }
+            catch (SocketException e)
+            {
+                ApplyTailnet(new TailnetStatus { State = "error", Error = e.Message });
+                return;
+            }
+        }
+        var forward = ((IPEndPoint)_tailnetListener.LocalEndPoint!).Port;
+        var cfg = new Dictionary<string, object>
+        {
+            ["dir"] = opts.Directory, ["deviceId"] = DeviceId, ["deviceName"] = DeviceName,
+            ["ports"] = new[] { _port }, ["forward"] = $"127.0.0.1:{forward}",
+        };
+        if (opts.ControlUrl is { } c) cfg["controlURL"] = c;
+        if (opts.LogPath is { } lp) cfg["logPath"] = lp;
+        if (opts.TestMode) cfg["testMode"] = true;
+        var json = JsonSerializer.Serialize(cfg);
+        var gen = ++_tailnetGeneration;
+        if (!_tailnet.IsRunning) ApplyTailnet(new TailnetStatus { State = "starting" });
+        _tq.Post(() =>
+        {
+            Directory.CreateDirectory(opts.Directory);
+            var st = TailnetBridge.Start(json);
+            Q.Post(() =>
+            {
+                if (gen != _tailnetGeneration) return;
+                ApplyTailnet(st);
+                ScheduleTailnetPoll(gen);
+            });
+        });
+    }
+
+    void StopTailnet()
+    {
+        var active = _tailnetListener is not null || _tailnet.State != "off";
+        _tailnetCts?.Cancel();
+        try { _tailnetListener?.Dispose(); } catch (Exception) { }
+        _tailnetListener = null;
+        _tailnetCts = null;
+        _tailnetGeneration++;
+        if (!active) return;
+        _tq.Post(() => TailnetBridge.Stop());
+        ApplyTailnet(TailnetStatus.Off);
+    }
+
+    void ScheduleTailnetPoll(int gen)
+    {
+        var delay = _tailnet.IsRunning ? TimeSpan.FromSeconds(5) : TimeSpan.FromSeconds(1.5);
+        Q.After(delay, () =>
+        {
+            if (gen != _tailnetGeneration || _tailnetListener is null) return;
+            _tq.Post(() =>
+            {
+                var st = TailnetBridge.Status();
+                Q.Post(() =>
+                {
+                    if (gen != _tailnetGeneration) return;
+                    ApplyTailnet(st);
+                    ScheduleTailnetPoll(gen);
+                });
+            });
+        });
+    }
+
+    void ApplyTailnet(TailnetStatus st)
+    {
+        var old = _tailnet;
+        _tailnet = st;
+        if (!old.SameEssentials(st)) Emit(new NodeEvent.TailnetChanged(st));
+        // New ways to reach members (node came up, other nodes appeared): dial at once.
+        var reach = st.IsRunning ? st.Ip + "|" + string.Join(",", st.Peers.Select(p => $"{p.IdPrefix}@{p.Ip}")) : "";
+        if (reach == _tailnetReach) return;
+        _tailnetReach = reach;
+        if (!st.IsRunning) return;
+        _backoff.Clear();
+        if (_running && !_paused) RedialDisconnected(DateTime.UtcNow);
+    }
+
+    /// <summary>All ways to reach a member: the discovered service, remembered endpoints and its tailnet node.</summary>
+    List<DialCandidate> DialCandidates(string id)
+    {
+        var eps = new List<Endpoint>();
+        if (_discovered.TryGetValue(id, out var d) && d.Gt == GroupTag) eps.AddRange(d.Endpoints);
+        if (_store.State.Endpoints.TryGetValue(id, out var known)) eps.AddRange(known);
+        if (_tailnet.IsRunning)
+        {
+            var id8 = id.Replace("-", "")[..Math.Min(8, id.Replace("-", "").Length)];
+            eps.AddRange(_tailnet.Peers.Where(p => p.IdPrefix == id8).Select(p => new Endpoint(p.Ip, TailnetPort)));
+        }
+        return CandidatesFor(eps);
+    }
+
+    /// <summary>Direct candidates for LAN endpoints; tailnet endpoints go through the bridge proxy (and through the OS when
+    /// the Tailscale app itself is connected) and start a little later (PROTOCOL.md §10.3).</summary>
+    List<DialCandidate> CandidatesFor(IEnumerable<Endpoint> eps, bool fallback = false)
+    {
+        var list = eps.Distinct().ToList();
+        var outList = new List<DialCandidate>();
+        var ts = _tailnet;
+        bool? osTailnet = null;
+        foreach (var e in list)
+        {
+            if (!TailnetAddress.Contains(e.H))
+            {
+                outList.Add(DialCandidate.Direct(e));
+                continue;
+            }
+            if (e.H == ts.Ip) continue;
+            if (ts.IsRunning && ts.ProxyPort is { } pp && ts.Token is { } token)
+                outList.Add(new DialCandidate(new Endpoint("127.0.0.1", pp), e, $"NCTN1 {token} {e.H}:{e.P}\n", TailnetDelay, true));
+            osTailnet ??= _o.AddressProvider().Any(TailnetAddress.Contains);
+            if (osTailnet == true) outList.Add(new DialCandidate(e, e, null, TailnetDelay, true));
+        }
+        if (outList.Count == 0 && fallback && list.Count > 0) outList.Add(DialCandidate.Direct(list[0]));
+        return outList;
     }
 
     ServiceAdvertisement MakeAdvertisement()
@@ -587,19 +798,19 @@ public sealed partial class NearclipNode : IDisposable
         if (_store.Members.TryGetValue(d.Id, out var m) && m.Removed) return;
         if (string.CompareOrdinal(DeviceId, d.Id) < 0)
         {
-            DialMember(d.Id, d.Endpoints);
+            DialMember(d.Id, DialCandidates(d.Id));
         }
         else
         {
             Q.After(TimeSpan.FromSeconds(3), () =>
             {
                 if (_discovered.TryGetValue(d.Id, out var d2) && d2.Gt == GroupTag && !_online.ContainsKey(d.Id) && !_dialing.ContainsKey(d.Id))
-                    DialMember(d.Id, d2.Endpoints);
+                    DialMember(d2.Id, DialCandidates(d2.Id));
             });
         }
     }
 
-    void DialMember(string? peerId, IReadOnlyList<Endpoint> targets)
+    void DialMember(string? peerId, IReadOnlyList<DialCandidate> targets)
     {
         if (!_running || _paused || targets.Count == 0) return;
         if (peerId is not null)
@@ -609,7 +820,7 @@ public sealed partial class NearclipNode : IDisposable
             _dialing[peerId] = DateTime.UtcNow;
         }
         else if (_sessions.Any(x => x.Role == PeerSession.SessionRole.Client && x.Mode == PeerSession.SessionMode.Member &&
-                                    !x.IsClosing && x.Targets.Intersect(targets).Any()))
+                                    !x.IsClosing && x.Targets.Intersect(targets.Select(t => t.Address)).Any()))
         {
             return; // already dialing / connected to that address
         }
@@ -618,12 +829,19 @@ public sealed partial class NearclipNode : IDisposable
         s.Start();
     }
 
-    IReadOnlyList<Endpoint> OwnEndpoints() =>
-        _port <= 0 ? [] : _o.AddressProvider().Select(a => new Endpoint(a, _port)).ToList();
+    IReadOnlyList<Endpoint> OwnEndpoints()
+    {
+        if (_port <= 0) return [];
+        var eps = _o.AddressProvider().Select(a => new Endpoint(a, _port)).ToList();
+        if (_tailnet.IsRunning && _tailnet.Ip is { } ip) eps.Add(new Endpoint(ip, TailnetPort));
+        return eps;
+    }
 
+    /// <summary>Keeps up to 6 LAN and 2 tailnet endpoints per member, newest first (PROTOCOL.md §4.5).</summary>
     void RememberEndpoints(string peerId, IEnumerable<Endpoint> eps)
     {
-        var merged = eps.Concat(_store.State.Endpoints.GetValueOrDefault(peerId) ?? []).Distinct().Take(8).ToList();
+        var all = eps.Concat(_store.State.Endpoints.GetValueOrDefault(peerId) ?? []).Distinct().ToList();
+        var merged = all.Where(e => !TailnetAddress.Contains(e.H)).Take(6).Concat(all.Where(e => TailnetAddress.Contains(e.H)).Take(2)).ToList();
         _store.State.Endpoints[peerId] = merged;
         _store.SaveSoon();
     }
@@ -650,12 +868,11 @@ public sealed partial class NearclipNode : IDisposable
             if (id == DeviceId || rec.Removed || _online.ContainsKey(id) || _dialing.ContainsKey(id)) continue;
             var b = _backoff.TryGetValue(id, out var bb) ? bb : (Next: DateTime.MinValue, Delay: 20.0);
             if (now < b.Next) continue;
-            var targets = new List<Endpoint>();
-            if (_discovered.TryGetValue(id, out var d) && d.Gt == GroupTag) targets.AddRange(d.Endpoints);
-            if (_store.State.Endpoints.TryGetValue(id, out var eps)) targets.AddRange(eps);
+            // Every known way to reach the member at once; the first connection wins (PROTOCOL.md §4.5).
+            var targets = DialCandidates(id);
             if (targets.Count == 0) continue;
             _backoff[id] = (now.AddSeconds(b.Delay), Math.Min(b.Delay * 2, 300));
-            DialMember(id, targets.Distinct().ToList());
+            DialMember(id, targets);
         }
     }
 
@@ -681,7 +898,8 @@ public sealed partial class NearclipNode : IDisposable
         _dialing.Remove(pid);
         var eps = new List<Endpoint>();
         if (s.Role == PeerSession.SessionRole.Client && s.DialedEndpoint is { } a) eps.Add(a);
-        else if (s.Role == PeerSession.SessionRole.Server && s.RemoteHost is { } host && addrs.Count > 0) eps.Add(new Endpoint(host, addrs[0].P));
+        // Never remember the loopback address of connections relayed by the tailnet bridge (§10.1).
+        else if (s.Role == PeerSession.SessionRole.Server && !s.ViaTailnet && s.RemoteHost is { } host && addrs.Count > 0) eps.Add(new Endpoint(host, addrs[0].P));
         eps.AddRange(addrs);
         RememberEndpoints(pid, eps);
         members.Add(device);
@@ -718,7 +936,7 @@ public sealed partial class NearclipNode : IDisposable
         _online[pid] = s;
         _store.State.LastSeen[pid] = Clock.NowMs();
         _store.SaveSoon();
-        if (_store.Members.TryGetValue(pid, out var rec)) Emit(new NodeEvent.PeerUp(rec));
+        if (_store.Members.TryGetValue(pid, out var rec)) Emit(new NodeEvent.PeerUp(rec, s.Route));
         return true;
     }
 

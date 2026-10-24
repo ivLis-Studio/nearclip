@@ -16,6 +16,8 @@ import studio.ivlis.nearclip.core.proto.Wire
 import studio.ivlis.nearclip.core.proto.int
 import studio.ivlis.nearclip.core.proto.str
 import studio.ivlis.nearclip.core.store.FileStore
+import studio.ivlis.nearclip.core.tailnet.TailnetOptions
+import studio.ivlis.nearclip.core.tailnet.TailnetStatus
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileDescriptor
@@ -60,20 +62,31 @@ private fun membersJson(list: List<MemberRecord>) = buildJsonObject {
 }
 
 private fun usage(): Nothing {
-    log("usage: cli --state <dir> --name <name> [--port <n>]")
+    log("usage: cli --state <dir> --name <name> [--port <n>] [--tailnet <dir> [--tailnet-control <url>]]")
     exitProcess(2)
+}
+
+private fun tailnetJson(st: TailnetStatus) = buildJsonObject {
+    put("ev", "tailnet")
+    put("state", st.state)
+    put("ip", st.ip ?: "")
+    put("peers", st.peers.size)
 }
 
 fun main(args: Array<String>) {
     var stateDir: String? = null
     var name = "Nearclip CLI"
     var port = 0
+    var tailnetDir: String? = null
+    var tailnetControl: String? = null
     var i = 0
     while (i < args.size) {
         when (args[i]) {
             "--state" -> stateDir = args.getOrNull(++i) ?: usage()
             "--name" -> name = args.getOrNull(++i) ?: usage()
             "--port" -> port = args.getOrNull(++i)?.toIntOrNull()?.takeIf { it in 0..65535 } ?: usage()
+            "--tailnet" -> tailnetDir = args.getOrNull(++i) ?: usage()
+            "--tailnet-control" -> tailnetControl = args.getOrNull(++i) ?: usage()
             else -> usage()
         }
         i++
@@ -84,13 +97,19 @@ fun main(args: Array<String>) {
         exitProcess(1)
     }
 
+    val tailnet = tailnetDir?.let {
+        val d = File(it)
+        TailnetOptions(d, controlUrl = tailnetControl, logPath = File(d, "tailnet.log").absolutePath, testMode = tailnetControl != null)
+    }
     val engine = try {
-        NearclipEngine(FileStore(dir), EngineConfig(platform = Platform.CLI, defaultName = name, appVersion = "1.0.0", port = port))
+        NearclipEngine(FileStore(dir), EngineConfig(platform = Platform.CLI, defaultName = name, appVersion = "1.0.0", port = port,
+            tailnet = tailnet))
     } catch (e: Exception) {
         log("init failed: ${e}")
         exitProcess(1)
     }
 
+    var lastTailnet = ""
     engine.listener = { ev ->
         when (ev) {
             is EngineEvent.Ready -> emit(buildJsonObject {
@@ -103,19 +122,29 @@ fun main(args: Array<String>) {
             })
             is EngineEvent.Paired -> emit(buildJsonObject { put("ev", "paired"); put("group", ev.groupId); put("peer", ev.peerId) })
             is EngineEvent.PairFailed -> emit(buildJsonObject { put("ev", "pair_failed"); put("reason", ev.reason) })
-            is EngineEvent.PeerUp -> emit(buildJsonObject { put("ev", "peer_up"); put("id", ev.record.id); put("name", ev.record.name) })
+            is EngineEvent.PeerUp -> emit(buildJsonObject {
+                put("ev", "peer_up"); put("id", ev.record.id); put("name", ev.record.name); put("route", ev.route.wire)
+            })
             is EngineEvent.PeerDown -> emit(buildJsonObject { put("ev", "peer_down"); put("id", ev.id) })
             is EngineEvent.ClipAdded -> if (!ev.local) emit(clipJson(ev.clip, ev.live, "clip"))
             is EngineEvent.ClipsDeleted -> ev.ids.forEach { id -> emit(buildJsonObject { put("ev", "deleted"); put("id", id) }) }
             is EngineEvent.MembersChanged -> emit(membersJson(ev.members))
             is EngineEvent.Left -> emit(buildJsonObject { put("ev", "left"); put("reason", ev.reason) })
             is EngineEvent.TooLarge -> emit(buildJsonObject { put("ev", "error"); put("msg", "too large: ${ev.kind}") })
+            is EngineEvent.TailnetChanged -> {
+                val key = "${ev.status.state}|${ev.status.ip}|${ev.status.peers.size}"
+                if (key != lastTailnet) {
+                    lastTailnet = key
+                    emit(tailnetJson(ev.status))
+                }
+            }
             is EngineEvent.Log -> log(ev.message)
             else -> Unit
         }
     }
 
     if (engine.snapshot().deviceName != name) engine.rename(name)
+    if (tailnet != null) engine.setRemoteEnabled(true)
     engine.start()
 
     fun quit(): Nothing {
@@ -176,6 +205,7 @@ fun main(args: Array<String>) {
                     emit(buildJsonObject { put("ev", "history"); put("clips", JsonArray(clips)) })
                 }
                 "members" -> emit(membersJson(engine.snapshot().members))
+                "tailnet" -> emit(tailnetJson(engine.snapshot().tailnet))
                 "quit" -> quit()
                 else -> emit(buildJsonObject { put("ev", "error"); put("msg", "unknown command ${cmd}") })
             }

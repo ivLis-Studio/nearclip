@@ -1,5 +1,6 @@
 package studio.ivlis.nearclip.core.engine
 
+import studio.ivlis.nearclip.core.tailnet.TailnetOptions
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -31,10 +32,16 @@ data class EngineConfig(
     val liveRetryMs: Long = 0,
     /** Our own reachable IPv4 listener addresses (no loopback, no link-local). */
     val localAddresses: () -> List<String> = ::defaultLocalAddresses,
+    /** Embedded Tailscale node for remote connection (PROTOCOL §10). null = not available. */
+    val tailnet: TailnetOptions? = null,
 ) {
     companion object {
         const val DEFAULT_PORT = 45821
         const val SERVICE_TYPE = "_nearclip._tcp"
+        /** Tailnet port every Nearclip node accepts connections on (PROTOCOL §10.1). */
+        const val TAILNET_PORT = 45821
+        /** Tailnet candidates start this much later than LAN candidates (PROTOCOL §10.3). */
+        const val TAILNET_DELAY_MS = 400L
     }
 }
 

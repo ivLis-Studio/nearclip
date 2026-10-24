@@ -1,19 +1,54 @@
 import Foundation
 import Network
 
+/// One way to reach a peer during a dial race (PROTOCOL.md §4.5, §10.3).
+struct DialCandidate {
+    /// Where to open the TCP connection: the peer itself, or the tailnet bridge proxy.
+    var endpoint: NWEndpoint
+    /// The peer address this candidate stands for (remembered when it wins).
+    var address: Endpoint?
+    /// Proxy request line ("NCTN1 <token> <ip>:<port>\n") when dialing through the tailnet bridge.
+    var proxyRequest: String?
+    /// Start delay; tailnet candidates start after the LAN ones.
+    var delay: TimeInterval
+    var route: PeerRoute
+
+    static func direct(_ e: Endpoint, delay: TimeInterval = 0, route: PeerRoute = .lan) -> DialCandidate? {
+        guard let p = NWEndpoint.Port(rawValue: UInt16(clamping: e.p)), e.p > 0 else { return nil }
+        return DialCandidate(endpoint: .hostPort(host: NWEndpoint.Host(e.h), port: p), address: e, proxyRequest: nil,
+                             delay: delay, route: route)
+    }
+}
+
 /// Length-prefixed frames over a Network.framework TCP connection. All callbacks run on `queue`.
+/// A dialing connection races all its candidates and keeps the first one that opens.
 final class FramedConnection {
-    let nw: NWConnection
+    private(set) var nw: NWConnection?
     let queue: DispatchQueue
     var onReady: (() -> Void)?
     var onFrame: ((Data) -> Void)?
     var onClose: ((NearclipError?) -> Void)?
     private(set) var isClosed = false
     private(set) var isReady = false
+    /// The candidate that won the race (client connections).
+    private(set) var winner: DialCandidate?
+    /// Set for inbound connections relayed by the tailnet bridge.
+    var viaTailnet = false
+    private let candidates: [DialCandidate]
+    private var racers: [ObjectIdentifier: NWConnection] = [:]
+    private var pendingStarts = 0
+    private var lastError: String?
 
     init(nw: NWConnection, queue: DispatchQueue) {
         self.nw = nw
         self.queue = queue
+        self.candidates = []
+    }
+
+    init(candidates: [DialCandidate], queue: DispatchQueue) {
+        self.nw = nil
+        self.queue = queue
+        self.candidates = candidates
     }
 
     static func parameters() -> NWParameters {
@@ -29,8 +64,16 @@ final class FramedConnection {
 
     /// Remote IP for inbound connections (IPv4-mapped IPv6 is unwrapped).
     var remoteHost: String? {
-        guard case .hostPort(let host, _) = nw.endpoint else { return nil }
+        guard winner == nil, let nw, case .hostPort(let host, _) = nw.endpoint else { return nil }
         return Self.describe(host)
+    }
+
+    /// Whether the connection runs over the tailnet.
+    var route: PeerRoute {
+        if let winner { return winner.route }
+        if viaTailnet { return .remote }
+        if let h = remoteHost, TailnetAddress.contains(h) { return .remote }
+        return .lan
     }
 
     static func describe(_ host: NWEndpoint.Host) -> String? {
@@ -47,13 +90,118 @@ final class FramedConnection {
     }
 
     func start() {
-        nw.stateUpdateHandler = { [weak self] state in
+        if let nw {
+            adopt(nw)
+            nw.start(queue: queue)
+            return
+        }
+        guard !candidates.isEmpty else {
+            queue.async { [weak self] in self?.finish(.io("no address")) }
+            return
+        }
+        pendingStarts = candidates.count
+        for c in candidates {
+            if c.delay <= 0 {
+                launch(c)
+            } else {
+                queue.asyncAfter(deadline: .now() + c.delay) { [weak self] in self?.launch(c) }
+            }
+        }
+        // Safety net: a race never takes longer than this.
+        queue.asyncAfter(deadline: .now() + 20) { [weak self] in
+            guard let self, !self.isClosed, self.winner == nil, self.nw == nil else { return }
+            self.finish(.io(self.lastError ?? "unreachable"))
+        }
+    }
+
+    private func launch(_ c: DialCandidate) {
+        pendingStarts -= 1
+        guard !isClosed, winner == nil else { return }
+        let conn = NWConnection(to: c.endpoint, using: Self.parameters())
+        let key = ObjectIdentifier(conn)
+        racers[key] = conn
+        conn.stateUpdateHandler = { [weak self, weak conn] state in
+            guard let self, let conn else { return }
+            switch state {
+            case .ready:
+                if let req = c.proxyRequest {
+                    self.proxyHandshake(conn, request: req, candidate: c)
+                } else {
+                    self.win(conn, c)
+                }
+            case .waiting(let error), .failed(let error):
+                self.lose(conn, error.localizedDescription)
+            case .cancelled:
+                self.lose(conn, nil)
+            default:
+                break
+            }
+        }
+        conn.start(queue: queue)
+    }
+
+    private func proxyHandshake(_ conn: NWConnection, request: String, candidate: DialCandidate) {
+        conn.send(content: Data(request.utf8), completion: .contentProcessed { [weak self, weak conn] error in
+            guard let self, let conn else { return }
+            if let error { self.lose(conn, error.localizedDescription); return }
+            let timeout = DispatchWorkItem { [weak self, weak conn] in
+                guard let self, let conn else { return }
+                self.lose(conn, "tailnet dial timed out")
+            }
+            self.queue.asyncAfter(deadline: .now() + 15, execute: timeout)
+            conn.receive(minimumIncompleteLength: 1, maximumLength: 1) { [weak self, weak conn] data, _, _, error in
+                timeout.cancel()
+                guard let self, let conn else { return }
+                if let data, data.first == 0 {
+                    self.win(conn, candidate)
+                } else {
+                    let code = data?.first.map { Int($0) } ?? -1
+                    self.lose(conn, error?.localizedDescription ?? "tailnet dial failed (\(code))")
+                }
+            }
+        })
+    }
+
+    private func win(_ conn: NWConnection, _ c: DialCandidate) {
+        guard !isClosed, winner == nil else {
+            if racers[ObjectIdentifier(conn)] != nil { racers[ObjectIdentifier(conn)] = nil; conn.cancel() }
+            return
+        }
+        winner = c
+        nw = conn
+        racers[ObjectIdentifier(conn)] = nil
+        for other in racers.values { other.stateUpdateHandler = nil; other.cancel() }
+        racers = [:]
+        adopt(conn)
+        isReady = true
+        onReady?()
+        readHeader()
+    }
+
+    private func lose(_ conn: NWConnection, _ error: String?) {
+        let key = ObjectIdentifier(conn)
+        guard racers[key] != nil else { return }
+        racers[key] = nil
+        conn.stateUpdateHandler = nil
+        conn.cancel()
+        if let error { lastError = error }
+        if winner == nil, racers.isEmpty, pendingStarts <= 0 {
+            finish(.io(lastError ?? "unreachable"))
+        }
+    }
+
+    /// Installs the steady-state handler on the connection that carries the session.
+    private func adopt(_ conn: NWConnection) {
+        let accepted = winner == nil
+        conn.stateUpdateHandler = { [weak self] state in
             guard let self, !self.isClosed else { return }
             switch state {
             case .ready:
-                self.isReady = true
-                self.onReady?()
-                self.readHeader()
+                if accepted && !self.isReady {
+                    self.isReady = true
+                    self.onReady?()
+                    self.readHeader()
+                }
             case .waiting(let error):
                 // Fail fast: peers on the LAN either answer or are gone; the engine retries later.
                 self.finish(.io(error.localizedDescription))
@@ -65,11 +213,10 @@ final class FramedConnection {
                 break
             }
         }
-        nw.start(queue: queue)
     }
 
     func send(_ payload: Data, completion: (() -> Void)? = nil) {
-        guard !isClosed else { return }
+        guard !isClosed, let nw else { return }
         var frame = Data(capacity: payload.count + 4)
         withUnsafeBytes(of: UInt32(payload.count).bigEndian) { frame.append(contentsOf: $0) }
         frame.append(payload)
@@ -89,12 +236,14 @@ final class FramedConnection {
         onClose = nil
         onFrame = nil
         onReady = nil
-        nw.cancel()
+        nw?.cancel()
+        for other in racers.values { other.stateUpdateHandler = nil; other.cancel() }
+        racers = [:]
         cb?(error)
     }
 
     private func readHeader() {
-        nw.receive(minimumIncompleteLength: 4, maximumLength: 4) { [weak self] data, _, isComplete, error in
+        nw?.receive(minimumIncompleteLength: 4, maximumLength: 4) { [weak self] data, _, isComplete, error in
             guard let self, !self.isClosed else { return }
             if let error { self.finish(.io(error.localizedDescription)); return }
             guard let data, data.count == 4 else {
@@ -112,7 +261,7 @@ final class FramedConnection {
     }
 
     private func readBody(_ length: Int) {
-        nw.receive(minimumIncompleteLength: length, maximumLength: length) { [weak self] data, _, isComplete, error in
+        nw?.receive(minimumIncompleteLength: length, maximumLength: length) { [weak self] data, _, isComplete, error in
             guard let self, !self.isClosed else { return }
             if let error { self.finish(.io(error.localizedDescription)); return }
             guard let data, data.count == length else {

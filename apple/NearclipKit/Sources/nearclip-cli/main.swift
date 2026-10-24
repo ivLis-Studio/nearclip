@@ -7,7 +7,7 @@ setvbuf(stdout, nil, _IOLBF, 0)
 func errlog(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8)) }
 
 func usage() -> Never {
-    errlog("usage: nearclip-cli --state <dir> --name <name> [--port <n>]")
+    errlog("usage: nearclip-cli --state <dir> --name <name> [--port <n>] [--tailnet <dir> [--tailnet-control <url>]]")
     exit(2)
 }
 
@@ -15,6 +15,8 @@ var stateDir: String?
 var name = "Nearclip CLI"
 var port: UInt16 = 0
 var platform = "cli"
+var tailnetDir: String?
+var tailnetControl: String?
 var args = CommandLine.arguments.dropFirst().makeIterator()
 while let a = args.next() {
     switch a {
@@ -22,6 +24,8 @@ while let a = args.next() {
     case "--name": name = args.next() ?? name
     case "--port": port = UInt16(args.next() ?? "") ?? 0
     case "--platform": platform = args.next() ?? platform  // demos only: impersonate mac/win/android/ios
+    case "--tailnet": tailnetDir = args.next()
+    case "--tailnet-control": tailnetControl = args.next()
     default: usage()
     }
 }
@@ -54,16 +58,28 @@ func emit(_ obj: [String: Any]) {
 }
 
 let stateURL = URL(fileURLWithPath: stateDir)
+var tailnetOptions: TailnetOptions?
+if let tailnetDir {
+    let dir = URL(fileURLWithPath: tailnetDir)
+    tailnetOptions = TailnetOptions(directory: dir, controlURL: tailnetControl,
+                                    logPath: dir.appendingPathComponent("tailnet.log").path, testMode: tailnetControl != nil)
+}
 let node: NearclipNode
 do {
     node = try NearclipNode(config: .init(stateDirectory: stateURL, deviceName: name, platform: platform, appVersion: "1.0.0",
                                           port: port, bonjour: false,
-                                          secretStore: FileSecretStore(directory: stateURL.appendingPathComponent("secrets"))))
+                                          secretStore: FileSecretStore(directory: stateURL.appendingPathComponent("secrets")),
+                                          tailnet: tailnetOptions))
 } catch {
     errlog("init failed: \(error)")
     exit(1)
 }
 if node.snapshot().deviceName != name { node.rename(name) }
+
+@Sendable func tailnetJSON(_ st: TailnetStatus) -> [String: Any] {
+    ["ev": "tailnet", "state": st.state, "ip": st.ip ?? "", "peers": st.peers.count]
+}
+nonisolated(unsafe) var lastTailnet = ""
 
 node.eventQueue = out
 node.onEvent = { ev in
@@ -80,8 +96,8 @@ node.onEvent = { ev in
         emit(["ev": "paired", "group": g, "peer": peer])
     case .pairFailed(let reason):
         emit(["ev": "pair_failed", "reason": reason])
-    case .peerUp(let rec):
-        emit(["ev": "peer_up", "id": rec.id, "name": rec.name])
+    case .peerUp(let rec, let route):
+        emit(["ev": "peer_up", "id": rec.id, "name": rec.name, "route": route.rawValue])
     case .peerDown(let id):
         emit(["ev": "peer_down", "id": id])
     case .clipAdded(let sc, let live, _, let local):
@@ -98,12 +114,19 @@ node.onEvent = { ev in
         emit(["ev": "left", "reason": reason])
     case .tooLarge(let kind):
         emit(["ev": "error", "msg": "too large: \(kind)"])
+    case .tailnetChanged(let st):
+        let key = "\(st.state)|\(st.ip ?? "")|\(st.peers.count)"
+        if key != lastTailnet {
+            lastTailnet = key
+            emit(tailnetJSON(st))
+        }
     case .log(let s):
         errlog(s)
     default:
         break
     }
 }
+if tailnetOptions != nil { node.setRemoteEnabled(true) }
 node.start()
 
 func quit() -> Never {
@@ -158,6 +181,9 @@ func handle(_ cmd: String, _ o: [String: Any]) {
     case "members":
         let snap = node.snapshot()
         out.async { emit(["ev": "members", "members": snap.members.map(memberJSON)]) }
+    case "tailnet":
+        let st = node.snapshot().tailnet
+        out.async { emit(tailnetJSON(st)) }
     case "quit":
         quit()
     default:

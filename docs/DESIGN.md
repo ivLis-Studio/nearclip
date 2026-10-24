@@ -1,7 +1,9 @@
 # Nearclip — Product & UI/UX Design
 
-Nearclip is a universal clipboard for a person's own devices on the **same local network**.
-Copy on one device, paste on any other. No server, no account, end-to-end encrypted.
+Nearclip is a universal clipboard for a person's own devices. Copy on one device, paste on any other.
+On the **same local network** it needs no server and no account; with **Remote connection** turned on
+(§4.7) the devices also find each other across networks through an embedded Tailscale node.
+End-to-end encrypted either way.
 Wire protocol: [PROTOCOL.md](PROTOCOL.md).
 
 ## 1. Principles
@@ -13,8 +15,8 @@ Wire protocol: [PROTOCOL.md](PROTOCOL.md).
 3. **Native everywhere.** macOS = menu bar app + floating panel; Windows = tray app + Windows 11
    flyout; Android = Material 3 (Material You); iOS = SwiftUI following the HIG. Use the platform's
    own controls, fonts, icons (SF Symbols / Segoe Fluent Icons / Material Symbols), sheets and dialogs.
-4. **Private by default.** LAN only, encrypted, password-manager items are never synced, deleting a
-   clip deletes it on every device.
+4. **Private by default.** LAN only unless the user turns on Remote connection, always end-to-end
+   encrypted, password-manager items are never synced, deleting a clip deletes it on every device.
 5. **Calm visuals.** Flat surfaces, system materials (Liquid Glass / vibrancy on Apple, Mica on
    Windows, tonal surfaces on Android). No heavy gradients, no confetti. Motion 150–250 ms,
    ease-out, disabled under Reduce Motion.
@@ -55,6 +57,9 @@ resource system (String Catalog, `strings.xml`, `.resw`). Device-platform words 
 | Receive feedback | Copied from iPhone | iPhone에서 복사됨 |
 | Send feedback | Sent to 3 devices | 기기 3대로 보냄 |
 | Pairing number | Pairing code | 연결 코드 |
+| Cross-network mode | Remote connection | 원격 연결 |
+| Route: same network | Connected · Same network | 연결됨 · 같은 네트워크 |
+| Route: through the tailnet | Connected · Remote | 연결됨 · 원격 |
 
 ## 4. Shared flows
 
@@ -136,6 +141,42 @@ resource system (String Catalog, `strings.xml`, `.resw`). Device-platform words 
   syncing with your devices.").
 * **Add device** button (accent).
 * Advanced: "Leave my devices" (this device starts a new, empty group) — confirm dialog.
+* A connected device shows its route in its subtitle (§4.7). When Remote connection is off and a
+  device is not connected, the list footer offers: "On another network? Turn on Remote connection." /
+  "다른 네트워크에 있나요? 원격 연결을 켜 보세요." (opens the setting).
+
+### 4.7 Remote connection (embedded Tailscale)
+
+Off by default. Lives in Settings (macOS/Windows: General page, its own group; phones: its own
+section). Copy (EN / KO):
+
+| Element | English | 한국어 |
+|---|---|---|
+| Group title | Remote connection | 원격 연결 |
+| Toggle | Sync across networks | 다른 네트워크에서도 동기화 |
+| Explanation (always shown under the toggle) | Keeps your devices connected on different networks — home, office or mobile data. Uses a free Tailscale account; clips stay end-to-end encrypted. | 집, 회사, 모바일 데이터처럼 서로 다른 네트워크에서도 기기끼리 연결돼요. 무료 Tailscale 계정을 사용하고, 클립은 계속 종단 간 암호화돼요. |
+| starting | Starting… | 준비 중… |
+| needsLogin | Sign in to Tailscale to finish turning this on. | Tailscale에 로그인하면 켜져요. |
+| Login button | Sign in with Tailscale | Tailscale로 로그인 |
+| Waiting after the button | Waiting for sign-in… | 로그인 기다리는 중… |
+| needsApproval | Approve this device in the Tailscale admin console. | Tailscale 관리 콘솔에서 이 기기를 승인해 주세요. |
+| running (title) | On · {account} | 켜짐 · {account} |
+| running (detail) | This device: {ip} | 이 기기 주소: {ip} |
+| running (hint) | Sign in with the same account on your other devices. | 다른 기기에서도 같은 계정으로 로그인하세요. |
+| error | Couldn't start remote connection. {error} | 원격 연결을 시작하지 못했어요. {error} |
+| Retry | Try again | 다시 시도 |
+| Sign out | Sign out of Tailscale | Tailscale에서 로그아웃 |
+
+* Turning the toggle on starts the node at once; if it needs a login, the login button is the
+  primary action. Login opens Tailscale's sign-in page: macOS/Windows in the default browser, iOS in
+  an in-app Safari sheet that closes by itself when the node is running, Android in a Custom Tab.
+  The status refreshes live (every 1–2 s until running).
+* Turning it off stops the node (the login is kept, so turning it on again is instant). "Sign out of
+  Tailscale" also forgets the login.
+* Status glyph: globe (SF Symbol `globe`, Segoe `\uE774`, Material `public`), green when running,
+  amber for login/approval, red for errors.
+* Device rows: "Connected · Same network" / "Connected · Remote" (remote also shows a small globe).
+* About: "Direct device-to-device · End-to-end encrypted" / "기기 간 직접 연결 · 종단 간 암호화".
 
 ### 4.6 Settings
 
@@ -150,11 +191,12 @@ resource system (String Catalog, `strings.xml`, `.resw`). Device-platform words 
 | Mobile | Send clipboard when Nearclip opens | on |
 | Mobile | Copy the newest clip when Nearclip opens (if it arrived ≤ 10 min ago) | on |
 | Android | Stay connected in the background (persistent notification) | on |
+| Remote connection | Sync across networks (embedded Tailscale, §4.7) | off |
 | Privacy | Skip password managers (always on, explained) | — |
 | Privacy | Ignore apps… (macOS/Windows list) | 1Password, Bitwarden, KeePassXC, Keychain Access |
 | History | Keep history for | 30 days (1 day / 7 days / 30 days / Forever) |
 | History | Clear history (on all devices) | — |
-| About | version, "Local network only · End-to-end encrypted", licenses | — |
+| About | version, "Direct device-to-device · End-to-end encrypted", licenses (incl. Tailscale, BSD-3-Clause) | — |
 
 ## 5. Platform blueprints
 

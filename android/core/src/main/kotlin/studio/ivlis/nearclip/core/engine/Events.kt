@@ -3,6 +3,8 @@ package studio.ivlis.nearclip.core.engine
 import studio.ivlis.nearclip.core.model.Clip
 import studio.ivlis.nearclip.core.model.Endpoint
 import studio.ivlis.nearclip.core.model.MemberRecord
+import studio.ivlis.nearclip.core.tailnet.PeerRoute
+import studio.ivlis.nearclip.core.tailnet.TailnetStatus
 
 data class TicketInfo(val uri: String, val expiresAt: Long, val hosts: List<String>, val port: Int)
 
@@ -32,7 +34,7 @@ sealed class EngineEvent {
     data object PairPromptDismissed : EngineEvent()
     data class Paired(val groupId: String, val peerId: String, val peerName: String, val peerPlatform: String, val joined: Boolean) : EngineEvent()
     data class PairFailed(val reason: String, val peerName: String?) : EngineEvent()
-    data class PeerUp(val record: MemberRecord) : EngineEvent()
+    data class PeerUp(val record: MemberRecord, val route: PeerRoute = PeerRoute.LAN) : EngineEvent()
     data class PeerDown(val id: String) : EngineEvent()
     /**
      * A clip entered the history. [local]: produced on this device. [apply]: a live clip from another device
@@ -43,6 +45,8 @@ sealed class EngineEvent {
     data class MembersChanged(val members: List<MemberRecord>) : EngineEvent()
     data class Left(val reason: String) : EngineEvent()
     data class TooLarge(val kind: String) : EngineEvent()
+    /** The embedded Tailscale node changed state (remote connection). */
+    data class TailnetChanged(val status: TailnetStatus) : EngineEvent()
     data class Log(val message: String) : EngineEvent()
 }
 
@@ -67,6 +71,10 @@ data class EngineSnapshot(
     val prompt: PairPromptInfo?,
     val joining: Boolean,
     val addresses: List<String>,
+    /** Route of every connected member. */
+    val routes: Map<String, PeerRoute> = emptyMap(),
+    val remoteEnabled: Boolean = false,
+    val tailnet: TailnetStatus = TailnetStatus.OFF,
 ) {
     val me: MemberRecord? get() = members.firstOrNull { it.id == deviceId }
     val otherMembers: List<MemberRecord> get() = members.filter { it.id != deviceId && !it.removed }

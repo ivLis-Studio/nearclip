@@ -9,7 +9,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 import studio.ivlis.nearclip.core.crypto.B64u
 import studio.ivlis.nearclip.core.crypto.Crypto
 import studio.ivlis.nearclip.core.crypto.Hex
@@ -37,8 +41,13 @@ import studio.ivlis.nearclip.core.proto.obj
 import studio.ivlis.nearclip.core.proto.objects
 import studio.ivlis.nearclip.core.proto.str
 import studio.ivlis.nearclip.core.store.Store
+import studio.ivlis.nearclip.core.tailnet.PeerRoute
+import studio.ivlis.nearclip.core.tailnet.TailnetAddress
+import studio.ivlis.nearclip.core.tailnet.TailnetBridge
+import studio.ivlis.nearclip.core.tailnet.TailnetStatus
 import java.io.File
 import java.io.IOException
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.SocketTimeoutException
@@ -127,6 +136,15 @@ class NearclipEngine(
     private var syncImages = config.syncImages
     private var lastPrune = 0L
 
+    // Remote connection (embedded Tailscale node, PROTOCOL §10).
+    private var remoteEnabled = false
+    private var tailnetStatus = TailnetStatus.OFF
+    private var tailnetServer: ServerSocket? = null
+    private var tailnetGeneration = 0
+    private var tailnetReach = ""
+    private var tailnetPoll: ScheduledFuture<*>? = null
+    private val tailnetExec: ExecutorService = Executors.newSingleThreadExecutor { r -> Thread(r, "nearclip-tailnet").apply { isDaemon = true } }
+
     // ---- outputs ----
     private val _events = MutableSharedFlow<EngineEvent>(extraBufferCapacity = 512, onBufferOverflow = BufferOverflow.DROP_OLDEST)
     val events: SharedFlow<EngineEvent> = _events.asSharedFlow()
@@ -199,6 +217,8 @@ class NearclipEngine(
         val deadline = System.currentTimeMillis() + 1_500
         for (s in closing) s.awaitWriter(max(1, deadline - System.currentTimeMillis()))
         try { call { writeNow() } } catch (_: RejectedExecutionException) {}
+        // Let the embedded node shut down cleanly (bounded by the bridge's own timeout).
+        try { tailnetExec.submit {}.get(10, TimeUnit.SECONDS) } catch (_: Exception) {}
     }
 
     /** [stop] and release all threads. The engine cannot be restarted afterwards. */
@@ -206,6 +226,7 @@ class NearclipEngine(
         stop()
         exec.shutdown()
         saver.shutdown()
+        tailnetExec.shutdown()
         try { saver.awaitTermination(3, TimeUnit.SECONDS) } catch (_: InterruptedException) {}
         io.shutdownNow()
     }
@@ -328,7 +349,10 @@ class NearclipEngine(
 
     fun createTicket(): TicketInfo = call {
         val secret = Crypto.random(16)
-        val hosts = config.localAddresses()
+        val hosts = config.localAddresses().toMutableList()
+        // A joiner in the same tailnet can pair from another network (the node also listens on the LAN port).
+        val tip = tailnetStatus.ip
+        if (tailnetStatus.isRunning && tip != null && tip !in hosts) hosts.add(tip)
         val p = if (port > 0) port else config.port
         val uri = PairingUri(deviceId, st.deviceName, config.platform, hosts, p, secret).build()
         val expires = clock() + config.ticketLifetimeMs
@@ -348,21 +372,29 @@ class NearclipEngine(
         uri.hosts.forEach { h -> runCatching { Endpoint(h, uri.port) }.getOrNull()?.let { targets.add(it) } }
         discovered[uri.inviterId]?.endpoints?.let { targets.addAll(it) }
         targets.addAll(extraEndpoints)
-        if (targets.isEmpty()) { emit(EngineEvent.PairFailed("unreachable", uri.name)); return@post }
+        if (tailnetStatus.isRunning) {
+            val id8 = uri.inviterId.replace("-", "").take(8)
+            for (p in tailnetStatus.peers) {
+                if (p.idPrefix == id8) runCatching { Endpoint(p.ip, uri.port) }.getOrNull()?.let { targets.add(it) }
+            }
+        }
+        val candidates = candidatesFor(targets.toList())
+        if (candidates.isEmpty()) { emit(EngineEvent.PairFailed("unreachable", uri.name)); return@post }
         val op = JoinOp("qr", uri.name)
         join = op
         val me = joinerRecord()
-        io.execute { runJoin(op, targets.toList()) { conn -> qrHandshake(op, conn, uri, me) } }
+        io.execute { runJoin(op, candidates) { conn -> qrHandshake(op, conn, uri, me) } }
     }
 
     /** Joiner: numeric-comparison pairing with a nearby device or an explicit address. */
     fun pairWithCode(targets: List<Endpoint>, peerName: String? = null) = post {
         if (join != null) { emit(EngineEvent.PairFailed("busy", peerName)); return@post }
-        if (targets.isEmpty()) { emit(EngineEvent.PairFailed("unreachable", peerName)); return@post }
+        val candidates = candidatesFor(targets, fallback = true)
+        if (candidates.isEmpty()) { emit(EngineEvent.PairFailed("unreachable", peerName)); return@post }
         val op = JoinOp("code", peerName)
         join = op
         val me = joinerRecord()
-        io.execute { runJoin(op, targets) { conn -> codeHandshake(op, conn, me) } }
+        io.execute { runJoin(op, candidates) { conn -> codeHandshake(op, conn, me) } }
     }
 
     fun cancelJoin() = post {
@@ -381,7 +413,61 @@ class NearclipEngine(
     }
 
     /** Dial a member session at an explicit address. */
-    fun connect(endpoint: Endpoint) = post { dialMember(null, listOf(endpoint)) }
+    fun connect(endpoint: Endpoint) = post { dialMember(null, candidatesFor(listOf(endpoint), fallback = true)) }
+
+    // ---- Remote connection (public) ----
+
+    /** Whether this build can run the embedded Tailscale node. */
+    val tailnetAvailable: Boolean get() = config.tailnet != null && TailnetBridge.available
+
+    /** Remote connection on/off (the app persists the choice). The node runs only while networking runs. */
+    fun setRemoteEnabled(on: Boolean) = post {
+        if (remoteEnabled == on) return@post
+        remoteEnabled = on
+        if (on) startTailnetIfNeeded() else stopTailnet()
+    }
+
+    /** Makes sure a Tailscale sign-in URL exists; completes with the fresh status. */
+    fun tailnetLogin(): CompletableFuture<TailnetStatus> {
+        val f = CompletableFuture<TailnetStatus>()
+        post {
+            if (tailnetServer == null) { f.complete(tailnetStatus); return@post }
+            val gen = tailnetGeneration
+            tailnetExec.execute {
+                val st = TailnetBridge.login()
+                post { if (gen == tailnetGeneration) applyTailnet(st) }
+                f.complete(st)
+            }
+        }
+        return f
+    }
+
+    /** Signs this device out of Tailscale (remote connection then needs a new sign-in). */
+    fun tailnetLogout() = post {
+        if (tailnetServer == null) return@post
+        val gen = tailnetGeneration
+        tailnetExec.execute {
+            val st = TailnetBridge.logout()
+            post { if (gen == tailnetGeneration) applyTailnet(st) }
+        }
+    }
+
+    /**
+     * The device's network changed (Wi-Fi ↔ cellular, wake, back in the foreground): drop sessions that went
+     * silent, forget back-off and redial now (PROTOCOL §4.5, §10.4). [netInfo] is the Android interface report
+     * for the embedded node (tailnet/README.md).
+     */
+    fun networkChanged(netInfo: String? = null) = post {
+        if (tailnetServer != null) {
+            tailnetExec.execute { if (netInfo != null) TailnetBridge.setNetwork(netInfo) else TailnetBridge.networkChanged() }
+        }
+        if (!running || paused) return@post
+        val now = clock()
+        for (s in online.values.toList()) if (now - s.lastReceived > 20_000) s.close()
+        backoff.clear()
+        for (s in online.values) s.sendJson(Msg.PING)
+        tick()
+    }
 
     fun onServiceDiscovered(d: DiscoveredService) = post {
         if (d.id == deviceId) return@post
@@ -499,6 +585,9 @@ class NearclipEngine(
         prompt = codeInvite?.prompt,
         joining = join != null,
         addresses = config.localAddresses(),
+        routes = online.mapValues { if (it.value.remote) PeerRoute.REMOTE else PeerRoute.LAN },
+        remoteEnabled = remoteEnabled,
+        tailnet = tailnetStatus,
     )
 
     // ---- persistence ----
@@ -592,6 +681,7 @@ class NearclipEngine(
     private fun stopNetworking(reason: String) {
         try { server?.close() } catch (_: Exception) {}
         server = null
+        stopTailnet()
         for (s in sessions.toList()) s.bye(reason)
         join?.let { op ->
             op.cancelled = true
@@ -633,11 +723,12 @@ class NearclipEngine(
         } ?: return
         server = ss
         port = ss.localPort
-        Thread({ acceptLoop(ss) }, "nearclip-accept").apply { isDaemon = true; start() }
+        Thread({ acceptLoop(ss, viaTailnet = false) }, "nearclip-accept").apply { isDaemon = true; start() }
         emit(EngineEvent.Ready(port, group.id, group.tag))
+        startTailnetIfNeeded()
     }
 
-    private fun acceptLoop(ss: ServerSocket) {
+    private fun acceptLoop(ss: ServerSocket, viaTailnet: Boolean) {
         while (!ss.isClosed) {
             val sock = try { ss.accept() } catch (_: IOException) { break }
             if (!running || paused) {
@@ -646,9 +737,99 @@ class NearclipEngine(
             }
             Conn.tune(sock)
             try {
-                io.execute { serveIncoming(Conn(sock)) }
+                io.execute { serveIncoming(Conn(sock), viaTailnet) }
             } catch (_: RejectedExecutionException) {
                 try { sock.close() } catch (_: Exception) {}
+            }
+        }
+    }
+
+    // ---- Embedded Tailscale node ----
+
+    private fun startTailnetIfNeeded() {
+        val opts = config.tailnet ?: return
+        if (!remoteEnabled || !running || paused || port <= 0) return
+        val ss = tailnetServer ?: try {
+            // Inbound tailnet connections arrive here from the bridge (loopback only).
+            ServerSocket().apply { bind(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 50) }.also { s ->
+                tailnetServer = s
+                Thread({ acceptLoop(s, viaTailnet = true) }, "nearclip-accept-tailnet").apply { isDaemon = true; start() }
+            }
+        } catch (e: IOException) {
+            applyTailnet(TailnetStatus(state = "error", error = e.message))
+            return
+        }
+        val cfg = buildJsonObject {
+            put("dir", opts.directory.absolutePath)
+            put("deviceId", deviceId)
+            put("deviceName", st.deviceName)
+            putJsonArray("ports") { add(port) }
+            put("forward", "127.0.0.1:${ss.localPort}")
+            opts.controlUrl?.let { put("controlURL", it) }
+            opts.logPath?.let { put("logPath", it) }
+            if (opts.testMode) put("testMode", true)
+        }
+        tailnetGeneration++
+        val gen = tailnetGeneration
+        if (!tailnetStatus.isRunning) applyTailnet(TailnetStatus(state = "starting"))
+        tailnetExec.execute {
+            opts.directory.mkdirs()
+            opts.netInfo?.invoke()?.let { TailnetBridge.setNetwork(it) }
+            val status = TailnetBridge.start(cfg)
+            post {
+                if (gen == tailnetGeneration) {
+                    applyTailnet(status)
+                    scheduleTailnetPoll(gen)
+                }
+            }
+        }
+    }
+
+    private fun stopTailnet() {
+        val active = tailnetServer != null || tailnetStatus.state != "off"
+        try { tailnetServer?.close() } catch (_: Exception) {}
+        tailnetServer = null
+        tailnetGeneration++
+        tailnetPoll?.cancel(false)
+        tailnetPoll = null
+        if (!active) return
+        try { tailnetExec.execute { TailnetBridge.stop() } } catch (_: RejectedExecutionException) {}
+        applyTailnet(TailnetStatus.OFF)
+    }
+
+    private fun scheduleTailnetPoll(gen: Int) {
+        val delay = if (tailnetStatus.isRunning) 5_000L else 1_500L
+        tailnetPoll = try {
+            exec.schedule({
+                runTask {
+                    if (gen != tailnetGeneration || tailnetServer == null) return@runTask
+                    tailnetExec.execute {
+                        val status = TailnetBridge.status()
+                        post {
+                            if (gen == tailnetGeneration) {
+                                applyTailnet(status)
+                                scheduleTailnetPoll(gen)
+                            }
+                        }
+                    }
+                }
+            }, delay, TimeUnit.MILLISECONDS)
+        } catch (_: RejectedExecutionException) {
+            null
+        }
+    }
+
+    private fun applyTailnet(status: TailnetStatus) {
+        val old = tailnetStatus
+        tailnetStatus = status
+        if (!old.sameEssentials(status)) emit(EngineEvent.TailnetChanged(status))
+        // New ways to reach members (node came up, other nodes appeared): dial at once.
+        val reach = if (status.isRunning) status.ip + "|" + status.peers.joinToString(",") { "${it.idPrefix}@${it.ip}" } else ""
+        if (reach != tailnetReach) {
+            tailnetReach = reach
+            if (status.isRunning) {
+                backoff.clear()
+                tick()
             }
         }
     }
@@ -656,11 +837,45 @@ class NearclipEngine(
     private fun busy(pid: String): Boolean =
         online.containsKey(pid) || dialing.contains(pid) || sessions.any { it.peerId == pid && !it.closed && !it.welcomed }
 
-    private fun dialTargets(pid: String): List<Endpoint> {
+    /** All ways to reach a member: the discovered service, remembered endpoints and its tailnet node. */
+    private fun dialCandidates(pid: String): List<DialCandidate> {
         val out = LinkedHashSet<Endpoint>()
         discovered[pid]?.takeIf { it.groupTag == group.tag }?.endpoints?.let { out.addAll(it) }
         st.endpoints[pid]?.let { out.addAll(it) }
-        return out.toList()
+        if (tailnetStatus.isRunning) {
+            val id8 = pid.replace("-", "").take(8)
+            for (p in tailnetStatus.peers) {
+                if (p.idPrefix == id8) runCatching { Endpoint(p.ip, EngineConfig.TAILNET_PORT) }.getOrNull()?.let { out.add(it) }
+            }
+        }
+        return candidatesFor(out.toList())
+    }
+
+    /**
+     * Direct candidates for LAN endpoints; tailnet endpoints go through the bridge proxy (and through the OS when
+     * the Tailscale app itself is connected) and start a little later (PROTOCOL §10.3).
+     */
+    private fun candidatesFor(eps: List<Endpoint>, fallback: Boolean = false): List<DialCandidate> {
+        val out = ArrayList<DialCandidate>()
+        val ts = tailnetStatus
+        var osTailnet: Boolean? = null
+        for (e in eps.distinct()) {
+            if (!TailnetAddress.contains(e.host)) {
+                out.add(DialCandidate(e, e))
+                continue
+            }
+            if (e.host == ts.ip) continue
+            val pp = ts.proxyPort
+            val token = ts.token
+            if (ts.isRunning && pp != null && token != null) {
+                out.add(DialCandidate(Endpoint("127.0.0.1", pp), e, "NCTN1 $token ${e.host}:${e.port}\n",
+                    EngineConfig.TAILNET_DELAY_MS, remote = true))
+            }
+            if (osTailnet == null) osTailnet = config.localAddresses().any { TailnetAddress.contains(it) }
+            if (osTailnet == true) out.add(DialCandidate(e, e, null, EngineConfig.TAILNET_DELAY_MS, remote = true))
+        }
+        if (out.isEmpty() && fallback && eps.isNotEmpty()) out.add(DialCandidate(eps[0], eps[0]))
+        return out
     }
 
     private fun tick() {
@@ -685,7 +900,8 @@ class NearclipEngine(
             if (m.id == deviceId || m.removed || busy(m.id)) continue
             val b = backoff[m.id]
             if (b != null && now < b.next) continue
-            val targets = dialTargets(m.id)
+            // Every known way to reach the member at once; the first connection wins (PROTOCOL §4.5).
+            val targets = dialCandidates(m.id)
             if (targets.isEmpty()) continue
             val delay = b?.delay ?: config.dialIntervalMs
             backoff[m.id] = Backoff(now + delay, minOf(delay * 2, config.maxBackoffMs))
@@ -696,13 +912,13 @@ class NearclipEngine(
     private fun considerDial(d: DiscoveredService) {
         if (!running || paused || busy(d.id) || st.members[d.id]?.removed == true || d.endpoints.isEmpty()) return
         if (deviceId < d.id) {
-            dialMember(d.id, d.endpoints)
+            dialMember(d.id, dialCandidates(d.id))
         } else {
             try {
                 exec.schedule({
                     runTask {
                         val d2 = discovered[d.id]
-                        if (d2 != null && d2.groupTag == group.tag && !busy(d.id) && running && !paused) dialMember(d.id, d2.endpoints)
+                        if (d2 != null && d2.groupTag == group.tag && !busy(d.id) && running && !paused) dialMember(d.id, dialCandidates(d.id))
                     }
                 }, 3, TimeUnit.SECONDS)
             } catch (_: RejectedExecutionException) {
@@ -710,7 +926,7 @@ class NearclipEngine(
         }
     }
 
-    private fun dialMember(peerId: String?, targets: List<Endpoint>) {
+    private fun dialMember(peerId: String?, targets: List<DialCandidate>) {
         if (!running || paused || targets.isEmpty()) return
         if (peerId != null) {
             if (busy(peerId) || st.members[peerId]?.removed == true) return
@@ -721,12 +937,12 @@ class NearclipEngine(
             io.execute {
                 var session: MemberSession? = null
                 try {
-                    val (sock, ep) = Conn.connectFirst(targets, config.connectTimeoutMs, io)
-                    session = clientMemberHandshake(Conn(sock), ep, creds)
+                    val (sock, cand) = Conn.race(targets, config.connectTimeoutMs, io)
+                    session = clientMemberHandshake(Conn(sock), cand, creds)
                 } catch (e: HandshakeError) {
-                    log("dial ${peerId?.take(8) ?: targets.first()}: ${e.code}")
+                    log("dial ${peerId?.take(8) ?: targets.first().address}: ${e.code}")
                 } catch (e: Exception) {
-                    log("dial ${peerId?.take(8) ?: targets.first()}: ${e.message ?: e.javaClass.simpleName}")
+                    log("dial ${peerId?.take(8) ?: targets.first().address}: ${e.message ?: e.javaClass.simpleName}")
                 }
                 post {
                     if (peerId != null) dialing.remove(peerId)
@@ -738,7 +954,7 @@ class NearclipEngine(
         }
     }
 
-    private fun clientMemberHandshake(conn: Conn, ep: Endpoint, creds: Creds): MemberSession {
+    private fun clientMemberHandshake(conn: Conn, cand: DialCandidate, creds: Creds): MemberSession {
         try {
             conn.setReadTimeout(config.handshakeTimeoutMs)
             val eph = P256.generate()
@@ -758,7 +974,7 @@ class NearclipEngine(
             val okm = Crypto.hkdf(z, creds.group.authKey, concat("nearclip-session".utf8, th), 64)
             conn.setReadTimeout(SESSION_READ_TIMEOUT_MS)
             return MemberSession(this, conn, SecureChannel.fromOkm(okm, isClient = true), pid, isClient = true,
-                clientId = creds.id, groupId = creds.group.id, dialed = ep)
+                clientId = creds.id, groupId = creds.group.id, dialed = cand.address, remote = cand.remote)
         } catch (e: Exception) {
             conn.close()
             throw e
@@ -777,14 +993,21 @@ class NearclipEngine(
         s.start()
     }
 
-    private fun ownEndpoints(): List<Endpoint> =
-        if (port > 0) config.localAddresses().mapNotNull { runCatching { Endpoint(it, port) }.getOrNull() } else emptyList()
+    private fun ownEndpoints(): List<Endpoint> {
+        if (port <= 0) return emptyList()
+        val eps = config.localAddresses().mapNotNull { runCatching { Endpoint(it, port) }.getOrNull() }.toMutableList()
+        val ip = tailnetStatus.ip
+        if (tailnetStatus.isRunning && ip != null) eps.add(Endpoint(ip, EngineConfig.TAILNET_PORT))
+        return eps
+    }
 
+    /** Keeps up to 6 LAN and 2 tailnet endpoints per member, newest first (PROTOCOL §4.5). */
     private fun rememberEndpoints(pid: String, eps: List<Endpoint>) {
         val merged = LinkedHashSet<Endpoint>()
         merged.addAll(eps)
         st.endpoints[pid]?.let { merged.addAll(it) }
-        val list = merged.take(6).toMutableList()
+        val list = (merged.filter { !TailnetAddress.contains(it.host) }.take(6) +
+            merged.filter { TailnetAddress.contains(it.host) }.take(2)).toMutableList()
         if (st.endpoints[pid] != list) {
             st.endpoints[pid] = list
             markPersist()
@@ -803,7 +1026,7 @@ class NearclipEngine(
         try { exec.schedule({ conn.close() }, 2, TimeUnit.SECONDS) } catch (_: RejectedExecutionException) { conn.close() }
     }
 
-    private fun serveIncoming(conn: Conn) {
+    private fun serveIncoming(conn: Conn, viaTailnet: Boolean) {
         try {
             conn.setReadTimeout(config.handshakeTimeoutMs)
             val hello = try { HelloFrame(conn.read()) } catch (e: ProtocolException) { reject(conn, "bad_request"); return }
@@ -814,7 +1037,7 @@ class NearclipEngine(
             if (pid == null || e == null || e.size != 65) { reject(conn, "bad_request"); return }
             if (pid == deviceId) { conn.close(); return }
             when (hello.mode) {
-                "member" -> serveMember(conn, hello, pid, e)
+                "member" -> serveMember(conn, hello, pid, e, viaTailnet)
                 "pair-qr" -> servePairQr(conn, hello, pid, e)
                 "pair-code" -> servePairCode(conn, hello, pid, e)
                 else -> reject(conn, "bad_request")
@@ -824,7 +1047,7 @@ class NearclipEngine(
         }
     }
 
-    private fun serveMember(conn: Conn, hello: HelloFrame, pid: String, e: ByteArray) {
+    private fun serveMember(conn: Conn, hello: HelloFrame, pid: String, e: ByteArray, viaTailnet: Boolean) {
         val creds = call { if (running && !paused) Creds(deviceId, group) else null } ?: run { conn.close(); return }
         if (hello.groupTag != creds.group.tag) { reject(conn, "group_mismatch"); return }
         val eph = P256.generate()
@@ -836,7 +1059,8 @@ class NearclipEngine(
         val okm = Crypto.hkdf(z, creds.group.authKey, concat("nearclip-session".utf8, th), 64)
         conn.setReadTimeout(SESSION_READ_TIMEOUT_MS)
         val s = MemberSession(this, conn, SecureChannel.fromOkm(okm, isClient = false), pid, isClient = false,
-            clientId = pid, groupId = creds.group.id, dialed = null)
+            clientId = pid, groupId = creds.group.id, dialed = null, viaTailnet = viaTailnet,
+            remote = viaTailnet || TailnetAddress.contains(conn.remoteHost))
         post { attach(s) }
     }
 
@@ -938,7 +1162,8 @@ class NearclipEngine(
         val dialed = s.dialed
         if (dialed != null) {
             eps.add(dialed)
-        } else {
+        } else if (!s.viaTailnet) {
+            // Never remember the loopback address of connections relayed by the tailnet bridge (PROTOCOL §10.1).
             val host = s.conn.remoteHost
             val p = addrs.firstOrNull()?.port
             if (host != null && p != null) runCatching { Endpoint(host, p) }.getOrNull()?.let { eps.add(it) }
@@ -986,7 +1211,7 @@ class NearclipEngine(
         st.lastSeen[s.peerId] = clock()
         markPersist()
         val rec = st.members[s.peerId]
-        if (rec != null) emit(EngineEvent.PeerUp(rec))
+        if (rec != null) emit(EngineEvent.PeerUp(rec, if (s.remote) PeerRoute.REMOTE else PeerRoute.LAN))
         return true
     }
 
@@ -1330,11 +1555,11 @@ class NearclipEngine(
     // Pairing — joiner
     // =====================================================================================
 
-    private fun runJoin(op: JoinOp, targets: List<Endpoint>, handshake: (Conn) -> PairAccept) {
+    private fun runJoin(op: JoinOp, targets: List<DialCandidate>, handshake: (Conn) -> PairAccept) {
         var conn: Conn? = null
         try {
-            val (sock, ep) = try {
-                Conn.connectFirst(targets, config.connectTimeoutMs, io)
+            val (sock, cand) = try {
+                Conn.race(targets, config.connectTimeoutMs, io)
             } catch (e: IOException) {
                 throw PairError("unreachable")
             }
@@ -1342,7 +1567,7 @@ class NearclipEngine(
             op.conn = conn
             if (op.cancelled) throw PairError("cancelled")
             val accept = handshake(conn)
-            post { completeJoin(op, accept, ep) }
+            post { completeJoin(op, accept, cand.address) }
         } catch (e: PairError) {
             post { finishJoin(op, e.reason) }
         } catch (e: SocketTimeoutException) {
@@ -1463,7 +1688,7 @@ class NearclipEngine(
         writeNow()
         emit(EngineEvent.MembersChanged(memberList()))
         emit(EngineEvent.Paired(group.id, inviter, accept.device.name, accept.device.platform, joined = true))
-        dialMember(inviter, listOf(ep))
+        dialMember(inviter, dialCandidates(inviter))
         for (d in discovered.values.toList()) if (d.groupTag == group.tag && d.id != inviter) considerDial(d)
     }
 

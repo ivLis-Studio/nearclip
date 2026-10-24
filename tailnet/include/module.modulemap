@@ -1,0 +1,4 @@
+module NCTailnet {
+    header "nctailnet.h"
+    export *
+}

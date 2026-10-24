@@ -1,5 +1,5 @@
 // Headless Nearclip peer for cross-implementation tests (PROTOCOL.md §9).
-//   Nearclip.Cli --state <dir> --name <name> [--port <n>]
+//   Nearclip.Cli --state <dir> --name <name> [--port <n>] [--tailnet <dir> [--tailnet-control <url>]]
 // One JSON event per line on stdout, one JSON command per line on stdin, free-form log on stderr.
 using System.Buffers;
 using System.Text;
@@ -10,6 +10,8 @@ using Nearclip.Core;
 string? stateDir = null;
 var name = "Nearclip CLI";
 var port = 0;
+string? tailnetDir = null;
+string? tailnetControl = null;
 for (var i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -17,6 +19,8 @@ for (var i = 0; i < args.Length; i++)
         case "--state" when i + 1 < args.Length: stateDir = args[++i]; break;
         case "--name" when i + 1 < args.Length: name = args[++i]; break;
         case "--port" when i + 1 < args.Length: port = int.TryParse(args[++i], out var p) ? p : 0; break;
+        case "--tailnet" when i + 1 < args.Length: tailnetDir = args[++i]; break;
+        case "--tailnet-control" when i + 1 < args.Length: tailnetControl = args[++i]; break;
         default: Usage(); break;
     }
 }
@@ -77,6 +81,8 @@ try
         Model = "dotnet",
         Port = port,
         SecretStore = new FileSecretStore(Path.Combine(Path.GetFullPath(stateDir!), "secrets")),
+        Tailnet = tailnetDir is null ? null : new TailnetOptions(Path.GetFullPath(tailnetDir), tailnetControl,
+            Path.Combine(Path.GetFullPath(tailnetDir), "tailnet.log"), TestMode: tailnetControl is not null),
     });
 }
 catch (Exception e)
@@ -84,6 +90,12 @@ catch (Exception e)
     Log("init failed: " + e);
     return 1;
 }
+
+void EmitTailnet(TailnetStatus st) => Emit(w =>
+{
+    w.WriteString("ev", "tailnet"); w.WriteString("state", st.State); w.WriteString("ip", st.Ip ?? ""); w.WriteNumber("peers", st.Peers.Count);
+});
+var lastTailnet = "";
 
 node.Event += ev =>
 {
@@ -108,7 +120,11 @@ node.Event += ev =>
             Emit(w => { w.WriteString("ev", "pair_failed"); w.WriteString("reason", f.Reason); });
             break;
         case NodeEvent.PeerUp u:
-            Emit(w => { w.WriteString("ev", "peer_up"); w.WriteString("id", u.Member.Id); w.WriteString("name", u.Member.Name); });
+            Emit(w =>
+            {
+                w.WriteString("ev", "peer_up"); w.WriteString("id", u.Member.Id); w.WriteString("name", u.Member.Name);
+                w.WriteString("route", u.Route == PeerRoute.Remote ? "remote" : "lan");
+            });
             break;
         case NodeEvent.PeerDown d:
             Emit(w => { w.WriteString("ev", "peer_down"); w.WriteString("id", d.Id); });
@@ -128,6 +144,16 @@ node.Event += ev =>
         case NodeEvent.TooLarge t:
             Emit(w => { w.WriteString("ev", "error"); w.WriteString("msg", "too large: " + t.Kind); });
             break;
+        case NodeEvent.TailnetChanged tc:
+        {
+            var key = $"{tc.Status.State}|{tc.Status.Ip}|{tc.Status.Peers.Count}";
+            if (key != lastTailnet)
+            {
+                lastTailnet = key;
+                EmitTailnet(tc.Status);
+            }
+            break;
+        }
         case NodeEvent.Log l:
             Log(l.Message);
             break;
@@ -135,6 +161,7 @@ node.Event += ev =>
 };
 
 if (node.Snapshot().DeviceName != name) node.Rename(name);
+if (tailnetDir is not null) node.SetRemoteEnabled(true);
 node.Start();
 
 var quitting = 0;
@@ -211,6 +238,9 @@ void Handle(string cmd, JsonElement o)
             Emit(w => { w.WriteString("ev", "members"); WriteMembers(w, snap.Members); });
             break;
         }
+        case "tailnet":
+            EmitTailnet(node.Snapshot().Tailnet);
+            break;
         case "quit":
             Quit();
             break;
