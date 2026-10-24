@@ -154,6 +154,14 @@ See [android/README.md](android/README.md) and [windows/README.md](windows/READM
   image · Copy it again on …*; with auto-copy off, *Image from … · Saved to history*. On Android also in the background
   (banner, progress in the shade, *Copied from …* banner with the thumbnail), and an image shared into Nearclip was
   announced before it was read (size known 0.2 s later). **Not verified yet:** real phones and a real Windows PC.
+* **Final pass on the shipped builds (2026-10-24)**: engine tests (Swift 12, Kotlin 24, C# 33, Go), interop 48/48, every
+  acceptance script above on the macOS app, Windows VM, Android emulator and iPhone/iPad simulators, Android
+  instrumented tests. The files in `dist/` themselves: the macOS zip run as an isolated instance (signature,
+  universal binary, text both ways, PNG byte-exact); the Android 1.0.2 release APK (not debuggable; text both ways,
+  image); the published Windows arm64 and x64 builds (pairing through a link, text both ways through the Windows
+  clipboard). Then the four apps in one group (shipped macOS build, Windows VM, Android emulator, iPhone
+  simulator): each sent a text and the other three got it, each with its one true source. The pass found and fixed
+  the x64 Windows build dying at start with remote connection on when emulated on ARM64 (windows/NOTES.md).
 * **Real apps, one group** (macOS app on this Mac, iPhone/iPad simulators, Android 16 emulator, Windows 11 ARM64 VM):
   a clip copied on each platform arrived on all the others —
   Mac → Windows clipboard / Android / iPhone, Windows → Mac clipboard / Android / iPhone,

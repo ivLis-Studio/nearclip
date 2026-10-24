@@ -145,6 +145,12 @@ scripts/build-release.sh          # 유니버설·ad-hoc 서명된 dist/Nearclip
   전송 중 보낸 기기가 끊기면 *이미지를 받지 못했습니다 · …에서 다시 복사해 보세요.*, 자동 복사가 꺼져 있으면 *…에서 받은 이미지 ·
   기록에 저장됨*. Android는 백그라운드에서도 확인(시작 배너, 알림창 진행률, 썸네일이 붙은 *…에서 복사됨* 배너), 공유로 보낸 이미지는
   읽기 전에 예고됨(0.2초 뒤 크기 확인). **아직 검증하지 않은 것:** 실제 휴대폰과 실제 Windows PC
+* **배포본 최종 점검(2026-10-24)**: 엔진 테스트(Swift 12, Kotlin 24, C# 33, Go), 상호 운용 48/48, 위의 수락 테스트 전부(macOS 앱,
+  Windows VM, Android 에뮬레이터, iPhone·iPad 시뮬레이터), Android 계측 테스트. `dist/` 파일 자체도 확인: macOS zip을 분리된
+  인스턴스로 실행(서명, 유니버설 바이너리, 텍스트 양방향, PNG 바이트 일치), Android 1.0.2 릴리스 APK(디버그 불가 빌드, 텍스트 양방향,
+  이미지), 퍼블리시된 Windows arm64·x64(링크로 연결, Windows 클립보드로 텍스트 양방향). 이어서 네 앱(macOS 배포본, Windows VM,
+  Android 에뮬레이터, iPhone 시뮬레이터)을 한 그룹으로 묶어 각자 보낸 텍스트가 나머지 셋에 출처 그대로 도착함. 이 과정에서
+  ARM64 PC에서 에뮬레이션으로 도는 x64 Windows 빌드가 원격 연결이 켜져 있으면 시작 직후 멈추는 문제를 찾아 고침(windows/NOTES.md)
 * **실제 앱 네 가지를 한 그룹으로**(이 Mac의 macOS 앱, iPhone·iPad 시뮬레이터, Android 16 에뮬레이터, Windows 11 ARM64 VM):
   각 플랫폼에서 복사한 클립이 나머지 모두에 도착 — Mac → Windows 클립보드·Android·iPhone, Windows → Mac 클립보드·Android·iPhone,
   Android 공유 → Mac·Windows 클립보드·iPhone, iPhone 붙여넣기 버튼 → Mac·Windows 클립보드·Android
