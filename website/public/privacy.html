@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy Policy · Nearclip</title>
+<meta name="description" content="Nearclip has no server, no account, no analytics and no telemetry. Clips travel only between your own devices, end-to-end encrypted.">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)">
+<link rel="icon" type="image/png" href="assets/media/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png">
+<link rel="canonical" href="https://ivlis-studio.github.io/nearclip/privacy.html">
+<link rel="stylesheet" href="assets/css/site.css">
+<style>
+  /* One readable column; colours, type, header and footer come from site.css (light and dark). */
+  .policy { padding: 64px 0 88px; }
+  .policy .wrap { max-width: 780px; }
+  .policy h1 { font-size: clamp(36px, 5vw, 52px); line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 12px; font-weight: 740; }
+  .policy .meta { color: var(--muted); font-size: 15px; margin: 0 0 32px; }
+  .policy h2 { font-size: 22px; line-height: 1.3; letter-spacing: -0.01em; margin: 44px 0 10px; }
+  .policy p, .policy li { color: var(--ink-2); }
+  .policy p { margin: 0 0 14px; }
+  .policy ul.list { padding-left: 1.2em; margin: 0 0 14px; display: grid; gap: 10px; }
+  .policy ul.list b { color: var(--ink); }
+  .policy:lang(ko) { word-break: keep-all; }
+  .policy:lang(ko) h1 { letter-spacing: -0.015em; line-height: 1.2; }
+  .glance { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .glance li { padding: 18px 20px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-weight: 650; font-size: 16px; line-height: 1.35; }
+  .alt .glance li { background: var(--bg); }
+  .glance li span { display: block; margin-top: 6px; font-weight: 400; font-size: 14.5px; line-height: 1.5; color: var(--muted); }
+  .jump { margin-left: auto; display: flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); }
+  .jump a { color: var(--ink-2); font-size: 13.5px; font-weight: 600; line-height: 1.2; padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+  .jump a:hover { text-decoration: none; background: var(--surface); color: var(--ink); }
+  footer [aria-current="page"] { color: var(--ink); font-weight: 600; }
+  @media (max-width: 640px) {
+    .policy { padding: 44px 0 64px; }
+    .glance { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#en">Skip to the policy</a>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="Nearclip home"><img src="assets/media/icon-512.png" alt="" width="30" height="30"><span>Nearclip</span></a>
+    <nav class="jump" aria-label="Language">
+      <a href="#en" hreflang="en" lang="en">English</a>
+      <a href="#ko" hreflang="ko" lang="ko">한국어</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="policy" id="en" lang="en" aria-labelledby="en-title">
+  <div class="wrap">
+    <h1 id="en-title">Privacy Policy</h1>
+    <p class="meta">Effective October 24, 2026 · Nearclip for Mac, Windows, Android, iPhone and iPad, by ivLis STUDIO</p>
+    <ul class="glance">
+      <li>No server<span>There is no Nearclip cloud. Clips go from your device to your device.</span></li>
+      <li>No account<span>Nothing to sign up for. Your devices pair with each other directly.</span></li>
+      <li>No tracking<span>No analytics, telemetry, ads or crash reports.</span></li>
+    </ul>
+
+    <h2>What stays on your devices</h2>
+    <ul class="list">
+      <li><b>Clipboard history</b> — the text, links, colors and images you copy, with the name of the device each came from. It lives in Nearclip's storage on each of your devices and is kept for the time you choose in Settings (30 days by default). Deleting a clip or clearing history removes it on every device in your group.</li>
+      <li><b>Your group key</b> — a random key created on your device that encrypts everything between your devices. It is kept in the system's protected storage (Keychain on Apple devices, the Android Keystore, Windows Data Protection) and is handed to a new device only when you pair it.</li>
+      <li><b>Settings and device names</b> — for example "MacBook Pro" or "Galaxy S25", which your other devices show.</li>
+    </ul>
+    <p>Items that password managers mark as private are never read into history or sent. On a computer you can also exclude apps, and every device can pause syncing.</p>
+
+    <h2>What travels on your network</h2>
+    <p>To find each other, your devices announce Nearclip on the local network (Bonjour / mDNS) with the device name, platform and random identifiers, so other devices on the same network can see that a Nearclip device is there. Clips, history and device lists are only ever sent to devices in your group, over connections that are end-to-end encrypted with fresh keys for each connection.</p>
+
+    <h2>Remote connection (optional, off by default)</h2>
+    <p>If you turn on Remote connection, Nearclip's built-in Tailscale node signs in to your own Tailscale account and connects your devices through Tailscale's network. Tailscale's coordination service then sees your account, the device names Nearclip registers (like <code>nearclip-macbook-pro-…</code>) and network addresses, and Tailscale's relays may carry the encrypted connection when no direct path is possible. Tailscale never receives readable clips: Nearclip's own end-to-end encryption runs inside. Tailscale's handling of that information is described in <a href="https://tailscale.com/privacy-policy">Tailscale's privacy policy</a>. Signing out in Nearclip takes the device offline; you can remove it from your Tailscale admin console.</p>
+
+    <h2>Permissions</h2>
+    <ul class="list">
+      <li><b>Clipboard</b> — to send what you copy and to put received clips on the clipboard.</li>
+      <li><b>Local network</b> — to find and connect to your devices. On Windows, the firewall asks once.</li>
+      <li><b>Camera</b> (phones, optional) — only to scan a pairing QR code. No image is saved or sent.</li>
+      <li><b>Notifications</b> (Android) — to keep the connection alive in the background and show what arrived.</li>
+      <li><b>Shizuku</b> (Android, optional) — only if you turn on instant capture, to read copies in the background. It stays on your phone.</li>
+    </ul>
+
+    <h2>Children</h2>
+    <p>Nearclip is a general-purpose utility and collects no personal information from anyone, children included.</p>
+
+    <h2>Changes</h2>
+    <p>If this policy changes, the new version appears on this page with a new date, and the change is visible in the project's public history on GitHub.</p>
+
+    <h2>Contact</h2>
+    <p>Questions or requests about privacy: open an issue at <a href="https://github.com/ivLis-Studio/nearclip/issues">github.com/ivLis-Studio/nearclip/issues</a>.</p>
+  </div>
+</section>
+
+<section class="policy alt" id="ko" lang="ko" aria-labelledby="ko-title">
+  <div class="wrap">
+    <h1 id="ko-title">개인정보 처리방침</h1>
+    <p class="meta">시행일 2026년 10월 24일 · ivLis STUDIO의 Mac, Windows, Android, iPhone·iPad용 Nearclip</p>
+    <ul class="glance">
+      <li>서버 없음<span>Nearclip 클라우드는 없어요. 클립은 내 기기에서 내 기기로 가요.</span></li>
+      <li>계정 없음<span>가입할 것이 없어요. 기기끼리 직접 연결해요.</span></li>
+      <li>추적 없음<span>분석, 원격 측정, 광고, 충돌 보고 모두 없어요.</span></li>
+    </ul>
+
+    <h2>내 기기에 저장되는 것</h2>
+    <ul class="list">
+      <li><b>클립보드 기록</b> — 복사한 텍스트, 링크, 색상, 이미지와 각각을 보낸 기기 이름이에요. 각 기기의 Nearclip 저장소에 있으며, 설정에서 고른 기간(기본 30일) 동안 보관돼요. 클립을 지우거나 기록을 지우면 그룹의 모든 기기에서 지워져요.</li>
+      <li><b>그룹 키</b> — 내 기기에서 만든 무작위 키로, 기기 사이에 오가는 모든 것을 암호화해요. 시스템 보호 저장소(Apple 기기는 키체인, Android 키스토어, Windows 데이터 보호)에 보관되고, 새 기기를 연결할 때만 그 기기에 전달돼요.</li>
+      <li><b>설정과 기기 이름</b> — 예를 들어 ‘MacBook Pro’, ‘Galaxy S25’처럼 다른 기기에 표시되는 이름이에요.</li>
+    </ul>
+    <p>비밀번호 관리자가 비공개로 표시한 항목은 기록에 담지도, 보내지도 않아요. 컴퓨터에선 앱을 제외할 수 있고, 모든 기기에서 동기화를 일시정지할 수 있어요.</p>
+
+    <h2>네트워크로 오가는 것</h2>
+    <p>기기끼리 서로를 찾기 위해 로컬 네트워크에 Nearclip을 알려요(Bonjour/mDNS). 이때 기기 이름, 플랫폼, 무작위 식별자가 포함되어, 같은 네트워크의 다른 기기도 Nearclip 기기가 있다는 걸 알 수 있어요. 클립, 기록, 기기 목록은 그룹에 속한 기기에만 보내지며, 연결할 때마다 새 키로 종단 간 암호화돼요.</p>
+
+    <h2>원격 연결 (선택, 기본값 꺼짐)</h2>
+    <p>원격 연결을 켜면 Nearclip에 내장된 Tailscale 노드가 내 Tailscale 계정으로 로그인해 Tailscale 네트워크를 통해 기기를 연결해요. 이때 Tailscale의 조정 서비스는 계정, Nearclip이 등록하는 기기 이름(<code>nearclip-macbook-pro-…</code> 같은 형식), 네트워크 주소를 보게 되고, 직접 연결이 안 되면 Tailscale 중계 서버가 암호화된 연결을 실어 나를 수 있어요. 그 안에서는 Nearclip의 종단 간 암호화가 따로 돌기 때문에 Tailscale은 읽을 수 있는 클립을 받지 않아요. Tailscale의 정보 처리는 <a href="https://tailscale.com/privacy-policy">Tailscale 개인정보 처리방침</a>을 따라요. Nearclip에서 로그아웃하면 기기가 오프라인이 되고, Tailscale 관리 콘솔에서 기기를 삭제할 수 있어요.</p>
+
+    <h2>권한</h2>
+    <ul class="list">
+      <li><b>클립보드</b> — 복사한 내용을 보내고, 받은 클립을 클립보드에 넣기 위해 써요.</li>
+      <li><b>로컬 네트워크</b> — 내 기기를 찾고 연결하기 위해 써요. Windows에선 방화벽이 한 번 물어봐요.</li>
+      <li><b>카메라</b>(휴대폰, 선택) — 연결용 QR 코드를 스캔할 때만 써요. 사진은 저장하거나 보내지 않아요.</li>
+      <li><b>알림</b>(Android) — 백그라운드 연결을 유지하고 도착한 내용을 보여 주기 위해 써요.</li>
+      <li><b>Shizuku</b>(Android, 선택) — ‘복사한 항목 바로 Nearclip에 불러오기’를 켤 때만, 백그라운드에서 복사한 내용을 읽기 위해 써요. 휴대폰 밖으로 나가지 않아요.</li>
+    </ul>
+
+    <h2>아동</h2>
+    <p>Nearclip은 범용 도구이며, 아동을 포함한 누구의 개인정보도 수집하지 않아요.</p>
+
+    <h2>변경</h2>
+    <p>방침이 바뀌면 새 날짜와 함께 이 페이지에 올라오고, 변경 내용은 GitHub의 공개 기록에서 확인할 수 있어요.</p>
+
+    <h2>문의</h2>
+    <p>개인정보에 관한 질문이나 요청은 <a href="https://github.com/ivLis-Studio/nearclip/issues">GitHub 이슈</a>(github.com/ivLis-Studio/nearclip/issues)로 남겨 주세요.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 ivLis Studio · <a href="https://github.com/ivLis-Studio/nearclip/blob/main/LICENSE">MIT License</a></span>
+    <nav aria-label="Footer">
+      <a href="./">Nearclip</a>
+      <a href="https://github.com/ivLis-Studio/nearclip">GitHub</a>
+      <a href="https://github.com/ivLis-Studio/nearclip/issues">Report an issue</a>
+      <a href="privacy.html" aria-current="page">Privacy</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>
+
