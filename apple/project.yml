@@ -17,8 +17,11 @@ settings:
 packages:
   NearclipKit:
     path: NearclipKit
-targets:
-  Nearclip:
+targetTemplates:
+  # The Mac app. Two targets share it: Nearclip (Developer ID, GitHub releases) and NearclipAppStore (sandboxed,
+  # Mac App Store). The App Store build compiles with APPSTORE, which leaves out "Paste after choosing" (sending ⌘V
+  # to another app needs Accessibility, which a sandboxed app is not given).
+  MacApp:
     type: application
     platform: macOS
     sources:
@@ -57,11 +60,24 @@ targets:
         PRODUCT_NAME: Nearclip
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        COMBINE_HIDPI_IMAGES: YES
+targets:
+  Nearclip:
+    templates: [MacApp]
+    settings:
+      base:
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "-"
         DEVELOPMENT_TEAM: ""
         ENABLE_HARDENED_RUNTIME: NO
-        COMBINE_HIDPI_IMAGES: YES
+  NearclipAppStore:
+    templates: [MacApp]
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: AppStore/Nearclip.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) APPSTORE
   NearclipiOS:
     type: application
     platform: iOS
@@ -93,7 +109,6 @@ targets:
           UIApplicationSupportsMultipleScenes: false
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
-        ITSAppUsesNonExemptEncryption: false
         NSLocalNetworkUsageDescription: Nearclip finds and connects to your other devices on this Wi-Fi.
         NSBonjourServices: [_nearclip._tcp]
         NSCameraUsageDescription: Nearclip uses the camera to scan the pairing code shown on your other device.
@@ -126,6 +141,12 @@ schemes:
     build:
       targets:
         Nearclip: all
+    run:
+      config: Debug
+  NearclipAppStore:
+    build:
+      targets:
+        NearclipAppStore: all
     run:
       config: Debug
   NearclipiOS:

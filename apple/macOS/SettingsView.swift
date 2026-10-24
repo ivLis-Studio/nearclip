@@ -77,6 +77,7 @@ private struct GeneralSettings: View {
                     }
                 }
                 Toggle("Show a notification when a clip arrives", isOn: $settings.showToasts)
+                #if !APPSTORE
                 Toggle(isOn: $settings.pasteAfterChoosing) {
                     Text("Paste after choosing from history")
                     Text("Nearclip presses ⌘V for you in the app you were using.")
@@ -92,6 +93,7 @@ private struct GeneralSettings: View {
                         }
                     }
                 }
+                #endif
             }
         }
         .formStyle(.grouped)

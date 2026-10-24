@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Nearclip — App Store screenshots</title>
+<!-- App Store screenshots for Nearclip, drawn at the size of the page (promo/appstore.mjs renders them, promo/appstore.sh
+     says which): ?dev=iphone|ipad|mac&lang=en|ko&n=<1-based index into SHOTS[dev]>.
+     iPhone and iPad frame real simulator screenshots (apple/tools/appstore_shots.py → out/appstore/raw/<dev>-<lang>/);
+     the Mac frames real window captures of the menu bar app (apple/tools/appstore_mac_shots.py → out/appstore/raw/mac-<lang>/)
+     on a desktop, or a held moment of the launch film. Colours and type are the film's: paper #F2F1EC, ink #101114,
+     Iris #4C5BF5, Pretendard. -->
+<style>
+  @font-face { font-family: "Pretendard"; src: local("Pretendard"), local("Pretendard-Regular"); }
+  html, body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; }
+  body { font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", sans-serif; color: #101114; -webkit-font-smoothing: antialiased; position: relative; }
+  .paper { background: #F2F1EC; } .iris { background: #4C5BF5; color: #fff; } .ink { background: #101114; color: #fff; }
+  h1 { margin: 0; font-weight: 800; letter-spacing: -0.035em; line-height: 1.06; }
+  h1 em { font-style: normal; color: #4C5BF5; }
+  .iris h1 em { color: #fff; opacity: .72; } .ink h1 em { color: #8B96FF; }
+  html:lang(ko) h1 { letter-spacing: -0.03em; line-height: 1.16; word-break: keep-all; }
+  html:lang(ko) p.sub { word-break: keep-all; }
+  p.sub { margin: 0; color: #55565C; letter-spacing: -0.01em; line-height: 1.4; font-weight: 500; }
+  .iris p.sub { color: rgba(255,255,255,.86); } .ink p.sub { color: rgba(255,255,255,.7); }
+  .head { position: absolute; left: 0; right: 0; text-align: center; }
+  .frame { position: absolute; background: #0D0E10; box-shadow: 0 2.2vw 6vw rgba(16,17,20,.22), 0 0 0 1px rgba(0,0,0,.25); }
+  .frame img.screen { display: block; width: 100%; height: auto; }
+  .island { position: absolute; background: #000; border-radius: 999px; }
+  .fade { position: absolute; left: 0; right: 0; bottom: 0; }
+  .keys { display: inline-flex; gap: 0.9vw; margin-bottom: 2.2vw; }
+  .keys span { font-weight: 700; border-radius: 0.9vw; background: #fff; color: #101114; box-shadow: 0 0.35vw 0 rgba(0,0,0,.12); border: 1px solid rgba(0,0,0,.1); }
+  .desk { position: absolute; inset: 0; overflow: hidden; }
+  .menubar { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; justify-content: flex-end; gap: 1.6vw;
+             background: rgba(246,246,248,.72); backdrop-filter: blur(20px); color: #101114; font-weight: 600; }
+  .win { position: absolute; border-radius: 1.1vw; overflow: hidden; box-shadow: 0 2vw 5vw rgba(10,12,30,.35), 0 0 0 1px rgba(0,0,0,.18); }
+  .win img { display: block; width: 100%; height: auto; }
+</style>
+</head><body>
+<script>
+const q = new URLSearchParams(location.search);
+const dev = q.get("dev") || "iphone", lang = q.get("lang") === "ko" ? "ko" : "en", n = +(q.get("n") || 1);
+document.documentElement.lang = lang;
+const W = innerWidth, H = innerHeight, b = document.body;
+const raw = f => "out/appstore/raw/" + dev + "-" + lang + "/" + f + ".png";
+const T = (en, ko) => (lang === "ko" ? ko : en);
+
+// Each shot: background, the screenshot, how much of it shows (bleed: the device runs off the bottom edge), and copy.
+const SHOTS = {
+  iphone: [
+    { bg: "paper", img: "06-home-history", h: T("One clipboard,<br><em>every device.</em>", "모든 기기를<br><em>하나의 클립보드로.</em>"), s: "Mac · Windows · Android · iPhone" },
+    { bg: "paper", img: "09-devices", h: T("Mac, PC, Galaxy.<br><em>All connected.</em>", "Mac, PC, 갤럭시까지<br><em>모두 연결.</em>"), s: T("Every device with every device, whoever made it.", "제조사와 상관없이, 모든 기기를 모든 기기와.") },
+    { bg: "iris", img: "11-add-device", zoom: [0.95, 0.765], h: T("Pair in seconds.<br><em>No account needed.</em>", "QR 한 번이면 연결.<br><em>계정은 필요 없어요.</em>"), s: T("Scan the code on your computer. No sign-up, no server.", "컴퓨터에 뜬 코드를 비추면 끝. 가입도, 서버도 없어요.") },
+    { bg: "ink", img: "10-settings", h: T("Even on<br><em>another network.</em>", "네트워크가 달라도<br><em>그대로.</em>"), s: T("Turn on Sync across networks. Tailscale is built in.", "설정에서 원격 연결만 켜세요. Tailscale 내장.") },
+  ],
+  ipad: [
+    { bg: "paper", img: "06-home-history", h: T("One clipboard, <em>every device.</em>", "모든 기기를 <em>하나의 클립보드로.</em>"), s: "Mac · Windows · Android · iPhone · iPad" },
+    { bg: "paper", img: "09-devices", h: T("Mac, PC, Galaxy. <em>All connected.</em>", "Mac, PC, 갤럭시까지 <em>모두 연결.</em>"), s: T("Every device with every device, whoever made it.", "제조사와 상관없이, 모든 기기를 모든 기기와.") },
+    { bg: "iris", img: "11-add-device", h: T("Pair in seconds. <em>No account.</em>", "QR 한 번이면 연결. <em>계정은 필요 없어요.</em>"), s: T("Scan the code on your computer. No sign-up, no server.", "컴퓨터에 뜬 코드를 비추면 끝. 가입도, 서버도 없어요.") },
+    { bg: "ink", img: "10-settings", h: T("Even on <em>another network.</em>", "네트워크가 달라도 <em>그대로.</em>"), s: T("Turn on Sync across networks. Tailscale is built in.", "설정에서 원격 연결만 켜세요. Tailscale 내장.") },
+  ],
+  mac: [
+    { bg: "desk", win: "panel", keys: ["⌃", "⌘", "V"], h: T("Every device's history,<br><em>one shortcut away.</em>", "모든 기기의 기록을<br><em>단축키 하나로.</em>"), s: T("Copies from your iPhone, PC and Galaxy,<br>right under the menu bar.", "iPhone, PC, 갤럭시에서 복사한 것까지<br>메뉴 막대 바로 아래에서.") },
+    { film: "02-mac-to-windows" },
+    { bg: "desk", win: "devices", h: T("iPhone, PC, Galaxy.<br><em>All connected.</em>", "iPhone, PC,<br>갤럭시까지<br><em>모두 연결.</em>"), s: T("Every device with every device,<br>whoever made it.", "제조사와 상관없이,<br>모든 기기를 모든 기기와.") },
+    { film: "05-pair-with-qr" },
+    { film: "06-another-network" },
+    { film: "07-end-to-end" },
+  ],
+};
+const shot = SHOTS[dev][n - 1];
+
+function headline(top, size, sub, width) {
+  const d = document.createElement("div");
+  d.className = "head";
+  d.style.top = top + "px";
+  d.innerHTML = (shot.keys ? '<div class="keys">' + shot.keys.map(k => '<span style="font-size:' + size * 0.42 + 'px;padding:' + size * 0.16 + 'px ' + size * 0.3 + 'px">' + k + "</span>").join("") + "</div>" : "") +
+    '<h1 style="font-size:' + size + 'px">' + shot.h + "</h1>" +
+    (shot.s ? '<p class="sub" style="font-size:' + sub + "px;margin-top:" + size * 0.42 + "px" + (width ? ";max-width:" + width + "px;margin-left:auto;margin-right:auto" : "") + '">' + shot.s + "</p>" : "");
+  b.appendChild(d);
+  return d;
+}
+
+function device(kind) {
+  // Native screenshot sizes: iPhone 17 Pro Max 1320×2868, iPad Pro 13" 2064×2752.
+  const sw = kind === "iphone" ? 1320 : 2064, sh = kind === "iphone" ? 2868 : 2752;
+  let top = kind === "iphone" ? H * 0.235 : H * 0.2;
+  const bezel = kind === "iphone" ? W * 0.022 : W * 0.018;
+  const radius = kind === "iphone" ? W * 0.115 : W * 0.04;
+  let h = H - top - H * 0.035;                       // the whole device fits under the headline
+  let w = (h - 2 * bezel) * sw / sh + 2 * bezel;
+  if (w > W * (kind === "iphone" ? 0.78 : 0.86)) { w = W * (kind === "iphone" ? 0.78 : 0.86); h = (w - 2 * bezel) * sh / sw + 2 * bezel; }
+  if (shot.zoom) {                                     // a larger device that runs off the bottom edge: [width, visible part of the screen]
+    w = W * shot.zoom[0];
+    h = (w - 2 * bezel) * sh / sw + 2 * bezel;
+    top = H - shot.zoom[1] * (h - 2 * bezel) - bezel;
+  }
+  if (kind === "ipad") {                               // the iPad is wide: a large device from 19% down, running off the bottom
+    w = W * 0.88;
+    h = (w - 2 * bezel) * sh / sw + 2 * bezel;
+    top = H * 0.19;
+  }
+  const f = document.createElement("div");
+  f.className = "frame";
+  Object.assign(f.style, { left: (W - w) / 2 + "px", top: top + "px", width: w + "px", height: h + "px", padding: bezel + "px", boxSizing: "border-box", borderRadius: radius + "px" });
+  f.innerHTML = '<img class="screen" style="border-radius:' + (radius - bezel) + 'px" src="' + raw(shot.img) + '">';
+  if (kind === "iphone") {
+    const s = (w - 2 * bezel) / 1320;
+    const isl = document.createElement("div");
+    isl.className = "island";
+    Object.assign(isl.style, { width: 372 * s + "px", height: 110 * s + "px", left: (w - 372 * s) / 2 + "px", top: bezel + 34 * s + "px" });
+    f.appendChild(isl);
+  }
+  b.appendChild(f);
+  if (shot.cover) {                                    // fades the bottom of the screen (lists of nearby devices) into the page
+    const fade = document.createElement("div");
+    fade.className = "fade";
+    const c = { paper: "242,241,236", iris: "76,91,245", ink: "16,17,20" }[shot.bg];
+    Object.assign(fade.style, { height: H * shot.cover + "px", background: "linear-gradient(rgba(" + c + ",0) 0%, rgba(" + c + ",.94) 15%, rgba(" + c + ",1) 22%)" });
+    b.appendChild(fade);
+  }
+  return top;
+}
+
+function desktop() {
+  b.className = "paper";
+  const d = document.createElement("div");
+  d.className = "desk";
+  // A calm desktop: Iris light from the upper right, paper at the bottom left.
+  d.style.background = "radial-gradient(120% 110% at 88% 0%, #6E7BFF 0%, #4C5BF5 34%, #2F3AB8 62%, #1C2270 100%)";
+  b.appendChild(d);
+  const mb = document.createElement("div");
+  mb.className = "menubar";
+  const mbh = H * 0.0244;
+  Object.assign(mb.style, { height: mbh + "px", fontSize: mbh * 0.5 + "px", paddingRight: W * 0.012 + "px" });
+  const icon = '<img src="../design/out/MenuBarTemplate@3x.png" style="height:' + mbh * 0.62 + 'px;filter:brightness(0)">';
+  mb.innerHTML = '<span style="display:flex;align-items:center;justify-content:center;width:' + mbh * 1.3 + "px;height:" + mbh * 0.86 + "px;border-radius:" + mbh * 0.22 + 'px;background:rgba(0,0,0,.12)">' + icon + "</span><span>" + T("Sat 9:41 AM", "10월 24일 (토) 오전 9:41") + "</span>";
+  d.appendChild(mb);
+  // Copy on the left in white, the window on the right.
+  const left = document.createElement("div");
+  Object.assign(left.style, { position: "absolute", left: W * 0.075 + "px", top: H * 0.32 + "px", width: (shot.win === "panel" ? W * 0.4 : W * 0.34) + "px", color: "#fff" });
+  const size = W * 0.044;
+  left.innerHTML = (shot.keys ? '<div class="keys">' + shot.keys.map(k => '<span style="font-size:' + size * 0.42 + 'px;padding:' + size * 0.16 + 'px ' + size * 0.3 + 'px">' + k + "</span>").join("") + "</div>" : "") +
+    '<h1 style="font-size:' + size + 'px;color:#fff">' + shot.h.replace(/<em>/g, '<em style="color:#C9CEFF">') + "</h1>" +
+    '<p class="sub" style="font-size:' + size * 0.36 + 'px;margin-top:' + size * 0.5 + 'px;color:rgba(255,255,255,.82)">' + shot.s + "</p>";
+  d.appendChild(left);
+  const img = new Image();
+  img.onload = () => {
+    // Window captures are 2x; the canvas is a 2x (Retina) desktop, so they go in at their own size, a little larger if small.
+    let w = img.naturalWidth, h = img.naturalHeight;
+    const maxW = shot.win === "panel" ? W * 0.44 : W * 0.49, maxH = H * 0.86;
+    const k = Math.min(maxW / w, maxH / h, 1.25);
+    w *= k; h *= k;
+    const win = document.createElement("div");
+    win.className = "win";
+    const x = shot.win === "panel" ? W * 0.93 - w : W * 0.955 - w;
+    const y = shot.win === "panel" ? mbh + H * 0.012 : (H - h) / 2 + mbh / 2;
+    Object.assign(win.style, { left: x + "px", top: y + "px", width: w + "px" });
+    win.innerHTML = '<img src="' + img.src + '">';
+    d.appendChild(win);
+    document.body.dataset.ready = "1";
+  };
+  img.src = raw(shot.win);
+}
+
+if (shot.film) {
+  // A held moment of the film (the Microsoft Store screenshot, 16:9) on its own background, letterboxed to 16:10.
+  const src = "out/store/screenshots/" + lang + "/" + shot.film + ".png";
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = 4; c.height = 4;
+    const x = c.getContext("2d");
+    x.drawImage(img, 0, 0, 4, 4, 0, 0, 4, 4);
+    const [r, g, bl] = x.getImageData(1, 1, 1, 1).data;
+    b.style.background = "rgb(" + r + "," + g + "," + bl + ")";
+    const h = W * 9 / 16;
+    b.innerHTML = '<img src="' + src + '" style="position:absolute;left:0;top:' + (H - h) / 2 + 'px;width:' + W + 'px;height:' + h + 'px">';
+    document.body.dataset.ready = "1";
+  };
+  img.src = src;
+} else if (dev === "mac") {
+  desktop();
+} else {
+  b.className = shot.bg;
+  const size = dev === "iphone" ? W * 0.083 : W * 0.056;
+  const head = headline(0, size, dev === "iphone" ? W * 0.034 : W * 0.022, dev === "iphone" ? W * 0.84 : W * 0.8);
+  const deviceTop = device(dev);
+  // The headline sits in the middle of the space above the device.
+  head.style.top = Math.max(H * 0.04, (deviceTop - head.offsetHeight) / 2) + "px";
+  const im = b.querySelector("img.screen");
+  if (im.complete) document.body.dataset.ready = "1"; else im.onload = () => (document.body.dataset.ready = "1");
+}
+</script>
+</body></html>

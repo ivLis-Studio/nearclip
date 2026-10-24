@@ -245,9 +245,11 @@ final class HistoryPanelController: NSObject, NSWindowDelegate {
     private func copy(_ item: ClipItem) {
         model.copy(item)
         hide()
+        #if !APPSTORE // the Mac App Store build is sandboxed and cannot send ⌘V to another app
         if model.settings.pasteAfterChoosing && MacSystem.isAccessibilityTrusted {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { MacSystem.pasteIntoFrontApp() }
         }
+        #endif
     }
 }
 

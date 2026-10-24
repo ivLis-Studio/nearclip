@@ -210,6 +210,14 @@ scripts/build-release.sh          # universal dist/Nearclip-macOS.zip, signed ad
 SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=<notarytool profile> scripts/build-release.sh   # notarized
 ```
 
+The **App Store** builds come from the same project: `NearclipiOS` (iPhone and iPad) and `NearclipAppStore`, the Mac app
+sandboxed (`apple/AppStore/Nearclip.entitlements`: network client and server, user-selected files). The sandboxed build
+compiles with `APPSTORE`, which leaves out "Paste after choosing" (sending ⌘V to another app); it keeps its data in its
+container, so it does not share pairing with the Developer ID build. Archive with a released Xcode and upload with
+`xcodebuild -exportArchive` (method `app-store-connect`, destination `upload`). Listing copy is in
+`docs/store/app-store.json`; the screenshots come from `apple/tools/appstore_shots.py` (iPhone and iPad simulators),
+`apple/tools/appstore_mac_shots.py` (the Mac app) and `promo/appstore.sh`, which frames them.
+
 **Android** — see [android/README.md](android/README.md); `android/scripts/build-release.sh` builds the R8 release and
 signs it with the release key. **Windows** — see [windows/README.md](windows/README.md) (`dotnet publish`, .NET 10 SDK
 only, no Visual Studio needed).
