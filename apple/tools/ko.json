@@ -262,5 +262,11 @@
  "port": "포트",
  "‘%@’ is now one of your devices.": "‘%@’ 기기가 내 기기에 추가되었습니다.",
  "…or paste a nearclip:// link.": "…또는 nearclip:// 링크를 붙여넣으세요.",
- "%lld characters": "%lld자"
+ "%lld characters": "%lld자",
+ "Receiving an image from %@…": "%@에서 이미지 받는 중…",
+ "Preparing…": "준비 중…",
+ "Image from %@": "%@에서 받은 이미지",
+ "Saved to history": "기록에 저장됨",
+ "Couldn't receive the image": "이미지를 받지 못했습니다",
+ "Copy it again on %@.": "%@에서 다시 복사해 보세요."
 }

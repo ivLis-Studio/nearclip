@@ -89,12 +89,19 @@ final class NearclipFlowTests: XCTestCase {
         shot("11-add-device")
     }
 
-    /// Cross-device acceptance on an already paired app: expects the clips named in NC_EXPECT (comma separated)
-    /// to arrive through catch-up, then sends NC_SEND_TEXT with the system Paste button.
+    /// Cross-device acceptance on an onboarded app: joins the group of NC_PAIR_LINK first when it is set, expects the
+    /// clips named in NC_EXPECT (comma separated) to arrive through catch-up, then sends NC_SEND_TEXT with the system
+    /// Paste button.
     func testReceiveThenSend() throws {
         app.launchArguments = language()
         app.launch()
         XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        if let link = ProcessInfo.processInfo.environment["NC_PAIR_LINK"] {
+            app.open(URL(string: link)!)
+            XCTAssertTrue(app.staticTexts["join.success"].waitForExistence(timeout: 30))
+            app.buttons["join.done"].tap()
+            tapIfExists(app.buttons["sheet.done"])
+        }
         for expected in (ProcessInfo.processInfo.environment["NC_EXPECT"] ?? "").split(separator: ",").map(String.init) where !expected.isEmpty {
             let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", expected)).firstMatch
             XCTAssertTrue(row.waitForExistence(timeout: 20), "missing clip: \(expected)")
