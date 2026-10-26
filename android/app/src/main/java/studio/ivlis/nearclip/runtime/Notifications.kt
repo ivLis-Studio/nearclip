@@ -17,6 +17,7 @@ import studio.ivlis.nearclip.core.engine.PairPromptInfo
 import studio.ivlis.nearclip.core.engine.Sas
 import studio.ivlis.nearclip.service.NotificationActionReceiver
 import studio.ivlis.nearclip.ui.MainActivity
+import studio.ivlis.nearclip.ui.Routes
 import studio.ivlis.nearclip.ui.SendActivity
 import java.util.Locale
 
@@ -24,9 +25,12 @@ object Notifications {
     const val CHANNEL_SYNC = "sync"
     const val CHANNEL_PAIRING = "pairing"
     const val CHANNEL_TRANSFERS = "incoming_images"
+    const val CHANNEL_CODES = "codes"
     const val ID_SYNC = 7
     const val ID_PAIRING = 8
     const val ID_TRANSFER = 9
+    const val ID_CODE = 10
+    const val ID_CODES_HIDDEN = 11
     private const val IRIS = 0xFF4C5BF5.toInt()
     /** The transfer notification currently shows progress (not "Copied from …" or a failure). */
     @Volatile private var transferProgressShown = false
@@ -51,6 +55,11 @@ object Notifications {
                     setShowBadge(false)
                     setSound(null, null)
                     enableVibration(false)
+                },
+                // "A verification code arrived from MacBook Pro. Copy it?" — a banner, like the popup on a computer.
+                NotificationChannel(CHANNEL_CODES, context.getString(R.string.channel_codes), NotificationManager.IMPORTANCE_HIGH).apply {
+                    description = context.getString(R.string.channel_codes_description)
+                    setShowBadge(false)
                 },
             ),
         )
@@ -240,5 +249,72 @@ object Notifications {
         transferProgressShown = false
         transferDoneFor = null
         NotificationManagerCompat.from(context).cancel(ID_TRANSFER)
+    }
+
+    // ---------------------------------------------------------------- verification codes (PROTOCOL §6.7)
+
+    /**
+     * "Verification code from Junseo's iPhone · 482915 · Copy it?" with a Copy button, while Nearclip is not on screen.
+     * The lock screen shows only that a code arrived. Codes expire quickly, and so does the notification.
+     */
+    @SuppressLint("MissingPermission")
+    fun code(context: Context, clipId: String, name: String, code: String) {
+        val nm = NotificationManagerCompat.from(context)
+        if (!nm.areNotificationsEnabled()) return
+        val copy = PendingIntent.getBroadcast(
+            context, 6,
+            Intent(context, NotificationActionReceiver::class.java)
+                .setAction(NotificationActionReceiver.ACTION_COPY_CODE)
+                .putExtra(NotificationActionReceiver.EXTRA_CLIP_ID, clipId),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val public = NotificationCompat.Builder(context, CHANNEL_CODES)
+            .setSmallIcon(R.drawable.ic_stat_nearclip)
+            .setColor(IRIS)
+            .setContentTitle(context.getString(R.string.code_arrived_public))
+            .build()
+        val n = NotificationCompat.Builder(context, CHANNEL_CODES)
+            .setSmallIcon(R.drawable.ic_stat_nearclip)
+            .setColor(IRIS)
+            .setContentTitle(context.getString(R.string.code_arrived_title, name))
+            .setContentText(context.getString(R.string.code_arrived_text, code))
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(public)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setTimeoutAfter(Nearclip.CODE_OFFER_MS)
+            .setContentIntent(openApp(context, 7))
+            .addAction(R.drawable.ic_content_copy, context.getString(R.string.copy), copy)
+            .build()
+        try { nm.notify(ID_CODE, n) } catch (_: SecurityException) {}
+    }
+
+    fun cancelCode(context: Context) {
+        NotificationManagerCompat.from(context).cancel(ID_CODE)
+    }
+
+    /** Once: Android 15+ hid a code from Nearclip; the fix is in Settings. */
+    @SuppressLint("MissingPermission")
+    fun codesHidden(context: Context) {
+        val nm = NotificationManagerCompat.from(context)
+        if (!nm.areNotificationsEnabled()) return
+        val open = PendingIntent.getActivity(
+            context, 8,
+            MainActivity.routeIntent(context, Routes.SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val n = NotificationCompat.Builder(context, CHANNEL_CODES)
+            .setSmallIcon(R.drawable.ic_stat_nearclip)
+            .setColor(IRIS)
+            .setContentTitle(context.getString(R.string.codes_hidden_title))
+            .setContentText(context.getString(R.string.codes_hidden_text))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(context.getString(R.string.codes_hidden_text)))
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .build()
+        try { nm.notify(ID_CODES_HIDDEN, n) } catch (_: SecurityException) {}
     }
 }

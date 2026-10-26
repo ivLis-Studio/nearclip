@@ -51,6 +51,7 @@ import studio.ivlis.nearclip.core.tailnet.TailnetStatus
 import studio.ivlis.nearclip.runtime.AppSettings
 import studio.ivlis.nearclip.runtime.CaptureSetup
 import studio.ivlis.nearclip.runtime.CaptureStatus
+import studio.ivlis.nearclip.runtime.CodeStatus
 import studio.ivlis.nearclip.ui.Actions
 import studio.ivlis.nearclip.ui.components.SectionHeader
 import studio.ivlis.nearclip.ui.components.SettingsGroup
@@ -71,6 +72,12 @@ class SettingsActions(
     val setInstantCapture: (Boolean) -> Unit = {},
     val allowInstantCapture: () -> Unit = {},
     val refreshCapture: () -> Unit = {},
+    val setForwardCodes: (Boolean) -> Unit = {},
+    val refreshCodes: () -> Unit = {},
+    val unhideCodes: () -> Unit = {},
+    val openCodeAccess: () -> Unit = {},
+    val openAppInfo: () -> Unit = {},
+    val copyCodesCommand: () -> Unit = {},
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,12 +90,16 @@ fun SettingsScreen(
     remoteAvailable: Boolean = false,
     signingIn: Boolean = false,
     capture: CaptureStatus = CaptureStatus(CaptureSetup.NOT_INSTALLED),
+    codes: CodeStatus = CodeStatus(),
+    codesRestricted: Boolean = false,
+    codesCommand: String = "",
 ) {
     val context = LocalContext.current
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var retentionOpen by rememberSaveable { mutableStateOf(false) }
     var clearOpen by rememberSaveable { mutableStateOf(false) }
     var captureOpen by rememberSaveable { mutableStateOf(false) }
+    var codesOpen by rememberSaveable { mutableStateOf(false) }
     var batteryOk by rememberSaveable { mutableStateOf(true) }
     var notificationsOk by rememberSaveable { mutableStateOf(true) }
     LifecycleResumeEffect(Unit) {
@@ -96,6 +107,7 @@ fun SettingsScreen(
         batteryOk = pm?.isIgnoringBatteryOptimizations(context.packageName) == true
         notificationsOk = NotificationManagerCompat.from(context).areNotificationsEnabled()
         actions.refreshCapture() // Shizuku may have been installed or started meanwhile
+        actions.refreshCodes() // notification access may have been allowed meanwhile
         onPauseOrDispose {}
     }
 
@@ -134,6 +146,14 @@ fun SettingsScreen(
                         onSwitch = { on -> if (on) captureOpen = true else actions.setInstantCapture(false) },
                     )
                     toggle(R.string.sync_images, R.string.sync_images_summary, R.drawable.ic_image, settings.syncImages) { v -> actions.update { it.copy(syncImages = v) } }
+                    CodeForwardingRow(
+                        settings, codes,
+                        onOpen = { codesOpen = true },
+                        onSwitch = { on ->
+                            actions.setForwardCodes(on)
+                            if (on && !codes.access) codesOpen = true
+                        },
+                    )
                 }
             }
             if (remoteAvailable) {
@@ -141,7 +161,7 @@ fun SettingsScreen(
                     SectionHeader(stringResource(R.string.section_remote))
                     SettingsGroup {
                         toggle(R.string.remote_toggle, R.string.remote_summary, R.drawable.ic_public, settings.remoteEnabled) { actions.setRemoteEnabled(it) }
-                        if (settings.remoteEnabled) RemoteRows(tailnet, signingIn, actions)
+                        if (settings.remoteEnabled) RemoteRows(tailnet, signingIn, actions, paused = settings.paused)
                     }
                 }
             }
@@ -293,6 +313,27 @@ fun SettingsScreen(
             onDismiss = { captureOpen = false },
         )
     }
+    if (codesOpen) {
+        CodeForwardingSheet(
+            on = settings.forwardCodes,
+            hidden = settings.codesHidden,
+            st = codes,
+            shizuku = capture,
+            restricted = codesRestricted,
+            command = codesCommand,
+            actions = CodeSheetActions(
+                turnOn = { actions.setForwardCodes(true) },
+                turnOff = { actions.setForwardCodes(false) },
+                openAccess = actions.openCodeAccess,
+                openAppInfo = actions.openAppInfo,
+                unhide = actions.unhideCodes,
+                getShizuku = { Actions.getShizuku(context) },
+                openShizuku = { Actions.openShizuku(context) },
+                copyCommand = actions.copyCodesCommand,
+            ),
+            onDismiss = { codesOpen = false },
+        )
+    }
     @Suppress("UNUSED_VARIABLE") val sdk = Build.VERSION.SDK_INT
     Spacer(Modifier.height(0.dp))
 }
@@ -335,9 +376,36 @@ private fun InstantCaptureRow(settings: AppSettings, st: CaptureStatus, onOpen: 
     )
 }
 
+/** "Send verification codes": the row opens the setup sheet, the switch turns it on or off. On by default. */
+@Composable
+private fun CodeForwardingRow(settings: AppSettings, st: CodeStatus, onOpen: () -> Unit, onSwitch: (Boolean) -> Unit) {
+    val on = settings.forwardCodes
+    val title = stringResource(R.string.forward_codes)
+    val problem = codesProblem(on, settings.codesHidden, st)
+    val summary = when {
+        problem != null -> problem
+        on -> R.string.forward_codes_on
+        else -> R.string.forward_codes_summary
+    }
+    SettingsRow(
+        title = title,
+        summary = stringResource(summary),
+        icon = R.drawable.ic_pin,
+        iconTint = if (problem != null) Brand.Warning else MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = onOpen,
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                VerticalDivider(Modifier.height(32.dp))
+                Spacer(Modifier.width(16.dp))
+                Switch(checked = on, onCheckedChange = onSwitch, modifier = Modifier.semantics { contentDescription = title })
+            }
+        },
+    )
+}
+
 /** Remote-connection status and actions (DESIGN §4.7). */
 @Composable
-private fun RemoteRows(st: TailnetStatus, signingIn: Boolean, actions: SettingsActions) {
+private fun RemoteRows(st: TailnetStatus, signingIn: Boolean, actions: SettingsActions, paused: Boolean) {
     val title: String
     var detail: String? = null
     val tint: androidx.compose.ui.graphics.Color
@@ -346,6 +414,12 @@ private fun RemoteRows(st: TailnetStatus, signingIn: Boolean, actions: SettingsA
     var retry = false
     var signOut = false
     when {
+        // Pausing stops the remote connection with everything else; it starts again when syncing resumes.
+        paused -> {
+            title = stringResource(R.string.remote_paused)
+            detail = stringResource(R.string.remote_paused_hint)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        }
         st.isRunning -> {
             title = st.account?.let { stringResource(R.string.remote_on_account, it) } ?: stringResource(R.string.remote_on)
             detail = st.ip?.let { stringResource(R.string.remote_this_device, it) } + "\n" + stringResource(R.string.remote_hint)

@@ -118,8 +118,10 @@ fun HomeScreen(
     onSendClipboard: () -> Unit,
     onResume: () -> Unit,
     onCopy: (Clip) -> Boolean,
-    onTogglePin: (Clip) -> Unit,
-    onDelete: (Clip) -> Unit,
+    /** Every clip id behind the row, and the new state. */
+    onSetPinned: (Set<String>, Boolean) -> Unit,
+    /** Every clip id behind the row. */
+    onDelete: (Set<String>) -> Unit,
     onShare: (Clip) -> Unit,
     onOpenLink: (String) -> Unit,
     onSaveImage: (Clip) -> Unit,
@@ -132,17 +134,18 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val now = rememberNow()
 
-    val visible = remember(snapshot.history, snapshot.members, pendingDeletes, query, filter) {
+    // The same content copied more than once is one row.
+    val groups = remember(snapshot.history, pendingDeletes) { ClipGroups.of(snapshot.history.filter { it.id !in pendingDeletes }) }
+    val visible = remember(groups, snapshot.members, query, filter) {
         val q = query.trim()
-        snapshot.history.filter { c ->
-            c.id !in pendingDeletes &&
-                when (filter) {
-                    HistoryFilter.All -> true
-                    HistoryFilter.Text -> c.isText && ClipLook.of(c) !is ClipLook.Link
-                    HistoryFilter.Links -> c.isText && ClipLook.of(c) is ClipLook.Link
-                    HistoryFilter.Images -> c.isImage
-                    HistoryFilter.Pinned -> c.pinned
-                } &&
+        groups.clips.filter { c ->
+            when (filter) {
+                HistoryFilter.All -> true
+                HistoryFilter.Text -> c.isText && ClipLook.of(c) !is ClipLook.Link
+                HistoryFilter.Links -> c.isText && ClipLook.of(c) is ClipLook.Link
+                HistoryFilter.Images -> c.isImage
+                HistoryFilter.Pinned -> c.pinned
+            } &&
                 (q.isEmpty() || c.text?.contains(q, ignoreCase = true) == true || nameOf(c).contains(q, ignoreCase = true))
         }
     }
@@ -267,8 +270,8 @@ fun HomeScreen(
                         now = now,
                         imageFile = if (clip.isImage) blobFile(clip) else null,
                         onCopy = { onCopy(clip) },
-                        onTogglePin = { onTogglePin(clip) },
-                        onDelete = { onDelete(clip) },
+                        onTogglePin = { onSetPinned(groups.idsOf(clip), !clip.pinned) },
+                        onDelete = { onDelete(groups.idsOf(clip)) },
                         onShare = { onShare(clip) },
                         onOpenLink = onOpenLink,
                         onSaveImage = { onSaveImage(clip) },

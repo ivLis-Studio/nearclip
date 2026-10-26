@@ -91,6 +91,8 @@ internal sealed class AppHost
         };
         Model.OnReceivedQuietly = sc => Toast()?.ShowReceived(sc);
         Model.OnTransferFailed = t => Toast()?.ShowFailed(t);
+        // A code waits for an answer, so it shows even with arrival notices off.
+        Model.OnCode = sc => Toast(force: true)?.ShowCode(sc);
         Model.OnActivity = () => _tray?.Pulse();
         Model.OnPairPrompt = ShowPairPrompt;
         Model.Changed += OnModelChanged;

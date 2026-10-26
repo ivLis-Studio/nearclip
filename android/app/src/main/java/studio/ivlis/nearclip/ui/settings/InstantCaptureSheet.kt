@@ -166,12 +166,12 @@ fun InstantCaptureSheet(
 }
 
 @Composable
-private fun StatusLine(@StringRes problem: Int?) {
+internal fun StatusLine(@StringRes problem: Int?, @StringRes ok: Int = R.string.instant_capture_on) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         if (problem == null) {
             StatusDot(online = true, ring = MaterialTheme.colorScheme.surfaceContainerLow)
             Spacer(Modifier.width(10.dp))
-            Text(stringResource(R.string.instant_capture_on), style = MaterialTheme.typography.bodyMedium, color = Brand.OnlineText)
+            Text(stringResource(ok), style = MaterialTheme.typography.bodyMedium, color = Brand.OnlineText)
         } else {
             Sym(R.drawable.ic_error, null, Modifier.size(18.dp), tint = Brand.Warning)
             Spacer(Modifier.width(8.dp))
@@ -207,8 +207,17 @@ private fun Steps(st: CaptureStatus) {
     }
 }
 
+/** One step of a setup; [extra] (a command, a button) shows under the hint while it is the current step. */
 @Composable
-private fun Step(n: Int, @StringRes title: Int, @StringRes hint: Int, @StringRes doneLabel: Int, done: Boolean, current: Boolean) {
+internal fun Step(
+    n: Int,
+    @StringRes title: Int,
+    @StringRes hint: Int,
+    @StringRes doneLabel: Int,
+    done: Boolean,
+    current: Boolean,
+    extra: (@Composable () -> Unit)? = null,
+) {
     val primary = MaterialTheme.colorScheme.primary
     Row(
         Modifier
@@ -256,6 +265,7 @@ private fun Step(n: Int, @StringRes title: Int, @StringRes hint: Int, @StringRes
                 current -> {
                     Spacer(Modifier.height(2.dp))
                     Text(stringResource(hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    extra?.invoke()
                 }
             }
         }
@@ -278,7 +288,7 @@ private fun Notes(st: CaptureStatus) {
 }
 
 @Composable
-private fun Note(@DrawableRes icon: Int, text: String) {
+internal fun Note(@DrawableRes icon: Int, text: String) {
     Row(verticalAlignment = Alignment.Top) {
         Sym(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(14.dp))

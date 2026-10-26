@@ -75,8 +75,12 @@ resource system (String Catalog, `strings.xml`, `.resw`). Device-platform words 
      automatic sync (System Settings › Privacy & Security › Paste from Other Apps); local network.
    * Windows: "Allow Nearclip on private networks" when the firewall asks; nothing else.
    * Android: notifications (for the background connection), optional "Don't optimize battery".
+   * Android: notification access for **Send verification codes** (on by default, 4.3), with the "Allow restricted
+     settings" hint when the switch is greyed out (Android 13+, installed from a file).
    * iOS: local network ("Find devices on your network"); tip about Settings › Nearclip ›
      Paste from Other Apps › Allow for automatic sending.
+   * iOS: a page on verification codes with **Show Me How** (the Shortcuts automation, 4.3); iOS has no permission
+     to ask for.
 3. **Add your devices** — the Add-device UI (4.2) embedded, plus **Done / Skip for now**.
 
 ### 4.2 Add device (pairing)
@@ -124,14 +128,32 @@ resource system (String Catalog, `strings.xml`, `.resw`). Device-platform words 
     captures text and links in the background with Shizuku; it is off until the user opts in.
   * iOS: when the app opens and the clipboard changed: auto-send if "Paste from Other Apps" is
     allowed, otherwise a prominent card with the system **Paste** button ("Send what you copied").
+* Verification codes (PROTOCOL.md §6.7): a phone sends just the code from a new text message (Android: also
+  KakaoTalk) to the other devices, with nothing to confirm on the phone. Android reads the messaging apps'
+  notifications ("Send verification codes", on by default; Android 15+ needs the one-time "Let Nearclip see codes"
+  step with Shizuku or adb). iOS uses a Shortcuts automation on Message that runs **Send Verification Code**. The
+  receiving devices never paste a code on their own; they ask: "A verification code arrived from Junseo's iPhone.
+  Copy it?" (ko "준서의 iPhone에서 인증번호가 도착했어요! 복사할까요?") with the code in large digits, **Copy** and
+  **Not now** — the computer toast (shown even with arrival notices off; a minute, hover keeps it; clicking it copies),
+  the snackbar or a notification with Copy on Android, a banner in the iOS app. A code that comes in through catch-up
+  is offered while it is under 3 minutes old.
 * Never sync: password-manager items (concealed/transient/sensitive markers), clips larger than the
   limits (show "Too large to sync" in history), anything while **Syncing paused**.
-* Loop safety: a clip written by Nearclip is never sent back out as a new clip.
+* Loop safety: a clip written by Nearclip is never sent back out as a new clip. Nor is the same content put on the
+  clipboard again — by a screenshot tool that sets its picture twice, or by another sync app (Link to Windows / Phone
+  Link, Universal Clipboard) that puts back what Nearclip just wrote — or the newest clip copied again within 10 minutes:
+  it is on the other devices already. "The same" ignores line endings, Unicode composition and trailing whitespace;
+  images compare by their pixels on computers (PNG or bitmap alike) and by their file otherwise. A clip that arrives
+  while the clipboard already holds it is not written again and shows no "Copied from …" (computers know what their
+  clipboard holds; phones trust what they last wrote or read while the clipboard has not changed since — Android, which
+  hides the clipboard in the background, for a minute).
 
 ### 4.4 History (main surface on every platform)
 
 * Newest first, grouped **Today / Yesterday / weekday / date**. Pinned clips in their own section at
   the top (or via the Pinned filter on small surfaces).
+* The same content copied more than once is one row, its newest copy (pinned when any copy is); pinning or deleting the
+  row covers every copy.
 * Row: leading = content glyph or image thumbnail (rounded 6–8 pt); title = first 2 lines of text
   (links: domain in bold + path; color codes like `#4C5BF5`: swatch); caption = source device glyph +
   name · relative time; trailing = pin indicator. Clips from this device say "This Mac" / "이 Mac".
@@ -203,6 +225,8 @@ section). Copy (EN / KO):
 | Mobile | Copy the newest clip when Nearclip opens (if it arrived ≤ 10 min ago) | on |
 | Android | Stay connected in the background (persistent notification) | on |
 | Android / Sync | Bring copies into Nearclip instantly (Shizuku on Android 10+) | off |
+| Android / Sync | Send verification codes (notification access) | on |
+| iOS | Verification codes: Shortcuts automation guide | — |
 | Remote connection | Sync across networks (embedded Tailscale, §4.7) | off |
 | Privacy | Skip password managers (always on, explained) | — |
 | Privacy | Ignore apps… (macOS/Windows list) | 1Password, Bitwarden, KeePassXC, Keychain Access |

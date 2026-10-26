@@ -20,6 +20,10 @@ data class AppSettings(
     val remoteEnabled: Boolean = false,
     /** Opt-in "Bring copies into Nearclip instantly" (InstantCapture: Shizuku on Android 10+). */
     val instantCapture: Boolean = false,
+    /** "Send verification codes to my devices" (CodeForwarding): on by default, needs notification access. */
+    val forwardCodes: Boolean = true,
+    /** Android hid a code from Nearclip and the permission that lets it see them is not there yet (Android 15+). */
+    val codesHidden: Boolean = false,
 )
 
 class SettingsStore(context: Context) {
@@ -39,6 +43,8 @@ class SettingsStore(context: Context) {
         onboardingDone = prefs.getBoolean(ONBOARDED, false),
         remoteEnabled = prefs.getBoolean(REMOTE, false),
         instantCapture = prefs.getBoolean(INSTANT_CAPTURE, false),
+        forwardCodes = prefs.getBoolean(FORWARD_CODES, true),
+        codesHidden = prefs.getBoolean(CODES_HIDDEN, false),
     )
 
     @Synchronized
@@ -55,6 +61,8 @@ class SettingsStore(context: Context) {
             putBoolean(ONBOARDED, next.onboardingDone)
             putBoolean(REMOTE, next.remoteEnabled)
             putBoolean(INSTANT_CAPTURE, next.instantCapture)
+            putBoolean(FORWARD_CODES, next.forwardCodes)
+            putBoolean(CODES_HIDDEN, next.codesHidden)
         }
         _state.value = next
     }
@@ -69,6 +77,11 @@ class SettingsStore(context: Context) {
         get() = prefs.getLong(APPLIED_TS, 0L)
         set(v) = prefs.edit { putLong(APPLIED_TS, v) }
 
+    /** The "a code was hidden" notification was shown (once). */
+    var codesHiddenNotified: Boolean
+        get() = prefs.getBoolean(CODES_HIDDEN_NOTIFIED, false)
+        set(v) = prefs.edit { putBoolean(CODES_HIDDEN_NOTIFIED, v) }
+
     private companion object {
         const val PAUSED = "paused"
         const val AUTO_APPLY = "autoApply"
@@ -80,6 +93,9 @@ class SettingsStore(context: Context) {
         const val ONBOARDED = "onboardingDone"
         const val REMOTE = "remoteEnabled"
         const val INSTANT_CAPTURE = "instantCapture"
+        const val FORWARD_CODES = "forwardCodes"
+        const val CODES_HIDDEN = "codesHidden"
+        const val CODES_HIDDEN_NOTIFIED = "codesHiddenNotified"
         const val CLIPBOARD_STAMP = "clipboardStamp"
         const val APPLIED_TS = "appliedTs"
     }

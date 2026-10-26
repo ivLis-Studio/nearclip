@@ -12,14 +12,17 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.Parcel
+import android.os.ParcelFileDescriptor
 import android.os.Process
 import androidx.annotation.RequiresApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import moe.shizuku.server.IShizukuService
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuBinderWrapper
@@ -77,8 +80,11 @@ class InstantCapture(
         /** Text copied in another app. */
         data class Copied(val text: String, override val stamp: Long) : Change
 
-        /** Nearclip's own clip, or one marked sensitive: not read. */
-        data class Skipped(override val stamp: Long) : Change
+        /** Nearclip's own clip ([ours]), or one marked sensitive: not read. */
+        data class Skipped(override val stamp: Long, val ours: Boolean) : Change
+
+        /** A photo or a file: left to sharing or to opening Nearclip, and not marked as seen. */
+        data class NotText(override val stamp: Long) : Change
     }
 
     private val builtIn = Build.VERSION.SDK_INT < 29
@@ -138,6 +144,28 @@ class InstantCapture(
         }
     }
 
+    /**
+     * Runs a command as the shell user through Shizuku (it must be running, with Nearclip allowed); true when it
+     * exited with 0. Used to let Nearclip see verification codes on Android 15+ (CodeForwarding).
+     */
+    suspend fun runShell(vararg cmd: String): Boolean = withContext(Dispatchers.IO) {
+        if (builtIn) return@withContext false
+        try {
+            if (!Shizuku.pingBinder() || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) return@withContext false
+            val service = IShizukuService.Stub.asInterface(Shizuku.getBinder()) ?: return@withContext false
+            val p = service.newProcess(arrayOf(*cmd), null, null) ?: return@withContext false
+            val error = p.errorStream?.let { fd -> ParcelFileDescriptor.AutoCloseInputStream(fd).use { it.readBytes().decodeToString() } }
+            p.waitFor()
+            val code = p.exitValue()
+            p.destroy()
+            if (code != 0) log("shell: ${cmd.firstOrNull()} ${cmd.getOrNull(1)} exited with $code: ${error?.trim()}")
+            code == 0
+        } catch (e: Throwable) {
+            log("shell: ${cmd.firstOrNull()} ${cmd.getOrNull(1)} failed: ${cause(e)}")
+            false
+        }
+    }
+
     /** What the clipboard holds after a change; null when there is nothing to do (seen, locked, a photo or file). */
     suspend fun read(lastStamp: Long): Change? = withContext(dispatcher) {
         if (!wanted) return@withContext null
@@ -148,18 +176,18 @@ class InstantCapture(
             val extras = desc.extras
             when {
                 stamp == lastStamp -> null
-                extras?.getString(ClipboardBridge.EXTRA_ORIGIN) != null -> Change.Skipped(stamp)
-                extras?.getBoolean(ClipboardBridge.EXTRA_IS_SENSITIVE, false) == true -> Change.Skipped(stamp)
-                !ClipboardBridge.hasText(desc) -> null
+                extras?.getString(ClipboardBridge.EXTRA_ORIGIN) != null -> Change.Skipped(stamp, ours = true)
+                extras?.getBoolean(ClipboardBridge.EXTRA_IS_SENSITIVE, false) == true -> Change.Skipped(stamp, ours = false)
+                !ClipboardBridge.hasText(desc) -> Change.NotText(stamp)
                 // The clipboard may change between the description and the data fetch. Check the data's
                 // own flags too, so that a fast password-manager copy can never slip through.
                 else -> src.clip()?.let { clip ->
                     val actual = clip.description
                     when {
                         actual.timestamp == lastStamp -> null
-                        actual.extras?.getString(ClipboardBridge.EXTRA_ORIGIN) != null -> Change.Skipped(actual.timestamp)
-                        actual.extras?.getBoolean(ClipboardBridge.EXTRA_IS_SENSITIVE, false) == true -> Change.Skipped(actual.timestamp)
-                        !ClipboardBridge.hasText(actual) -> null
+                        actual.extras?.getString(ClipboardBridge.EXTRA_ORIGIN) != null -> Change.Skipped(actual.timestamp, ours = true)
+                        actual.extras?.getBoolean(ClipboardBridge.EXTRA_IS_SENSITIVE, false) == true -> Change.Skipped(actual.timestamp, ours = false)
+                        !ClipboardBridge.hasText(actual) -> Change.NotText(actual.timestamp)
                         else -> ClipboardBridge.plainText(clip)?.let { Change.Copied(it, actual.timestamp) }
                     }
                 }

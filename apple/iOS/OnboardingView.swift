@@ -4,18 +4,21 @@ struct OnboardingView: View {
     let env: AppEnvironment
     @State private var step = 0
     @State private var scanning = false
+    @State private var showCodeGuide = false
+    private let last = 3
 
     var body: some View {
         VStack(spacing: 0) {
             TabView(selection: $step) {
                 welcome.tag(0)
                 network.tag(1)
-                devices.tag(2)
+                codes.tag(2)
+                devices.tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeOut, value: step)
             HStack(spacing: 6) {
-                ForEach(0..<3) { i in
+                ForEach(0...last, id: \.self) { i in
                     Capsule().fill(i == step ? Brand.iris : Color.primary.opacity(0.15))
                         .frame(width: i == step ? 20 : 7, height: 7)
                 }
@@ -26,7 +29,7 @@ struct OnboardingView: View {
             Button {
                 advance()
             } label: {
-                Text(step == 0 ? "Get Started" : (step == 1 ? "Continue" : "Scan QR Code"))
+                Text(step == 0 ? "Get Started" : (step < last ? "Continue" : "Scan QR Code"))
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
@@ -36,7 +39,7 @@ struct OnboardingView: View {
             .controlSize(.large)
             .padding(.horizontal, 24)
             .accessibilityIdentifier("onboarding.next")
-            if step == 2 {
+            if step == last {
                 Button("Not Now") { finish() }
                     .padding(.top, 10)
                     .accessibilityIdentifier("onboarding.later")
@@ -44,6 +47,7 @@ struct OnboardingView: View {
         }
         .padding(.bottom, 20)
         .tint(Brand.iris)
+        .sheet(isPresented: $showCodeGuide) { CodeGuideSheet() }
         .fullScreenCover(isPresented: $scanning) {
             QRScannerScreen { link in
                 scanning = false
@@ -61,6 +65,8 @@ struct OnboardingView: View {
         case 1:
             env.startEngine()
             withAnimation { step = 2 }
+        case 2:
+            withAnimation { step = 3 }
         default:
             scanning = true
         }
@@ -118,6 +124,36 @@ struct OnboardingView: View {
                 feature("doc.on.clipboard", "Copy, then tap Paste", "The Paste button sends what you copied without any permission prompts.")
             }
             .padding(.top, 12)
+            Spacer()
+        }
+        .padding(.horizontal, 28)
+    }
+
+    /// Verification codes from text messages (PROTOCOL.md §6.7): iOS has no permission to grant, so this shows how.
+    private var codes: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            Image(systemName: "number")
+                .font(.system(size: 50, weight: .semibold))
+                .foregroundStyle(Brand.iris)
+                .frame(width: 112, height: 112)
+                .background(Circle().fill(Brand.iris.opacity(0.12)))
+            Text("Verification codes, too")
+                .font(.system(size: 30, weight: .bold))
+                .accessibilityIdentifier("onboarding.codes.title")
+            Text("A code that comes in a text message can show up on your computer, ready to copy.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            VStack(alignment: .leading, spacing: 18) {
+                feature("message.badge.filled.fill", "From your text messages", "A Shortcuts automation sends just the code. Set it up once.")
+                feature("lock.fill", "Your messages stay here", "Only the code leaves this iPhone, and your computer asks before copying it.")
+            }
+            .padding(.top, 12)
+            Button("Show Me How") { showCodeGuide = true }
+                .font(.headline)
+                .padding(.top, 4)
+                .accessibilityIdentifier("onboarding.codes.guide")
             Spacer()
         }
         .padding(.horizontal, 28)

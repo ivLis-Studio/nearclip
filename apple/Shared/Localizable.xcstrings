@@ -1,66 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "Copy it again on %@.": {
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@에서 다시 복사해 보세요."
-          }
-        }
-      }
-    },
-    "Couldn't receive the image": {
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미지를 받지 못했습니다"
-          }
-        }
-      }
-    },
-    "Image from %@": {
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@에서 받은 이미지"
-          }
-        }
-      }
-    },
-    "Preparing…": {
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "준비 중…"
-          }
-        }
-      }
-    },
-    "Receiving an image from %@…": {
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@에서 이미지 받는 중…"
-          }
-        }
-      }
-    },
-    "Saved to history": {
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기록에 저장됨"
-          }
-        }
-      }
-    },
     "%lld characters": {
       "localizations": {
         "ko": {
@@ -97,6 +37,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "7일"
+          }
+        }
+      }
+    },
+    "A Shortcuts automation sends just the code. Set it up once.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축어 자동화가 번호만 보냅니다. 한 번만 설정하면 됩니다."
+          }
+        }
+      }
+    },
+    "A code that comes in a text message can show up on your computer, ready to copy.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문자로 온 인증번호를 컴퓨터에서 바로 복사할 수 있습니다."
+          }
+        }
+      }
+    },
+    "A verification code arrived from %@. Copy it?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 인증번호가 도착했어요! 복사할까요?"
           }
         }
       }
@@ -261,6 +231,16 @@
         }
       }
     },
+    "Already on your devices": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 내 기기에 있습니다"
+          }
+        }
+      }
+    },
     "Another device": {
       "localizations": {
         "ko": {
@@ -327,6 +307,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "‘항상 허용’ 선택…"
+          }
+        }
+      }
+    },
+    "Choose Message. Leave Sender and Message Contains empty — Nearclip finds the code itself.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘메시지’를 고르세요. 보낸 사람과 메시지 내용 조건은 비워 두세요. 인증번호는 Nearclip이 찾아냅니다."
+          }
+        }
+      }
+    },
+    "Choose Run Immediately, turn off Notify When Run, then tap Next.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘즉시 실행’을 고르고 ‘실행 시 알림’을 끈 다음 ‘다음’을 누르세요."
           }
         }
       }
@@ -437,6 +437,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "닫기"
+          }
+        }
+      }
+    },
+    "Codes from texts, on your computer": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문자 인증번호를 컴퓨터에서"
+          }
+        }
+      }
+    },
+    "Codes from your other devices show “Copy it?” here — nothing is pasted on its own.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기에서 온 인증번호는 여기서 “복사할까요?”라고 묻습니다. 스스로 붙여넣지 않습니다."
           }
         }
       }
@@ -631,6 +651,16 @@
         }
       }
     },
+    "Copy it again on %@.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 다시 복사해 보세요."
+          }
+        }
+      }
+    },
     "Copy something on any of your devices.": {
       "localizations": {
         "ko": {
@@ -687,6 +717,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "기기에 연결할 수 없습니다. 두 기기가 같은 Wi-Fi에 있는지 확인하거나, 두 기기 모두 원격 연결을 켜세요."
+          }
+        }
+      }
+    },
+    "Couldn't receive the image": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지를 받지 못했습니다"
           }
         }
       }
@@ -801,6 +841,16 @@
         }
       }
     },
+    "Finds the verification code in a message and sends just the code to your other devices. They ask before copying it.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메시지에서 인증번호를 찾아 번호만 다른 기기로 보냅니다. 받은 기기는 복사하기 전에 묻습니다."
+          }
+        }
+      }
+    },
     "Fix…": {
       "localizations": {
         "ko": {
@@ -827,6 +877,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "다른 기기에서 10분 안에 받은 클립이 있을 때"
+          }
+        }
+      }
+    },
+    "From your text messages": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문자 메시지에서"
           }
         }
       }
@@ -911,6 +971,16 @@
         }
       }
     },
+    "Image from %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 받은 이미지"
+          }
+        }
+      }
+    },
     "Image syncing is off": {
       "localizations": {
         "ko": {
@@ -967,6 +1037,16 @@
         }
       }
     },
+    "It turns back on when you resume syncing.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화를 다시 시작하면 원격 연결도 다시 켜집니다."
+          }
+        }
+      }
+    },
     "It will stop syncing with your devices.": {
       "localizations": {
         "ko": {
@@ -1003,6 +1083,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "방금"
+          }
+        }
+      }
+    },
+    "KakaoTalk codes can't be read on iPhone — iOS gives apps no way to see them.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카카오톡 인증번호는 iPhone에서 읽을 수 없습니다. iOS가 앱에 그 방법을 열어 두지 않았습니다."
           }
         }
       }
@@ -1203,6 +1293,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "‘%@’에 이 코드가 표시되는지 확인하세요."
+          }
+        }
+      }
+    },
+    "Message": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메시지"
           }
         }
       }
@@ -1517,6 +1617,16 @@
         }
       }
     },
+    "Only the code leaves this iPhone, and your computer asks before copying it.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 iPhone 밖으로는 번호만 나가고, 컴퓨터는 복사하기 전에 묻습니다."
+          }
+        }
+      }
+    },
     "Only your paired devices can read what you copy.": {
       "localizations": {
         "ko": {
@@ -1573,6 +1683,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "설정 열기"
+          }
+        }
+      }
+    },
+    "Open Shortcuts": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축어 열기"
+          }
+        }
+      }
+    },
+    "Open Shortcuts, go to Automation and tap +.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축어 앱의 ‘자동화’ 탭에서 ＋를 누르세요."
           }
         }
       }
@@ -1727,6 +1857,16 @@
         }
       }
     },
+    "Paused": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일시정지됨"
+          }
+        }
+      }
+    },
     "Pin": {
       "localizations": {
         "ko": {
@@ -1777,6 +1917,16 @@
         }
       }
     },
+    "Preparing…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "준비 중…"
+          }
+        }
+      }
+    },
     "Press %@ anywhere to open your history. You can change it in Settings.": {
       "localizations": {
         "ko": {
@@ -1813,6 +1963,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "연결 대기 중"
+          }
+        }
+      }
+    },
+    "Receiving an image from %@…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에서 이미지 받는 중…"
           }
         }
       }
@@ -1897,6 +2057,16 @@
         }
       }
     },
+    "Saved to history": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록에 저장됨"
+          }
+        }
+      }
+    },
     "Saved — it syncs when your devices are nearby": {
       "localizations": {
         "ko": {
@@ -1947,6 +2117,26 @@
         }
       }
     },
+    "Send Verification Code": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인증번호 보내기"
+          }
+        }
+      }
+    },
+    "Send codes from text messages": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문자 인증번호 보내기"
+          }
+        }
+      }
+    },
     "Send what you copied": {
       "localizations": {
         "ko": {
@@ -1987,6 +2177,16 @@
         }
       }
     },
+    "Set up a Shortcuts automation once.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축어 자동화를 한 번만 설정하세요."
+          }
+        }
+      }
+    },
     "Settings": {
       "localizations": {
         "ko": {
@@ -2023,6 +2223,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "단축키"
+          }
+        }
+      }
+    },
+    "Show Me How": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 방법 보기"
           }
         }
       }
@@ -2173,6 +2383,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nearclip이 열려 있을 때 동기화"
+          }
+        }
+      }
+    },
+    "Tap Message in the action and choose Shortcut Input. Tap Done.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동작의 ‘메시지’를 눌러 ‘단축어 입력’을 고르고 ‘완료’를 누르세요."
+          }
+        }
+      }
+    },
+    "Tap New Blank Automation, add the Nearclip action “Send Verification Code”.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘새로운 빈 자동화’를 누르고 Nearclip의 ‘인증번호 보내기’ 동작을 추가하세요."
           }
         }
       }
@@ -2487,6 +2717,26 @@
         }
       }
     },
+    "Verification codes": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인증번호"
+          }
+        }
+      }
+    },
+    "Verification codes, too": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인증번호도 함께"
+          }
+        }
+      }
+    },
     "Version": {
       "localizations": {
         "ko": {
@@ -2547,6 +2797,16 @@
         }
       }
     },
+    "When a text message brings a verification code, Nearclip sends just the code to your other devices. They ask “Copy it?” — your messages stay on this iPhone.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문자로 인증번호가 오면 Nearclip이 번호만 다른 기기로 보냅니다. 받은 기기는 “복사할까요?”라고 묻고, 메시지는 이 iPhone에 그대로 남습니다."
+          }
+        }
+      }
+    },
     "Yesterday": {
       "localizations": {
         "ko": {
@@ -2583,6 +2843,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "기기끼리 직접 통신합니다. 서버도, 계정도 필요 없습니다."
+          }
+        }
+      }
+    },
+    "Your messages stay here": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메시지는 이 기기에"
           }
         }
       }

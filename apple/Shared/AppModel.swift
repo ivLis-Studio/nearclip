@@ -28,8 +28,9 @@ struct Notice: Identifiable, Equatable {
 
 @MainActor
 protocol ClipboardWriter: AnyObject {
-    /// Writes a clip to the system clipboard, marked so Nearclip does not pick it up again.
-    func write(_ clip: Clip, blob: Data?)
+    /// Writes a clip to the system clipboard, marked so Nearclip does not pick it up again. False when nothing was
+    /// written because the clipboard already holds the same content.
+    @discardableResult func write(_ clip: Clip, blob: Data?) -> Bool
 }
 
 /// The UI-facing state of the engine. Shared by the macOS and iOS apps.
@@ -50,6 +51,10 @@ final class AppModel {
     @ObservationIgnored var onReceivedQuietly: ((StoredClip) -> Void)?
     /// A shown transfer ended without the image (the sender cancelling it is not reported).
     @ObservationIgnored var onTransferFailed: ((IncomingTransfer) -> Void)?
+    /// A verification code from another device's messages (PROTOCOL.md §6.7), to offer with "Copy it?". Codes are never
+    /// copied on their own.
+    @ObservationIgnored var onCode: ((StoredClip) -> Void)?
+    @ObservationIgnored private var offeredCodes = Set<String>()
 
     private(set) var deviceId: String
     private(set) var deviceName: String
@@ -248,12 +253,16 @@ final class AppModel {
     }
 
     /// Something was copied on this device.
-    func localCopy(text: String) {
-        guard !settings.paused else { return }
+    /// Returns false when it was not sent because it is the newest clip already (see `isNewest`).
+    @discardableResult
+    func localCopy(text: String) -> Bool {
+        guard !settings.paused else { return true }
+        guard !isNewest(ContentKey.text(text)) else { return false }
         if let sc = node.sendText(text) {
             lastAppliedTs = max(lastAppliedTs, sc.clip.ts)
             onActivity?()
         }
+        return true
     }
 
     func localCopy(image: Data, mime: String, width: Int?, height: Int?) {
@@ -261,15 +270,35 @@ final class AppModel {
     }
 
     /// `announced`: from `announceImage()`, called before the image was encoded.
-    func localCopy(image: Data, mime: String, width: Int?, height: Int?, announced: String?) {
+    /// Returns false when it was not sent because it is the newest clip already (see `isNewest`).
+    @discardableResult
+    func localCopy(image: Data, mime: String, width: Int?, height: Int?, announced: String?) -> Bool {
         guard !settings.paused, settings.syncImages else {
             if let announced { node.cancelImage(announced) }
-            return
+            return true
+        }
+        guard !isNewest(image: image) else {
+            if let announced { node.cancelImage(announced) }
+            return false
         }
         if let sc = node.sendImage(image, mime: mime, width: width, height: height, id: announced) {
             lastAppliedTs = max(lastAppliedTs, sc.clip.ts)
             onActivity?()
         }
+        return true
+    }
+
+    /// The same content as the newest clip in history, if that one is recent: it is on the other devices already, so
+    /// copying it again here (or another sync app putting it back) is not a new clip (DESIGN.md §4.3).
+    func isNewest(_ key: String) -> Bool {
+        guard let newest = history.first, nowMs() - newest.receivedAt < 600_000 else { return false }
+        return ContentKey.of(newest.clip) == key
+    }
+
+    /// `isNewest` for an image file (hashed only when the newest clip is an image of the same size).
+    func isNewest(image: Data) -> Bool {
+        guard let newest = history.first, newest.clip.isImage, newest.clip.size == image.count else { return false }
+        return isNewest(ContentKey.file(image))
     }
 
     /// An image was just copied here and is about to be encoded: lets the other devices show it arriving right away
@@ -294,7 +323,7 @@ final class AppModel {
     }
 
     private func considerCatchUp(_ sc: StoredClip) {
-        guard let deadline = catchUpDeadline, Date() < deadline, settings.copyLatestOnOpen, !settings.paused,
+        guard let deadline = catchUpDeadline, Date() < deadline, settings.copyLatestOnOpen, !settings.paused, !sc.clip.isCode,
               sc.clip.src != deviceId, sc.clip.ts > lastAppliedTs, nowMs() - sc.clip.ts < 600_000,
               !(sc.clip.isImage && !settings.syncImages) else { return }
         if let c = catchUpCandidate, c.clip.ts >= sc.clip.ts { return }
@@ -305,15 +334,32 @@ final class AppModel {
             guard !Task.isCancelled, let self, let c = self.catchUpCandidate, c.clip.ts > self.lastAppliedTs else { return }
             let blob = c.clip.isImage ? self.node.blobData(for: c.id) : nil
             if c.clip.isImage && blob == nil { return }
-            self.clipboard?.write(c.clip, blob: blob)
+            let written = self.clipboard?.write(c.clip, blob: blob) ?? true
             self.lastAppliedTs = c.clip.ts
             self.node.noteApplied(c.clip)
-            self.onReceive?(c)
+            if written { self.onReceive?(c) }
         }
     }
 
     func togglePin(_ item: ClipItem) {
         for id in item.ids { node.setPinned(!item.pinned, id: id) }
+    }
+
+    // MARK: - Verification codes (PROTOCOL.md §6.7)
+
+    /// Offers a code from another device: when it arrives, or later (catch-up) while it can still be used.
+    func offerCode(_ sc: StoredClip, live: Bool) {
+        guard sc.clip.isCode, sc.clip.src != deviceId, !settings.paused else { return }
+        guard live || nowMs() - sc.clip.ts < 180_000 else { return }
+        guard offeredCodes.insert(sc.id).inserted else { return }
+        onCode?(sc)
+    }
+
+    /// "Copy" on a code offer: to this device's clipboard only.
+    func copyCode(_ sc: StoredClip) {
+        clipboard?.write(sc.clip, blob: nil)
+        lastAppliedTs = max(lastAppliedTs, sc.clip.ts)
+        node.noteApplied(sc.clip)
     }
 
     func delete(_ item: ClipItem) { node.delete(ids: item.ids) }
@@ -520,18 +566,25 @@ final class AppModel {
             online.remove(id)
             routes[id] = nil
             lastSeen[id] = nowMs()
-        case .clipAdded(let sc, _, let apply, let local):
+        case .clipAdded(let sc, let live, let apply, let local):
             insert(sc)
             guard !local else { return }
+            if sc.clip.isCode {
+                onActivity?()
+                offerCode(sc, live: live)
+                return
+            }
             let wasShown = transfers[sc.id] != nil && endTransfer(sc.id)
             onActivity?()
             var copied = false
             if apply, settings.autoApply, !settings.paused, !(sc.clip.isImage && !settings.syncImages) {
                 let blob = sc.clip.isImage ? node.blobData(for: sc.id) : nil
                 if !sc.clip.isImage || blob != nil {
-                    clipboard?.write(sc.clip, blob: blob)
+                    // Already on the clipboard (copied here too, or brought by another sync app): not written again
+                    // and no toast, unless its progress was showing.
+                    let written = clipboard?.write(sc.clip, blob: blob) ?? true
                     lastAppliedTs = max(lastAppliedTs, sc.clip.ts)
-                    onReceive?(sc)
+                    if written || wasShown { onReceive?(sc) }
                     copied = true
                 }
             } else if !apply {

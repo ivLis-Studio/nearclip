@@ -82,6 +82,12 @@ struct HomeView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 10) {
+                    if let sc = env.codeOffer {
+                        CodeOfferBanner(
+                            title: String(localized: "A verification code arrived from \(model.sourceName(sc)). Copy it?"),
+                            code: sc.clip.text ?? "", symbol: model.sourceSymbol(sc),
+                            onCopy: { env.copyOfferedCode() }, onDismiss: { env.dismissCodeOffer() })
+                    }
                     if env.toast == nil, let t = env.model.shownTransfer {
                         TransferOverlay(transfer: t, name: env.model.deviceName(t.from), symbol: env.model.deviceSymbol(t.from))
                     }
@@ -89,6 +95,7 @@ struct HomeView: View {
                     SendBar(env: env)
                 }
                 .animation(.spring(duration: 0.35), value: env.model.shownTransfer?.id)
+                .animation(.spring(duration: 0.4), value: env.codeOffer?.id)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 6)
             }

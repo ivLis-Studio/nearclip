@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 
 @main
 struct NearclipApp: App {
-    @State private var env = AppEnvironment()
+    /// Shared with "Send Verification Code" (SendCodeIntent), which can run while Nearclip is in the background.
+    @State private var env = AppEnvironment.shared
     @Environment(\.scenePhase) private var phase
 
     var body: some Scene {
@@ -50,6 +51,8 @@ struct Toast: Identifiable, Equatable {
 @MainActor
 @Observable
 final class AppEnvironment {
+    static let shared = AppEnvironment()
+
     let settings = AppSettings()
     let model: AppModel
     let clipboard = IOSClipboard()
@@ -61,7 +64,11 @@ final class AppEnvironment {
     /// The system clipboard has something new that was not sent yet.
     var pendingClipboard: ClipboardKind?
     var toast: Toast?
+    /// A verification code from another device, offered with "Copy it?" (PROTOCOL.md §6.7).
+    private(set) var codeOffer: StoredClip?
     @ObservationIgnored private var toastTask: Task<Void, Never>?
+    @ObservationIgnored private var codeOfferTask: Task<Void, Never>?
+    @ObservationIgnored private var lastForwarded: (code: String, at: Date)?
     @ObservationIgnored private var pauseTask: Task<Void, Never>?
     @ObservationIgnored private var bgTask: UIBackgroundTaskIdentifier = .invalid
     @ObservationIgnored private let prompts = PromptPresenter()
@@ -108,6 +115,7 @@ final class AppEnvironment {
             guard let self else { return }
             self.prompts.present(model: self.model, prompt: prompt)
         }
+        model.onCode = { [weak self] sc in self?.offerCode(sc) }
         if settings.onboardingDone { startEngine() }
     }
 
@@ -115,6 +123,8 @@ final class AppEnvironment {
         guard !started else { return }
         started = true
         model.start()
+        // Launched in the background for a Shortcuts automation: the clipboard is left alone until Nearclip is opened.
+        guard UIApplication.shared.applicationState != .background else { return }
         model.armCopyNewest()
         checkClipboard()
     }
@@ -154,6 +164,18 @@ final class AppEnvironment {
 
     func open(_ url: URL) {
         guard url.scheme?.lowercased() == "nearclip" else { return }
+        #if DEBUG
+        // Test hook (apple/tools/ios_code.py): runs "Send Verification Code" on a message, as a Shortcuts automation does.
+        if url.host == "debug-send-code",
+           let message = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "message" })?.value {
+            Task {
+                var intent = SendCodeIntent()
+                intent.message = message
+                _ = try? await intent.perform()
+            }
+            return
+        }
+        #endif
         if !started {
             settings.onboardingDone = true
             showOnboarding = false
@@ -183,16 +205,28 @@ final class AppEnvironment {
     func sendFromPasteboard() {
         let pb = UIPasteboard.general
         if pb.hasImages, let img = pb.image {
-            // The other devices show "Receiving…" while the image is encoded (PROTOCOL.md §6.6).
-            let announced = model.announceImage()
+            // The picture Nearclip put there itself, brought back by Universal Clipboard, is not a new copy; it is not
+            // even announced. A new one is: the other devices show "Receiving…" while it is encoded (PROTOCOL.md §6.6).
+            let cg = img.cgImage
             Task.detached(priority: .userInitiated) {
+                let key = cg.flatMap { ContentKey.pixels(of: $0) }
+                let start: (go: Bool, announced: String?) = await MainActor.run {
+                    if let key, key == self.clipboard.lastKey { return (false, nil) }
+                    self.clipboard.remember(key)
+                    return (true, self.model.announceImage())
+                }
+                guard start.go else { return }
                 let png = img.pngData()
                 await MainActor.run {
-                    if let png { self.sendImage(png, size: img.size, announced: announced) } else { self.model.cancelImage(announced) }
+                    if let png {
+                        self.sendImage(png, size: img.size, announced: start.announced, explicit: false)
+                    } else {
+                        self.model.cancelImage(start.announced)
+                    }
                 }
             }
         } else if let s = pb.string, !s.isEmpty {
-            sendText(s)
+            sendText(s, explicit: false)
         }
         clipboard.markSeen()
         pendingClipboard = nil
@@ -210,32 +244,50 @@ final class AppEnvironment {
                     Task { @MainActor in self.model.cancelImage(announced) }
                     return
                 }
+                let key = img.cgImage.flatMap { ContentKey.pixels(of: $0) }
                 let png = img.pngData() ?? data
-                Task { @MainActor in self.sendImage(png, size: img.size, announced: announced) }
+                Task { @MainActor in
+                    if let key, key == self.clipboard.lastKey {
+                        self.model.cancelImage(announced)
+                        self.showAlreadySynced()
+                        return
+                    }
+                    self.clipboard.remember(key)
+                    self.sendImage(png, size: img.size, announced: announced, explicit: true)
+                }
             }
         } else if p.canLoadObject(ofClass: URL.self) && !p.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
             _ = p.loadObject(ofClass: URL.self) { url, _ in
                 guard let url else { return }
-                Task { @MainActor in self.sendText(url.absoluteString) }
+                Task { @MainActor in self.sendText(url.absoluteString, explicit: true) }
             }
         } else {
             _ = p.loadObject(ofClass: String.self) { s, _ in
                 guard let s, !s.isEmpty else { return }
-                Task { @MainActor in self.sendText(s) }
+                Task { @MainActor in self.sendText(s, explicit: true) }
             }
         }
     }
 
-    private func sendText(_ text: String) {
+    /// `explicit`: the user pressed Paste, so a clip that is already everywhere says so; sending on open stays quiet.
+    private func sendText(_ text: String, explicit: Bool) {
         guard !settings.paused else {
             show(Toast(text: String(localized: "Syncing paused"), symbol: "pause.circle.fill", tint: Brand.warning))
             return
         }
-        model.localCopy(text: text)
+        // The text Nearclip put on the clipboard itself (brought back by Universal Clipboard), or the newest clip: it is
+        // on the other devices already.
+        let key = ContentKey.text(text)
+        let again = key == clipboard.lastKey
+        clipboard.remember(key)
+        guard !again, model.localCopy(text: text) else {
+            if explicit { showAlreadySynced() }
+            return
+        }
         confirmSent()
     }
 
-    private func sendImage(_ data: Data, size: CGSize, announced: String?) {
+    private func sendImage(_ data: Data, size: CGSize, announced: String?, explicit: Bool) {
         guard !settings.paused else {
             model.cancelImage(announced)
             return
@@ -245,8 +297,15 @@ final class AppEnvironment {
             show(Toast(text: String(localized: "Image syncing is off"), symbol: "photo", tint: Brand.warning))
             return
         }
-        model.localCopy(image: data, mime: "image/png", width: Int(size.width), height: Int(size.height), announced: announced)
+        guard model.localCopy(image: data, mime: "image/png", width: Int(size.width), height: Int(size.height), announced: announced) else {
+            if explicit { showAlreadySynced() }
+            return
+        }
         confirmSent()
+    }
+
+    private func showAlreadySynced() {
+        show(Toast(text: String(localized: "Already on your devices"), symbol: "checkmark.circle.fill", tint: Brand.online))
     }
 
     private func confirmSent() {
@@ -265,6 +324,51 @@ final class AppEnvironment {
         show(Toast(text: String(localized: "Copied"), symbol: "checkmark.circle.fill", tint: Brand.online))
     }
 
+    // MARK: Verification codes (PROTOCOL.md §6.7)
+
+    private func offerCode(_ sc: StoredClip) {
+        withAnimation(.spring(duration: 0.4)) { codeOffer = sc }
+        codeOfferTask?.cancel()
+        // Codes expire within minutes; so does the offer.
+        codeOfferTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(90))
+            guard !Task.isCancelled else { return }
+            self?.dismissCodeOffer()
+        }
+    }
+
+    func copyOfferedCode() {
+        guard let sc = codeOffer else { return }
+        model.copyCode(sc)
+        dismissCodeOffer()
+        show(Toast(text: String(localized: "Copied"), symbol: "checkmark.circle.fill", tint: Brand.online))
+    }
+
+    func dismissCodeOffer() {
+        codeOfferTask?.cancel()
+        withAnimation(.easeOut(duration: 0.25)) { codeOffer = nil }
+    }
+
+    /// "Send Verification Code" from a Shortcuts automation: sends a code found in a message to the other devices. It
+    /// may run while Nearclip is in the background with syncing asleep: the connection wakes for it, waits up to 6 s for
+    /// a device, sends, and goes back to sleep.
+    func forwardCode(_ code: String) async {
+        guard settings.onboardingDone, !settings.paused, !model.otherMembers.isEmpty else { return }
+        if let last = lastForwarded, last.code == code, Date().timeIntervalSince(last.at) < 300 { return }
+        lastForwarded = (code, Date())
+        startEngine()
+        pauseTask?.cancel()
+        model.node.setPaused(false)
+        model.node.nudge()
+        for _ in 0..<30 where model.connectedCount == 0 {
+            try? await Task.sleep(for: .milliseconds(200))
+        }
+        let sent = model.node.sendText(code, otp: true) != nil
+        // A moment for the connections to deliver it before iOS suspends Nearclip again.
+        if sent, model.connectedCount > 0 { try? await Task.sleep(for: .seconds(1.5)) }
+        if UIApplication.shared.applicationState == .background { model.node.setPaused(true) }
+    }
+
     func show(_ t: Toast) {
         withAnimation(.spring(duration: 0.35)) { toast = t }
         toastTask?.cancel()
@@ -279,19 +383,52 @@ final class AppEnvironment {
 @MainActor
 final class IOSClipboard: ClipboardWriter {
     private let defaults = UserDefaults.standard
+    /// What the pasteboard holds as far as Nearclip knows (ContentKey: the text, or an image's pixels), the key of that
+    /// image's file, and the changeCount at which that was true. iOS does not tell an app in the background about
+    /// changes, so a clip is only taken to be there while the changeCount says nothing changed since.
+    private(set) var lastKey: String?
+    private var lastFileKey: String?
+    private var lastKeyChange = -1
 
     var isNew: Bool { UIPasteboard.general.changeCount != defaults.integer(forKey: "seenChangeCount") }
 
     func markSeen() { defaults.set(UIPasteboard.general.changeCount, forKey: "seenChangeCount") }
 
-    func write(_ clip: Clip, blob: Data?) {
+    /// The pasteboard holds this content now (it was just read from it).
+    func remember(_ key: String?, file: String? = nil) {
+        lastKey = key
+        lastFileKey = file
+        lastKeyChange = UIPasteboard.general.changeCount
+    }
+
+    @discardableResult
+    func write(_ clip: Clip, blob: Data?) -> Bool {
+        let unchanged = UIPasteboard.general.changeCount == lastKeyChange
         if clip.isImage, let blob {
+            let file = ContentKey.of(clip)
+            if unchanged, file != nil, file == lastFileKey { return false }
             let type = clip.mime == "image/jpeg" ? UTType.jpeg.identifier : UTType.png.identifier
             UIPasteboard.general.setItems([[type: blob]])
+            remember(nil, file: file)
+            // The pixels, so the same picture coming back from Universal Clipboard is recognised.
+            let written = lastKeyChange
+            Task.detached(priority: .utility) {
+                let key = ContentKey.pixels(ofImageData: blob)
+                await MainActor.run { [weak self] in
+                    guard let self, self.lastKeyChange == written, self.lastKey == nil else { return }
+                    self.lastKey = key
+                }
+            }
         } else if let text = clip.text {
+            let key = ContentKey.text(text)
+            if unchanged, key == lastKey { return false }
             UIPasteboard.general.string = text
+            remember(key)
+        } else {
+            return false
         }
         markSeen()
+        return true
     }
 }
 

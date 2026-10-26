@@ -64,6 +64,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import studio.ivlis.nearclip.R
 import studio.ivlis.nearclip.core.engine.DiscoveredService
 import studio.ivlis.nearclip.core.engine.EngineSnapshot
+import studio.ivlis.nearclip.runtime.CodeForwarding
 import studio.ivlis.nearclip.ui.Actions
 import studio.ivlis.nearclip.ui.components.LogoTile
 import studio.ivlis.nearclip.ui.components.Sym
@@ -209,9 +210,12 @@ private fun PermissionsStep(onNext: () -> Unit) {
     val context = LocalContext.current
     var notifications by rememberSaveable { mutableStateOf(false) }
     var battery by rememberSaveable { mutableStateOf(false) }
+    var codes by rememberSaveable { mutableStateOf(false) }
+    var codesAsked by rememberSaveable { mutableStateOf(false) }
     LifecycleResumeEffect(Unit) {
         notifications = NotificationManagerCompat.from(context).areNotificationsEnabled()
         battery = context.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) == true
+        codes = CodeForwarding.hasAccess(context)
         onPauseOrDispose {}
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -243,6 +247,28 @@ private fun PermissionsStep(onNext: () -> Unit) {
                 }
             },
         )
+        Spacer(Modifier.height(12.dp))
+        // "Send verification codes" is on from the start; this is where it gets notification access.
+        PermissionCard(
+            icon = R.drawable.ic_pin,
+            title = stringResource(R.string.perm_codes),
+            reason = stringResource(R.string.perm_codes_reason),
+            granted = codes,
+            onAllow = {
+                codesAsked = true
+                CodeForwarding.openAccessSettings(context)
+            },
+        )
+        if (codesAsked && !codes && CodeForwarding.mayBeRestricted(context)) {
+            Column(Modifier.padding(start = 20.dp, end = 8.dp, top = 6.dp)) {
+                Text(
+                    stringResource(R.string.codes_step_restricted_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = { CodeForwarding.openAppInfo(context) }) { Text(stringResource(R.string.codes_open_app_info)) }
+            }
+        }
         Spacer(Modifier.height(12.dp))
         PermissionCard(
             icon = R.drawable.ic_battery_charging_full,

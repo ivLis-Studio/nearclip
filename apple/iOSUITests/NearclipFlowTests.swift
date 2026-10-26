@@ -49,11 +49,18 @@ final class NearclipFlowTests: XCTestCase {
         shot("02-network")
         start.tap()
         app.tap() // lets the interruption monitor handle a local-network alert, if any
+        XCTAssertTrue(app.staticTexts["onboarding.codes.title"].waitForExistence(timeout: 5))
+        shot("03-codes")
+        app.buttons["onboarding.codes.guide"].tap()
+        XCTAssertTrue(app.staticTexts["codes.guide.title"].waitForExistence(timeout: 5))
+        shot("03b-codes-guide")
+        app.buttons["codes.guide.done"].tap()
+        start.tap()
         XCTAssertTrue(app.buttons["onboarding.later"].waitForExistence(timeout: 5))
-        shot("03-add-devices")
+        shot("04-add-devices")
         app.buttons["onboarding.later"].tap()
         XCTAssertTrue(app.buttons["home.addDevice"].waitForExistence(timeout: 5))
-        shot("04-home-empty")
+        shot("05-home-empty")
 
         app.open(URL(string: link)!)
         let connected = app.staticTexts["join.success"]
@@ -128,6 +135,7 @@ final class NearclipFlowTests: XCTestCase {
             app.buttons["onboarding.next"].tap()
             app.buttons["onboarding.next"].tap()
             app.tap()
+            app.buttons["onboarding.next"].tap()
             if app.buttons["onboarding.later"].waitForExistence(timeout: 5) { app.buttons["onboarding.later"].tap() }
         }
         XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
@@ -149,6 +157,81 @@ final class NearclipFlowTests: XCTestCase {
         XCTAssertTrue(toast.waitForExistence(timeout: 3), "no toast when the image came in")
         shot("42-transfer-copied")
         XCTAssertTrue(app.buttons.matching(identifier: "clip.row").firstMatch.exists)
+    }
+
+    /// A verification code from another device (PROTOCOL.md §6.7), driven by apple/tools/ios_code.py: pairs through
+    /// NC_PAIR_LINK, then the peer sends two codes. The banner asks "Copy it?" with the code in large digits and
+    /// nothing is copied on its own; Copy puts it on the clipboard ("Copied"); the second code goes away with Not Now.
+    /// Then Settings › Verification codes shows the Shortcuts guide.
+    func testCodeOffer() throws {
+        let link = try XCTUnwrap(ProcessInfo.processInfo.environment["NC_PAIR_LINK"], "set TEST_RUNNER_NC_PAIR_LINK")
+        app.launchArguments = language()
+        app.launch()
+        if app.buttons["onboarding.next"].waitForExistence(timeout: 4) {
+            app.buttons["onboarding.next"].tap()
+            app.buttons["onboarding.next"].tap()
+            app.tap()
+            app.buttons["onboarding.next"].tap()
+            if app.buttons["onboarding.later"].waitForExistence(timeout: 5) { app.buttons["onboarding.later"].tap() }
+        }
+        XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        app.open(URL(string: link)!)
+        XCTAssertTrue(app.staticTexts["join.success"].waitForExistence(timeout: 30))
+        app.buttons["join.done"].tap()
+        tapIfExists(app.buttons["sheet.done"])
+
+        let banner = app.descendants(matching: .any)["codeOffer"]
+        XCTAssertTrue(banner.waitForExistence(timeout: 60), "no banner for the code")
+        let toast = app.descendants(matching: .any)["toast"]
+        XCTAssertFalse(toast.exists, "the code was copied on its own")
+        sleep(1)
+        shot("50-code-offer")
+        app.buttons["codeOffer.copy"].tap()
+        XCTAssertTrue(toast.waitForExistence(timeout: 3), "no Copied after Copy")
+        shot("51-code-copied")
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: banner)
+        XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 5), .completed, "the banner stayed after Copy")
+
+        XCTAssertTrue(banner.waitForExistence(timeout: 40), "no banner for the second code")
+        app.buttons["codeOffer.dismiss"].tap()
+        let gone2 = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: banner)
+        XCTAssertEqual(XCTWaiter().wait(for: [gone2], timeout: 5), .completed, "the banner stayed after Not Now")
+
+        app.buttons["home.settings"].tap()
+        let guide = app.buttons["codes.guide"]
+        for _ in 0..<4 where !guide.isHittable { app.swipeUp() }
+        shot("52-settings-codes")
+        guide.tap()
+        XCTAssertTrue(app.staticTexts["codes.guide.title"].waitForExistence(timeout: 5))
+        shot("53-codes-guide")
+    }
+
+    /// "Send Verification Code" (SendCodeIntent) as a Shortcuts automation runs it, through the Debug-only
+    /// nearclip://debug-send-code link; driven by apple/tools/ios_code.py --intent, whose peer checks that just the
+    /// code arrives, marked as a code, and that a message without a code sends nothing.
+    func testSendCodeIntent() throws {
+        let link = try XCTUnwrap(ProcessInfo.processInfo.environment["NC_PAIR_LINK"], "set TEST_RUNNER_NC_PAIR_LINK")
+        app.launchArguments = language()
+        app.launch()
+        if app.buttons["onboarding.next"].waitForExistence(timeout: 4) {
+            app.buttons["onboarding.next"].tap()
+            app.buttons["onboarding.next"].tap()
+            app.tap()
+            app.buttons["onboarding.next"].tap()
+            if app.buttons["onboarding.later"].waitForExistence(timeout: 5) { app.buttons["onboarding.later"].tap() }
+        }
+        XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        app.open(URL(string: link)!)
+        XCTAssertTrue(app.staticTexts["join.success"].waitForExistence(timeout: 30))
+        app.buttons["join.done"].tap()
+        tapIfExists(app.buttons["sheet.done"])
+        sleep(4)
+        for message in ["[카카오] 인증번호는 482915입니다. 타인에게 절대 알려주지 마세요.", "내일 3시에 회의실에서 봬요"] {
+            var c = URLComponents(string: "nearclip://debug-send-code")!
+            c.queryItems = [URLQueryItem(name: "message", value: message)]
+            app.open(c.url!)
+            sleep(8)
+        }
     }
 
     /// Needs an already onboarded app (run after testOnboardingPairSyncAndSend).
@@ -213,6 +296,7 @@ final class NearclipFlowTests: XCTestCase {
             next.tap()
             if next.waitForExistence(timeout: 3) { next.tap() }
             app.tap()
+            if next.waitForExistence(timeout: 3) { next.tap() }
             tapIfExists(app.buttons["onboarding.later"], timeout: 5)
         }
         XCTAssertTrue(app.buttons["home.settings"].waitForExistence(timeout: 10))

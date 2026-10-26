@@ -10,6 +10,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -22,19 +26,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import studio.ivlis.nearclip.R
 import studio.ivlis.nearclip.core.model.Clip
+import studio.ivlis.nearclip.runtime.CodeForwarding
 import studio.ivlis.nearclip.runtime.Nearclip
 import studio.ivlis.nearclip.runtime.PairingUi
+import studio.ivlis.nearclip.runtime.SendOutcome
 import studio.ivlis.nearclip.runtime.UiMessage
 import studio.ivlis.nearclip.ui.devices.DevicesScreen
 import studio.ivlis.nearclip.ui.home.HomeScreen
@@ -77,12 +87,14 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
     var addDeviceOpen by rememberSaveable { mutableStateOf(false) }
     var addressOpen by rememberSaveable { mutableStateOf(false) }
     var pendingSave by remember { mutableStateOf<Clip?>(null) }
+    /** A verification code from another device, offered over any screen (PROTOCOL §6.7). */
+    var codeOffer by remember { mutableStateOf<UiMessage.CodeArrived?>(null) }
     val start = remember { if (runtime.settings.value.onboardingDone) Routes.HOME else Routes.ONBOARDING }
 
-    fun show(message: String, action: String? = null, onAction: () -> Unit = {}) {
+    fun show(message: String, action: String? = null, duration: SnackbarDuration = SnackbarDuration.Short, onAction: () -> Unit = {}) {
         scope.launch {
             snackbar.currentSnackbarData?.dismiss()
-            val r = snackbar.showSnackbar(message, actionLabel = action, duration = SnackbarDuration.Short)
+            val r = snackbar.showSnackbar(message, actionLabel = action, duration = duration)
             if (r == SnackbarResult.ActionPerformed) onAction()
         }
     }
@@ -128,8 +140,16 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                 is UiMessage.TransferFailed -> show(
                     resources.getString(R.string.transfer_failed) + " · " + resources.getString(R.string.transfer_failed_body, m.name),
                 )
+                is UiMessage.CodeArrived -> codeOffer = m
             }
         }
+    }
+
+    // Codes expire within minutes; so does the offer.
+    LaunchedEffect(codeOffer?.id) {
+        val shown = codeOffer ?: return@LaunchedEffect
+        delay(90_000)
+        if (codeOffer?.id == shown.id) codeOffer = null
     }
 
     // Leave the QR screens once pairing went through; the success dialog takes over.
@@ -138,6 +158,7 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
         if (pairing is PairingUi.Success && (route == Routes.MY_QR || route == Routes.SCAN)) nav.popBackStack()
     }
 
+    Box(Modifier.fillMaxSize()) {
     NavHost(
         navController = nav,
         startDestination = start,
@@ -181,8 +202,8 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                 },
                 onResume = { runtime.setPaused(false) },
                 onCopy = { runtime.applyToClipboard(it, announce = false) },
-                onTogglePin = { runtime.togglePin(it) },
-                onDelete = { runtime.deleteWithUndo(setOf(it.id)) },
+                onSetPinned = { ids, pinned -> runtime.setPinned(ids, pinned) },
+                onDelete = { runtime.deleteWithUndo(it) },
                 onShare = { Actions.share(context, it, if (it.isImage) runtime.engine.blobFile(it) else null) },
                 onOpenLink = { Actions.openLink(context, it) },
                 onSaveImage = { saveImage(it) },
@@ -207,6 +228,7 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
         composable(Routes.SETTINGS) {
             val signingIn by runtime.tailnetSigningIn.collectAsStateWithLifecycle()
             val capture by runtime.capture.status.collectAsStateWithLifecycle()
+            val codes by runtime.codes.status.collectAsStateWithLifecycle()
             SettingsScreen(
                 settings = settings,
                 actions = SettingsActions(
@@ -222,12 +244,29 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                     setInstantCapture = { runtime.setInstantCapture(it) },
                     allowInstantCapture = { runtime.allowInstantCapture() },
                     refreshCapture = { runtime.capture.refresh() },
+                    setForwardCodes = { runtime.setForwardCodes(it) },
+                    refreshCodes = { runtime.codes.refresh() },
+                    unhideCodes = { runtime.codes.unhide() },
+                    openCodeAccess = { CodeForwarding.openAccessSettings(context) },
+                    openAppInfo = { CodeForwarding.openAppInfo(context) },
+                    copyCodesCommand = {
+                        // Copied here, and sent to the other devices: the command is run on a computer.
+                        val command = CodeForwarding.adbCommand(context)
+                        runtime.clipboard.writeText(command, "adb-command")
+                        scope.launch {
+                            val sent = runtime.sendText(command)
+                            show(resources.getString(if (sent is SendOutcome.Sent && sent.peers > 0) R.string.codes_command_sent else R.string.codes_command_copied))
+                        }
+                    },
                 ),
                 onBack = { nav.popBackStack() },
                 tailnet = snapshot.tailnet,
                 remoteAvailable = runtime.remoteAvailable,
                 signingIn = signingIn,
                 capture = capture,
+                codes = codes,
+                codesRestricted = CodeForwarding.mayBeRestricted(context),
+                codesCommand = CodeForwarding.adbCommand(context),
             )
         }
         composable(Routes.LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }
@@ -248,6 +287,19 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
                 onBack = { nav.popBackStack() },
             )
         }
+    }
+    CodeOfferBanner(
+        offer = codeOffer,
+        onCopy = { o ->
+            codeOffer = null
+            if (runtime.copyCode(o.id)) show(resources.getString(R.string.copied))
+        },
+        onDismiss = { codeOffer = null },
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    )
     }
 
     if (addDeviceOpen) {

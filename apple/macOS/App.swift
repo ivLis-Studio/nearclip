@@ -75,6 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.onShownTransfer = { [weak self] t in self?.toast.transfer(t) }
         model.onReceivedQuietly = { [weak self] sc in self?.toast.received(sc) }
         model.onTransferFailed = { [weak self] t in self?.toast.failed(t) }
+        model.onCode = { [weak self] sc in self?.toast.code(sc) }
         toast.onClick = { [weak self] in self?.panel.show(anchor: self?.status.anchorView) }
         model.onActivity = { [weak self] in self?.status.pulse() }
         model.onPairPrompt = { [weak self] prompt in self?.windows.showPairPrompt(prompt) }

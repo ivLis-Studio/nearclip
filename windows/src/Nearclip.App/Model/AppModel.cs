@@ -35,8 +35,9 @@ internal sealed class AppModel
     public NearclipNode Node => _node;
     public event Action<ModelChange>? Changed;
 
-    /// <summary>Writes a clip to the system clipboard (marked so it is not picked up again).</summary>
-    public Func<Clip, byte[]?, Task>? WriteClipboard { get; set; }
+    /// <summary>Writes a clip to the system clipboard (marked so it is not picked up again). False when nothing was
+    /// written because the clipboard already holds the same content.</summary>
+    public Func<Clip, byte[]?, Task<bool>>? WriteClipboard { get; set; }
     /// <summary>A live clip from another device was written to the clipboard.</summary>
     public Action<StoredClip>? OnReceive { get; set; }
     public Action<PairPrompt>? OnPairPrompt { get; set; }
@@ -49,6 +50,10 @@ internal sealed class AppModel
     public Action<StoredClip>? OnReceivedQuietly { get; set; }
     /// <summary>A shown transfer ended without the image (the sender cancelling it is not reported).</summary>
     public Action<IncomingTransfer>? OnTransferFailed { get; set; }
+    /// <summary>A verification code from another device's messages (PROTOCOL.md §6.7), to offer with "Copy it?".
+    /// Codes are never copied on their own.</summary>
+    public Action<StoredClip>? OnCode { get; set; }
+    readonly HashSet<string> _offeredCodes = [];
 
     public string DeviceId { get; }
     public string DeviceName { get; private set; } = "";
@@ -58,6 +63,8 @@ internal sealed class AppModel
     public Dictionary<string, long> LastSeen { get; private set; } = [];
     public List<StoredClip> History { get; private set; } = [];
     public List<ClipItem> Items { get; private set; } = [];
+    /// <summary><see cref="ContentKey.Of"/> per clip id, so history rows of the same content group cheaply.</summary>
+    readonly Dictionary<string, string?> _keys = new();
     public List<NearbyDevice> Nearby { get; private set; } = [];
     public int Port { get; private set; }
     public List<string> Addresses { get; private set; } = [];
@@ -260,9 +267,10 @@ internal sealed class AppModel
     {
         var index = new Dictionary<string, ClipItem>();
         var output = new List<ClipItem>(History.Count);
+        if (_keys.Count > History.Count * 2 + 64) _keys.Clear();
         foreach (var sc in History)
         {
-            var key = sc.Clip.IsImage ? "i:" + (sc.Clip.Sha ?? sc.Id) : "t:" + (sc.Clip.Text ?? "");
+            var key = KeyOf(sc) ?? sc.Id;
             if (index.TryGetValue(key, out var existing))
             {
                 existing.Ids.Add(sc.Id);
@@ -275,6 +283,20 @@ internal sealed class AppModel
             output.Add(item);
         }
         Items = output;
+    }
+
+    string? KeyOf(StoredClip sc)
+    {
+        if (!_keys.TryGetValue(sc.Id, out var key)) _keys[sc.Id] = key = ContentKey.Of(sc.Clip);
+        return key;
+    }
+
+    /// <summary>The same content as the newest clip in history, if that one is recent: it is on the other devices
+    /// already, so copying it again here (or another sync app putting it back) is not a new clip (DESIGN.md §4.3).</summary>
+    bool IsNewest(string key)
+    {
+        var newest = History.FirstOrDefault(c => !c.LocalOnly);
+        return newest is not null && Clock.NowMs() - newest.ReceivedAt < 10 * 60_000 && KeyOf(newest) == key;
     }
 
     // ------------------------------------------------------------------ clip actions
@@ -292,6 +314,22 @@ internal sealed class AppModel
         OnActivity?.Invoke();
     }
 
+    /// <summary>Offers a code from another device: when it arrives, or later (catch-up) while it can still be used.</summary>
+    void OfferCode(StoredClip sc, bool live)
+    {
+        if (Settings.Paused || sc.Clip.Src == DeviceId) return;
+        if (!live && Clock.NowMs() - sc.Clip.Ts > 3 * 60_000) return;
+        if (!_offeredCodes.Add(sc.Id)) return;
+        OnCode?.Invoke(sc);
+    }
+
+    /// <summary>"Copy" on a code offer: to this PC's clipboard only.</summary>
+    public async Task CopyCodeAsync(StoredClip sc)
+    {
+        if (WriteClipboard is { } write) await write(sc.Clip, null);
+        _node.NoteApplied(sc.Clip);
+    }
+
     /// <summary>Something was copied on this PC.</summary>
     public void LocalCopy(CopiedContent content)
     {
@@ -303,6 +341,11 @@ internal sealed class AppModel
         switch (content)
         {
             case CopiedContent.Text t:
+                if (IsNewest(t.Key))
+                {
+                    Log.Write("clipboard: already the newest clip, not sent again");
+                    return;
+                }
                 if (System.Text.Encoding.UTF8.GetByteCount(t.Value) > Wire.MaxText)
                 {
                     _node.AddLocalOnly("text", t.Value, null, null);
@@ -322,6 +365,12 @@ internal sealed class AppModel
                     CancelImage(img.Announced);
                     _node.AddLocalOnly("image", null, img.Data, img.Mime, img.Width, img.Height);
                     Show(Loc.S("TooLarge"), NoticeTone.Warning);
+                    return;
+                }
+                if (IsNewest("f:" + Hex.Encode(System.Security.Cryptography.SHA256.HashData(img.Data))))
+                {
+                    CancelImage(img.Announced);
+                    Log.Write("clipboard: already the newest clip, not sent again");
                     return;
                 }
                 if (_node.SendImage(img.Data, img.Mime, img.Width, img.Height, img.Announced) is not null) OnActivity?.Invoke();
@@ -573,6 +622,12 @@ internal sealed class AppModel
                 Insert(a.Clip);
                 Raise(ModelChange.History);
                 if (a.Local) break;
+                if (a.Clip.Clip.IsCode)
+                {
+                    OnActivity?.Invoke();
+                    OfferCode(a.Clip, a.Live);
+                    break;
+                }
                 var wasShown = _transfers.ContainsKey(a.Clip.Id) && EndTransfer(a.Clip.Id);
                 OnActivity?.Invoke();
                 var clip = a.Clip.Clip;
@@ -582,8 +637,10 @@ internal sealed class AppModel
                     var blob = clip.IsImage ? _node.ReadBlob(clip.Id) : null;
                     if (!clip.IsImage || blob is not null)
                     {
-                        if (WriteClipboard is { } write) await write(clip, blob);
-                        OnReceive?.Invoke(a.Clip);
+                        // Already on the clipboard (copied here too, or put there by another sync app): not written
+                        // again and no toast, unless its progress was showing.
+                        var written = WriteClipboard is not { } write || await write(clip, blob);
+                        if (written || wasShown) OnReceive?.Invoke(a.Clip);
                         copied = true;
                     }
                 }

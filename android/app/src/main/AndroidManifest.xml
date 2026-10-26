@@ -123,6 +123,20 @@
             android:name=".service.NotificationActionReceiver"
             android:exported="false" />
 
+        <!-- "Send verification codes to my devices": reads messaging apps' notifications for codes (CodeForwarding). -->
+        <service
+            android:name=".service.CodeListenerService"
+            android:exported="true"
+            android:label="@string/forward_codes"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.notification.default_filter_types"
+                android:value="conversations|alerting" />
+        </service>
+
         <receiver
             android:name=".service.BootReceiver"
             android:exported="true">

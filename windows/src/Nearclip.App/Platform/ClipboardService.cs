@@ -7,14 +7,18 @@ namespace Nearclip.App.Platform;
 
 internal abstract record CopiedContent
 {
-    public sealed record Text(string Value) : CopiedContent;
+    /// <param name="Key">What the text holds (<see cref="ContentKey"/>).</param>
+    public sealed record Text(string Value, string Key) : CopiedContent;
     /// <param name="Announced">The id from <see cref="ClipboardService.ImageStarting"/> (PROTOCOL.md §6.6), if announced.</param>
     public sealed record Image(byte[] Data, string Mime, int Width, int Height, bool TooLarge, string? Announced = null) : CopiedContent;
 }
 
 /// <summary>Watches the Windows clipboard (AddClipboardFormatListener) and writes clips that arrive from other devices.
 /// Clips written by Nearclip carry a private marker format so they are never sent back out (DESIGN.md §4.3), and
-/// content that password managers exclude from clipboard history / monitoring is never read (PROTOCOL.md §8).</summary>
+/// content that password managers exclude from clipboard history / monitoring is never read (PROTOCOL.md §8).
+/// The clipboard set again to what it already holds is not a new copy: a screenshot tool that puts its picture there
+/// twice, or a phone link that puts back the text Nearclip just wrote, would otherwise send it again — and around again.
+/// Likewise a clip that the clipboard already holds is not written again.</summary>
 internal sealed class ClipboardService
 {
     static readonly uint MarkerFormat = Native.RegisterClipboardFormat("Nearclip.ClipId");
@@ -32,6 +36,10 @@ internal sealed class ClipboardService
     /// <summary>Bumped on every clipboard change: an image still being encoded when a newer copy comes is dropped, so the
     /// newest copy always wins.</summary>
     int _generation;
+    /// <summary>What the clipboard holds as far as Nearclip knows (<see cref="ContentKey"/>; null: something it did not
+    /// read), and the clipboard sequence number at which that was true.</summary>
+    string? _lastKey;
+    uint _lastKeySeq;
 
     public Func<bool> IsPaused { get; set; } = () => false;
     public Func<IReadOnlyCollection<string>> IgnoredApps { get; set; } = () => [];
@@ -101,26 +109,47 @@ internal sealed class ClipboardService
         if (seq == _lastSeq || seq == _ownSeq) return;
         _lastSeq = seq;
         var generation = ++_generation;
-        if (IsPaused()) return;
+        if (IsPaused())
+        {
+            Remember(null, seq);
+            return;
+        }
         var owner = OwnerProcessName();
         if (owner is not null && IgnoredApps().Any(a => string.Equals(a, owner, StringComparison.OrdinalIgnoreCase)))
         {
+            Remember(null, seq);
             Log.Write("clipboard: skipped copy from ignored app " + owner);
             return;
         }
         string? text = null;
         byte[]? png = null, dib = null;
-        if (!Open()) { Log.Write("clipboard: busy"); return; }
+        if (!Open())
+        {
+            Remember(null, seq);
+            Log.Write("clipboard: busy");
+            return;
+        }
         try
         {
-            if (Native.IsClipboardFormatAvailable(MarkerFormat)) return;
+            // A clip of Nearclip's, set again by another app together with its marker (a clipboard manager restoring
+            // it): never sent back out. Which one it is, is not known.
+            if (Native.IsClipboardFormatAvailable(MarkerFormat))
+            {
+                Remember(null, seq);
+                return;
+            }
             if (Native.IsClipboardFormatAvailable(ExcludeFormat) || Native.IsClipboardFormatAvailable(ViewerIgnoreFormat) ||
                 DwordIsZero(HistoryFormat) || DwordIsZero(CloudFormat))
             {
+                Remember(null, seq);
                 Log.Write("clipboard: skipped private item");
                 return;
             }
-            if (Native.IsClipboardFormatAvailable(Native.CF_HDROP)) return;
+            if (Native.IsClipboardFormatAvailable(Native.CF_HDROP))
+            {
+                Remember(null, seq);
+                return;
+            }
             var formats = new List<uint>();
             for (uint f = 0; (f = Native.EnumClipboardFormats(f)) != 0 && formats.Count < 64;) formats.Add(f);
             var hasText = formats.Contains(Native.CF_UNICODETEXT);
@@ -154,34 +183,60 @@ internal sealed class ClipboardService
         {
             if (text is { Length: > 0 })
             {
-                Copied?.Invoke(new CopiedContent.Text(text));
+                var key = ContentKey.Text(text);
+                if (key == _lastKey)
+                {
+                    Remember(key, seq);
+                    Log.Write("clipboard: the same text again, not a new copy");
+                    return;
+                }
+                Remember(key, seq);
+                Copied?.Invoke(new CopiedContent.Text(text, key));
                 return;
             }
-            if (png is null && dib is null) return;
+            if (png is null && dib is null)
+            {
+                Remember(null, seq);
+                return;
+            }
+            // The pixels first: the same picture set again (as a bitmap, then as PNG) is not a new copy, and is not even
+            // announced to the other devices.
+            var pixels = dib is not null ? ImageCodec.DibToBgra(dib) : await ImageCodec.DecodeAsync(png!);
+            if (generation != _generation) return;
+            if (pixels is not { } bmp)
+            {
+                Remember(null, seq);
+                return;
+            }
+            var imageKey = ContentKey.Pixels(bmp.Bgra, bmp.W, bmp.H);
+            if (imageKey == _lastKey)
+            {
+                Remember(imageKey, seq);
+                Log.Write("clipboard: the same image again, not a new copy");
+                return;
+            }
+            Remember(imageKey, seq);
             // Large images: the other devices show "Receiving…" while this PC is still encoding.
             announced = ImageStarting();
-            if (png is null && dib is not null && ImageCodec.DibToBgra(dib) is { } bmp)
-                png = await ImageCodec.EncodeAsync(bmp.Bgra, bmp.W, bmp.H, jpeg: false);
-            if (png is null || generation != _generation)
-            {
-                ImageCancelled(announced);
-                return;
-            }
-            var (w, h) = ImageCodec.PngSize(png) ?? (0, 0);
-            if (png.Length <= Wire.MaxImage)
-            {
-                Copied?.Invoke(new CopiedContent.Image(png, "image/png", w, h, false, announced));
-                return;
-            }
-            // Too big as PNG: send a JPEG (quality 0.9) when that fits (PROTOCOL.md §7).
-            var decoded = await ImageCodec.DecodeAsync(png);
-            var jpeg = await ImageCodec.EncodeAsync(decoded.Bgra, decoded.W, decoded.H, jpeg: true, 0.9);
+            png ??= await ImageCodec.EncodeAsync(bmp.Bgra, bmp.W, bmp.H, jpeg: false);
             if (generation != _generation)
             {
                 ImageCancelled(announced);
                 return;
             }
-            Copied?.Invoke(new CopiedContent.Image(jpeg, "image/jpeg", decoded.W, decoded.H, jpeg.Length > Wire.MaxImage, announced));
+            if (png.Length <= Wire.MaxImage)
+            {
+                Copied?.Invoke(new CopiedContent.Image(png, "image/png", bmp.W, bmp.H, false, announced));
+                return;
+            }
+            // Too big as PNG: send a JPEG (quality 0.9) when that fits (PROTOCOL.md §7).
+            var jpeg = await ImageCodec.EncodeAsync(bmp.Bgra, bmp.W, bmp.H, jpeg: true, 0.9);
+            if (generation != _generation)
+            {
+                ImageCancelled(announced);
+                return;
+            }
+            Copied?.Invoke(new CopiedContent.Image(jpeg, "image/jpeg", bmp.W, bmp.H, jpeg.Length > Wire.MaxImage, announced));
         }
         catch (Exception e)
         {
@@ -190,21 +245,45 @@ internal sealed class ClipboardService
         }
     }
 
-    /// <summary>Writes a clip to the clipboard, marked so Nearclip never picks it up again.</summary>
-    public async Task WriteAsync(Clip clip, byte[]? blob)
+    void Remember(string? key, uint seq)
+    {
+        _lastKey = key;
+        _lastKeySeq = seq;
+    }
+
+    /// <summary>Writes a clip to the clipboard, marked so Nearclip never picks it up again. Returns false when nothing
+    /// was written: the clipboard already holds the same content, or it could not be opened.</summary>
+    public async Task<bool> WriteAsync(Clip clip, byte[]? blob)
     {
         byte[]? dib = null;
+        string? key;
         if (clip.IsImage)
         {
-            if (blob is null) return;
+            if (blob is null) return false;
+            key = null;
             try
             {
                 var d = await ImageCodec.DecodeAsync(blob);
+                key = ContentKey.Pixels(d.Bgra, d.W, d.H);
                 dib = ImageCodec.BgraToDibV5(d.Bgra, d.W, d.H);
             }
             catch (Exception e) { Log.Write("clipboard: decode failed: " + e.Message); }
+            key ??= ContentKey.Of(clip);
         }
-        if (!Open()) { Log.Write("clipboard: could not open for writing"); return; }
+        else
+        {
+            key = ContentKey.Text(clip.Text ?? "");
+        }
+        if (key is not null && key == _lastKey && Native.GetClipboardSequenceNumber() == _lastKeySeq)
+        {
+            Log.Write("clipboard: already holds this clip, not written again");
+            return false;
+        }
+        if (!Open())
+        {
+            Log.Write("clipboard: could not open for writing");
+            return false;
+        }
         try
         {
             Native.EmptyClipboard();
@@ -225,7 +304,9 @@ internal sealed class ClipboardService
             _ownSeq = Native.GetClipboardSequenceNumber();
             _lastSeq = _ownSeq;
             _generation++;
+            Remember(key, _ownSeq);
         }
+        return true;
     }
 
     static void SetData(uint format, byte[] data)

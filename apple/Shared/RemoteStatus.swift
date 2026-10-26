@@ -21,6 +21,14 @@ struct RemoteStatus {
         detail = nil
         hint = nil
         busy = false
+        // Pausing stops the remote connection with everything else; it starts again when syncing resumes.
+        if model.settings.paused {
+            title = String(localized: "Paused")
+            detail = String(localized: "It turns back on when you resume syncing.")
+            tone = .neutral
+            action = .none
+            return
+        }
         switch st.state {
         case "running" where st.isRunning:
             title = st.account.map { String(localized: "On · \($0)") } ?? String(localized: "On")

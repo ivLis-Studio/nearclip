@@ -38,6 +38,7 @@ import studio.ivlis.nearclip.core.engine.NearclipEngine
 import studio.ivlis.nearclip.core.engine.SendResult
 import studio.ivlis.nearclip.core.engine.TicketInfo
 import studio.ivlis.nearclip.core.model.Clip
+import studio.ivlis.nearclip.core.model.ContentKey
 import studio.ivlis.nearclip.core.model.Endpoint
 import studio.ivlis.nearclip.core.model.Platform
 import studio.ivlis.nearclip.core.pairing.PairingUri
@@ -67,6 +68,8 @@ sealed interface UiMessage {
     data class ImageSaved(val ok: Boolean) : UiMessage
     /** A large image that was shown arriving did not make it (PROTOCOL §6.6). */
     data class TransferFailed(val name: String) : UiMessage
+    /** A verification code arrived from another device (PROTOCOL §6.7): "Copy it?". */
+    data class CodeArrived(val id: String, val name: String, val code: String) : UiMessage
 }
 
 sealed interface PairingUi {
@@ -109,6 +112,11 @@ class Nearclip private constructor(val app: Application) {
     /** "Allow" was tapped in the setup sheet: turn the feature on once Shizuku grants it. */
     private var enableWhenAllowed = false
 
+    /** "Send verification codes to my devices" (notification access). */
+    val codes: CodeForwarding
+    /** Codes from other devices offered already: one "Copy it?" each. */
+    private val offeredCodes = HashSet<String>()
+
     /** Live images arriving from other devices (PROTOCOL §6.6), oldest first; main thread. */
     private val transfers = LinkedHashMap<String, IncomingTransfer>()
     /** Transfers still running 0.3 s after they started: quick ones go straight to "Copied from …". */
@@ -126,6 +134,15 @@ class Nearclip private constructor(val app: Application) {
     private var stopJob: Job? = null
     private var openWindowUntil = 0L
     private var openSentStamp = 0L
+
+    /**
+     * What the clipboard holds as far as Nearclip knows ([ContentKey]: the text, or an image file), its timestamp when
+     * known, and when that was learned. The same content put there again is not a new copy, and a clip that is there
+     * already is not written again (DESIGN §4.3): Link to Windows, for one, puts back what Nearclip just wrote.
+     */
+    @Volatile private var clipKey: String? = null
+    @Volatile private var clipKeyStamp: Long? = null
+    @Volatile private var clipKeyAt = 0L
 
     init {
         val s = settings.value
@@ -154,7 +171,9 @@ class Nearclip private constructor(val app: Application) {
         engine.setRemoteEnabled(s.remoteEnabled)
         discovery = Discovery(app, engine)
         capture = InstantCapture(app, onChanged = ::onClipboardChanged, onPermissionResult = ::onCapturePermission, log = { engine.log(it) })
+        codes = CodeForwarding(this)
         Notifications.ensureChannels(app)
+        codes.refresh()
         scope.launch { engine.events.collect { onEvent(it) } }
         scope.launch {
             engine.state.combine(settings.state) { snap, _ -> advert(snap) }.distinctUntilChanged().collect { discovery.update(it) }
@@ -269,10 +288,36 @@ class Nearclip private constructor(val app: Application) {
     }
 
     private fun onIncoming(e: EngineEvent.ClipAdded) {
+        if (e.clip.isCode) {
+            offerCode(e.clip, e.live)
+            return
+        }
         val wasShown = transfers.containsKey(e.clip.id) && endTransfer(e.clip.id)
         val copied = applyIncoming(e)
         if (wasShown && !uiVisible) notifyArrived(e.clip, copied)
         updateIncoming()
+    }
+
+    /**
+     * A verification code from another device (PROTOCOL §6.7): offered with "Copy it?" — a snackbar in the app, a
+     * notification outside it — and never copied on its own. One that arrives later (catch-up) is offered while it
+     * can still be used.
+     */
+    private fun offerCode(clip: Clip, live: Boolean) {
+        if (settings.value.paused || clip.src == engine.state.value.deviceId) return
+        if (!live && System.currentTimeMillis() - clip.ts > CODE_OFFER_MS) return
+        val code = clip.text ?: return
+        if (!offeredCodes.add(clip.id) || holds(clip)) return
+        val name = sourceName(clip)
+        if (uiVisible) _messages.tryEmit(UiMessage.CodeArrived(clip.id, name, code))
+        else Notifications.code(app, clip.id, name, code)
+    }
+
+    /** "Copy" on a code offer: to this phone's clipboard only. */
+    fun copyCode(id: String): Boolean {
+        Notifications.cancelCode(app)
+        val clip = engine.state.value.history.firstOrNull { it.id == id } ?: return false
+        return holds(clip) || applyToClipboard(clip, announce = false)
     }
 
     /** Turns the progress notification into "Copied from …" right away; the thumbnail follows once it is decoded. */
@@ -292,7 +337,8 @@ class Nearclip private constructor(val app: Application) {
     private fun applyIncoming(e: EngineEvent.ClipAdded): Boolean {
         val s = settings.value
         if (s.paused) return false
-        if (e.apply && s.autoApply) return applyToClipboard(e.clip, announce = true)
+        // Already on the clipboard (copied here too, or put back by another sync app): not written again, no message.
+        if (e.apply && s.autoApply) return holds(e.clip) || applyToClipboard(e.clip, announce = true)
         // "Copy the newest clip when Nearclip opens": catch-up that arrives right after opening counts too.
         if (!e.live && s.copyNewestOnOpen && System.currentTimeMillis() < openWindowUntil) {
             val snap = engine.state.value
@@ -300,7 +346,7 @@ class Nearclip private constructor(val app: Application) {
             if (clip.src == snap.deviceId || clip.localOnly) return false
             if (System.currentTimeMillis() - clip.ts > NEWEST_WINDOW_MS) return false
             if (clip.ts <= maxOf(settings.lastAppliedTs, newestLocalTs(snap), openSentStamp)) return false
-            return applyToClipboard(clip, announce = true)
+            return holds(clip) || applyToClipboard(clip, announce = true)
         }
         return false
     }
@@ -381,9 +427,29 @@ class Nearclip private constructor(val app: Application) {
         }
         if (!ok) return false
         if (clip.ts > settings.lastAppliedTs) settings.lastAppliedTs = clip.ts
-        clipboard.stamp()?.let { settings.lastClipboardStamp = it }
+        val stamp = clipboard.stamp()
+        stamp?.let { settings.lastClipboardStamp = it }
+        remember(ContentKey.of(clip), stamp)
         if (announce && uiVisible) _messages.tryEmit(UiMessage.CopiedFrom(sourceName(clip)))
         return true
+    }
+
+    private fun remember(key: String?, stamp: Long?) {
+        clipKey = key
+        clipKeyStamp = stamp
+        clipKeyAt = System.currentTimeMillis()
+    }
+
+    /**
+     * Whether the clipboard holds [clip] already. Android hides the clipboard from apps in the background, so without a
+     * timestamp to check, what Nearclip knows counts for a minute.
+     */
+    private fun holds(clip: Clip): Boolean {
+        val key = ContentKey.of(clip) ?: return false
+        if (key != clipKey) return false
+        val stamp = clipboard.stamp()
+        val known = clipKeyStamp
+        return if (stamp != null && known != null) stamp == known else System.currentTimeMillis() - clipKeyAt < 60_000
     }
 
     /** Called when MainActivity gains focus after coming to the foreground (DESIGN §4.3 / §4.6 mobile settings). */
@@ -405,6 +471,9 @@ class Nearclip private constructor(val app: Application) {
                 val outcome = send(local)
                 if (outcome is SendOutcome.Sent) _messages.tryEmit(UiMessage.Send(outcome))
             }
+        } else if (remote != null && remote.isCode) {
+            // A code is offered, not copied (it may have come while Nearclip was closed).
+            offerCode(remote, live = false)
         } else if (remote != null && s.copyNewestOnOpen) {
             applyToClipboard(remote, announce = true)
         }
@@ -420,9 +489,15 @@ class Nearclip private constructor(val app: Application) {
         return send(content)
     }
 
+    /** Sends what was read from the clipboard, unless it is what Nearclip knows the clipboard held already. */
     suspend fun send(content: ClipboardBridge.Content): SendOutcome = when (content) {
-        is ClipboardBridge.Text -> sendText(content.text)
-        is ClipboardBridge.Image -> sendImage(content.uri)
+        is ClipboardBridge.Text -> {
+            val key = ContentKey.text(content.text)
+            val again = key == clipKey
+            remember(key, content.stamp)
+            if (again) SendOutcome.AlreadySynced else sendText(content.text)
+        }
+        is ClipboardBridge.Image -> sendImage(content.uri, clipboardStamp = content.stamp)
     }
 
     // ---------------------------------------------------------------- instant capture
@@ -445,9 +520,17 @@ class Nearclip private constructor(val app: Application) {
         if (!current.instantCapture || current.paused || !(serviceRunning || uiVisible)) return
         // Opening Nearclip may have sent it meanwhile: onAppOpened updates the stamp on this (main) thread.
         if (change.stamp == settings.lastClipboardStamp) return
-        settings.lastClipboardStamp = change.stamp
-        if (change is InstantCapture.Change.Copied) {
-            send(ClipboardBridge.Text(change.text, change.stamp, ours = false, sensitive = false))
+        when (change) {
+            is InstantCapture.Change.Copied -> {
+                settings.lastClipboardStamp = change.stamp
+                send(ClipboardBridge.Text(change.text, change.stamp, ours = false, sensitive = false))
+            }
+            is InstantCapture.Change.Skipped -> {
+                settings.lastClipboardStamp = change.stamp
+                // Nearclip's own clip: still what it wrote, now with its timestamp. A sensitive one: not known.
+                if (change.ours) clipKeyStamp = change.stamp else remember(null, change.stamp)
+            }
+            is InstantCapture.Change.NotText -> remember(null, change.stamp)
         }
     }
 
@@ -472,6 +555,7 @@ class Nearclip private constructor(val app: Application) {
     private fun onCapturePermission(granted: Boolean) {
         if (granted && enableWhenAllowed) setInstantCapture(true)
         enableWhenAllowed = false
+        codes.onShizukuPermission(granted)
     }
 
     suspend fun sendText(text: String): SendOutcome = withContext(Dispatchers.IO) {
@@ -479,7 +563,10 @@ class Nearclip private constructor(val app: Application) {
         if (settings.value.paused) return@withContext SendOutcome.Paused
         val snap = engine.state.value
         val newest = snap.history.firstOrNull { it.groupId == snap.groupId }
-        if (newest != null && newest.isText && newest.text == text && System.currentTimeMillis() - newest.receivedAt < NEWEST_WINDOW_MS) {
+        // The newest clip already: it is on the other devices (DESIGN §4.3).
+        if (newest != null && newest.isText && System.currentTimeMillis() - newest.receivedAt < NEWEST_WINDOW_MS &&
+            ContentKey.of(newest) == ContentKey.text(text)
+        ) {
             return@withContext SendOutcome.AlreadySynced
         }
         engine.start()
@@ -487,7 +574,31 @@ class Nearclip private constructor(val app: Application) {
         outcome(engine.sendText(text))
     }
 
-    suspend fun sendImage(uri: Uri): SendOutcome = withContext(Dispatchers.IO) {
+    /**
+     * A verification code found in a message (CodeForwarding): to the other devices, which offer to copy it. The engine
+     * runs for it even when nothing else needs it, and stops again later (see updateRunning).
+     */
+    suspend fun sendCode(code: String): SendOutcome {
+        if (settings.value.paused) return SendOutcome.Paused
+        if (engine.state.value.otherMembers.isEmpty()) return SendOutcome.Sent(0, 0)
+        stopJob?.cancel()
+        stopJob = null
+        val result = withContext(Dispatchers.IO) {
+            engine.start()
+            awaitPeers()
+            outcome(engine.sendText(code, otp = true))
+        }
+        updateRunning()
+        return result
+    }
+
+    fun setForwardCodes(on: Boolean) {
+        settings.update { it.copy(forwardCodes = on, codesHidden = it.codesHidden && on) }
+        codes.refresh()
+    }
+
+    /** [clipboardStamp]: the image was read from the clipboard (then the clipboard is known to hold it). */
+    suspend fun sendImage(uri: Uri, clipboardStamp: Long? = null): SendOutcome = withContext(Dispatchers.IO) {
         if (settings.value.paused) return@withContext SendOutcome.Paused
         if (!settings.value.syncImages) return@withContext SendOutcome.ImagesOff
         engine.start()
@@ -497,6 +608,18 @@ class Nearclip private constructor(val app: Application) {
         if (img == null) {
             announced?.let { engine.cancelImage(it) }
             return@withContext SendOutcome.Unreadable
+        }
+        val file = ContentKey.file(img.bytes)
+        val again = clipboardStamp != null && file == clipKey
+        if (clipboardStamp != null) remember(file, clipboardStamp)
+        // What the clipboard held already, or the newest clip: it is on the other devices (DESIGN §4.3).
+        val snap = engine.state.value
+        val newest = snap.history.firstOrNull { it.groupId == snap.groupId }
+        if (again || newest != null && newest.isImage && System.currentTimeMillis() - newest.receivedAt < NEWEST_WINDOW_MS &&
+            ContentKey.of(newest) == file
+        ) {
+            announced?.let { engine.cancelImage(it) }
+            return@withContext SendOutcome.AlreadySynced
         }
         awaitPeers()
         outcome(engine.sendImage(img.bytes, img.mime, img.width, img.height, id = announced))
@@ -518,7 +641,10 @@ class Nearclip private constructor(val app: Application) {
 
     // ---------------------------------------------------------------- history actions
 
-    fun togglePin(clip: Clip) = engine.setPinned(clip.id, !clip.pinned)
+    /** Pins or unpins a history row: every copy of its content (DESIGN §4.4). */
+    fun setPinned(ids: Collection<String>, pinned: Boolean) {
+        for (id in ids) engine.setPinned(id, pinned)
+    }
 
     /** Hides the clips now and deletes them everywhere after the undo window (DESIGN §4.4: 4 s). */
     fun deleteWithUndo(ids: Set<String>) {
@@ -655,6 +781,8 @@ class Nearclip private constructor(val app: Application) {
 
     companion object {
         const val NEWEST_WINDOW_MS = 10 * 60_000L
+        /** How long a code that arrives later (catch-up) is still offered. */
+        const val CODE_OFFER_MS = 3 * 60_000L
 
         @Volatile private var instance: Nearclip? = null
 

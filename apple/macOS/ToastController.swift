@@ -4,7 +4,7 @@ import SwiftUI
 
 /// The small, non-activating capsule under the menu bar. "Copied from iPhone" when a clip arrives; for a large image,
 /// "Receiving an image from iPhone…" with a progress bar first (PROTOCOL.md §6.6), which turns into "Copied from iPhone"
-/// in place when the image is in.
+/// in place when the image is in. A verification code from a phone (§6.7) asks "Copy it?" with Copy and Not Now.
 @MainActor
 final class ToastController {
     private enum Shown: Equatable {
@@ -12,11 +12,12 @@ final class ToastController {
         case received(StoredClip)
         case transfer(IncomingTransfer)
         case failed(IncomingTransfer)
+        case code(StoredClip)
     }
 
     private let model: AppModel
     private var panel: NSPanel?
-    private var host: NSHostingView<ToastView>?
+    private var host: FirstClickHostingView<ToastView>?
     private var hideWork: DispatchWorkItem?
     private var shown: Shown?
     /// A transfer the user clicked away: its progress no longer brings the capsule back (its arrival still does).
@@ -39,6 +40,10 @@ final class ToastController {
     /// The image shown arriving did not make it.
     func failed(_ t: IncomingTransfer) { present(.failed(t), hideAfter: 3.5) }
 
+    /// A verification code from another device: "A verification code arrived from Junseo's iPhone. Copy it?". It waits
+    /// for an answer — shown even with arrival notices off — and goes after a minute, as codes expire.
+    func code(_ sc: StoredClip) { present(.code(sc), hideAfter: 60, always: true) }
+
     /// The image shown arriving changed; nil when none is arriving any more.
     func transfer(_ t: IncomingTransfer?) {
         if let t {
@@ -49,18 +54,20 @@ final class ToastController {
         }
     }
 
-    private func present(_ s: Shown, hideAfter: TimeInterval?) {
-        guard model.settings.showToasts else { return }
+    private func present(_ s: Shown, hideAfter: TimeInterval?, always: Bool = false) {
+        guard always || model.settings.showToasts else { return }
+        // A code waiting for an answer is not pushed away by a notice (a newer code replaces it).
+        if case .code = shown, panel?.isVisible == true, !always { return }
         shown = s
         token += 1
         let p = panel ?? makePanel()
         panel = p
         if !p.isVisible { epoch += 1 }
-        let view = ToastView(content: content(s), epoch: epoch, onClick: { [weak self] in self?.clicked() })
+        let view = makeView(s)
         if let host {
             host.rootView = view
         } else {
-            let h = NSHostingView(rootView: view)
+            let h = FirstClickHostingView(rootView: view)
             host = h
             p.contentView = HistoryPanelController.surface(for: h, cornerRadius: 16)
         }
@@ -83,6 +90,11 @@ final class ToastController {
         if let hideAfter { scheduleHide(after: hideAfter) }
     }
 
+    private func makeView(_ s: Shown) -> ToastView {
+        ToastView(content: content(s), epoch: epoch, onClick: { [weak self] in self?.clicked() },
+                  onCopy: { [weak self] in self?.copyShownCode() }, onDismiss: { [weak self] in self?.hide() })
+    }
+
     private func content(_ s: Shown) -> ToastContent {
         switch s {
         case .copied(let sc):
@@ -102,6 +114,11 @@ final class ToastController {
                 id: t.id, symbol: "exclamationmark", tint: Brand.warning,
                 title: String(localized: "Couldn't receive the image"),
                 detail: String(localized: "Copy it again on \(model.deviceName(t.from))."), progress: .none, image: false)
+        case .code(let sc):
+            return ToastContent(
+                id: sc.id, symbol: model.sourceSymbol(sc), tint: Brand.iris,
+                title: String(localized: "A verification code arrived from \(model.sourceName(sc)). Copy it?"),
+                detail: "", progress: .none, image: false, code: sc.clip.text)
         }
     }
 
@@ -121,8 +138,7 @@ final class ToastController {
             switch s {
             case .copied(let shownClip) where shownClip.id == sc.id, .received(let shownClip) where shownClip.id == sc.id:
                 // Same size: the slot is already there.
-                self.host?.rootView = ToastView(content: self.content(s), epoch: self.epoch,
-                                                onClick: { [weak self] in self?.clicked() })
+                self.host?.rootView = self.makeView(s)
             default:
                 break
             }
@@ -138,12 +154,25 @@ final class ToastController {
     }
 
     private func clicked() {
+        // Clicking a code offer anywhere copies it, like its Copy button.
+        if case .code = shown {
+            copyShownCode()
+            return
+        }
         if case .transfer(let t) = shown { dismissedTransfer = t.id }
         hideWork?.cancel()
         token += 1
         shown = nil
         panel?.orderOut(nil)
         onClick?()
+    }
+
+    /// Copy on a code offer: the code goes to this Mac's clipboard, and the capsule says so.
+    private func copyShownCode() {
+        guard case .code(let sc) = shown else { return }
+        model.copyCode(sc)
+        shown = nil
+        present(.copied(sc), hideAfter: 1.8, always: true)
     }
 
     private func scheduleHide(after seconds: TimeInterval) {
@@ -211,6 +240,8 @@ struct ToastContent: Equatable {
     /// Keeps a thumbnail slot, so the capsule keeps its size when "Receiving…" turns into "Copied from…".
     var image: Bool
     var thumbnail: NSImage? = nil
+    /// A verification code offered with Copy and Not Now.
+    var code: String? = nil
 
     /// "3.1 / 8.4 MB": both in the unit of the total, so the numbers don't jump between units.
     static func progressText(_ received: Int, of total: Int) -> String {
@@ -226,15 +257,66 @@ struct ToastView: View {
     /// A new value starts over without animating from the previous content (the capsule just appeared).
     var epoch = 0
     var onClick: () -> Void = {}
+    var onCopy: () -> Void = {}
+    var onDismiss: () -> Void = {}
 
     var body: some View {
+        Group {
+            if let code = content.code { codeOffer(code) } else { notice }
+        }
+        .padding(.leading, 10)
+        .padding(.trailing, 14)
+        .padding(.vertical, 9)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onClick)
+        .animation(.snappy(duration: 0.25), value: content.title)
+        .accessibilityElement(children: content.code == nil ? .combine : .contain)
+        .accessibilityValue(content.accessibilityProgress)
+        .id(epoch)
+    }
+
+    private var icon: some View {
+        Image(systemName: content.symbol)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 30, height: 30)
+            .background(Circle().fill(content.tint))
+            .contentTransition(.symbolEffect(.replace))
+    }
+
+    /// "A verification code arrived from Junseo's iPhone. Copy it?", the code in large digits, Copy and Not Now.
+    private func codeOffer(_ code: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            icon
+            VStack(alignment: .leading, spacing: 7) {
+                Text(verbatim: content.title)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(verbatim: code)
+                    .font(.system(size: 24, weight: .bold, design: .rounded).monospacedDigit())
+                    .tracking(2.5)
+                    .accessibilityLabel(Text(verbatim: code.map(String.init).joined(separator: " ")))
+                HStack(spacing: 8) {
+                    Button(action: onCopy) {
+                        Label("Copy", systemImage: "doc.on.doc").labelStyle(.titleOnly)
+                    }
+                    .buttonStyle(ToastButtonStyle(prominent: true))
+                    .accessibilityIdentifier("toast.code.copy")
+                    Button("Not Now", action: onDismiss)
+                        .buttonStyle(ToastButtonStyle(prominent: false))
+                        .accessibilityIdentifier("toast.code.dismiss")
+                }
+                .padding(.top, 1)
+            }
+            .frame(width: 230, alignment: .leading)
+        }
+        .padding(.vertical, 3)
+    }
+
+    private var notice: some View {
         HStack(spacing: 10) {
-            Image(systemName: content.symbol)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 30, height: 30)
-                .background(Circle().fill(content.tint))
-                .contentTransition(.symbolEffect(.replace))
+            icon
             VStack(alignment: .leading, spacing: 3) {
                 Text(verbatim: content.title)
                     .font(.system(size: 12.5, weight: .semibold))
@@ -278,16 +360,29 @@ struct ToastView: View {
                 .animation(.easeOut(duration: 0.2), value: content.thumbnail != nil)
             }
         }
-        .padding(.leading, 10)
-        .padding(.trailing, 14)
-        .padding(.vertical, 9)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onClick)
-        .animation(.snappy(duration: 0.25), value: content.title)
-        .accessibilityElement(children: .combine)
-        .accessibilityValue(content.accessibilityProgress)
-        .id(epoch)
     }
+}
+
+/// Capsule buttons that keep their colour in the capsule, which never becomes the key window.
+private struct ToastButtonStyle: ButtonStyle {
+    var prominent: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12, weight: .semibold))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 5)
+            .frame(minWidth: 64)
+            .foregroundStyle(prominent ? Color.white : Color.primary)
+            .background(Capsule().fill(prominent ? AnyShapeStyle(Brand.iris) : AnyShapeStyle(Color.primary.opacity(0.1))))
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .contentShape(Capsule())
+    }
+}
+
+/// Takes the first click: the capsule is a non-activating panel, and its buttons work without focusing it first.
+final class FirstClickHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 private extension ToastContent {

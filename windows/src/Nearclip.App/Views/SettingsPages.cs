@@ -227,7 +227,13 @@ internal sealed class SettingsPages
         var busy = false;
         Button? action = null;
         var signOut = false;
-        if (st.IsRunning)
+        if (S.Paused)
+        {
+            // Pausing stops the remote connection with everything else; it starts again when syncing resumes.
+            title = Loc.S("Remote_Paused");
+            description = Loc.S("Remote_PausedHint");
+        }
+        else if (st.IsRunning)
         {
             title = st.Account is { Length: > 0 } acct ? Loc.F("Remote_OnAccount", acct) : Loc.S("Remote_On");
             description = (st.Ip is { } ip ? Loc.F("Remote_ThisDevice", ip) + "\n" : "") + Loc.S("Remote_Hint");

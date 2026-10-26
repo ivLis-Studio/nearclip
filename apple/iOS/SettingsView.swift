@@ -22,6 +22,7 @@ struct SettingsView: View {
                     Text("iPhone and iPad sync while Nearclip is open. Open the app to catch up.")
                 }
                 if model.remoteAvailable { RemoteSection(model: model) }
+                CodeSection()
                 Section {
                     Toggle(isOn: $settings.copyLatestOnOpen) {
                         Text("Copy the newest clip")

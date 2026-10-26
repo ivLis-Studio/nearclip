@@ -2,6 +2,10 @@ import AppKit
 import NearclipKit
 
 /// Watches NSPasteboard for copies made on this Mac and writes clips that arrive from other devices.
+///
+/// The pasteboard set again to what it already holds is not a new copy: a screenshot tool that puts its picture there
+/// twice, or Universal Clipboard bringing back the text Nearclip just wrote, would otherwise send it again — and around
+/// again (DESIGN.md §4.3). Likewise a clip that the pasteboard already holds is not written again.
 @MainActor
 final class PasteboardMonitor: ClipboardWriter {
     enum Content {
@@ -16,7 +20,8 @@ final class PasteboardMonitor: ClipboardWriter {
     }
 
     private enum Encoded: Sendable {
-        case image(Data, mime: String, width: Int, height: Int)
+        /// `file`: the key of the encoded file (ContentKey.file).
+        case image(Data, mime: String, width: Int, height: Int, file: String)
         case tooLarge
         case unreadable
     }
@@ -41,6 +46,11 @@ final class PasteboardMonitor: ClipboardWriter {
     /// Bumped on every clipboard change: an image still being encoded when a newer copy comes is dropped, so the
     /// newest copy always wins.
     private var generation = 0
+    /// What the pasteboard holds as far as Nearclip knows (ContentKey: the text, or an image's pixels; nil: something it
+    /// did not read), the key of that image's file, and the changeCount at which that was true.
+    private var lastKey: String?
+    private var lastFileKey: String?
+    private var lastKeyChange = -1
     var onCopy: ((Content) -> Void)?
     var onTooLarge: (() -> Void)?
     /// An image copy is about to be encoded: returns an announcement id (PROTOCOL.md §6.6) or nil.
@@ -68,25 +78,38 @@ final class PasteboardMonitor: ClipboardWriter {
         guard cc != lastChange else { return }
         lastChange = cc
         generation += 1
-        guard !settings.paused else { return }
-        if pb == NSPasteboard.general, MacSystem.clipboardAccess == .denied { return }
+        guard !settings.paused else { return forget(cc) }
+        if pb == NSPasteboard.general, MacSystem.clipboardAccess == .denied { return forget(cc) }
         let types = pb.types ?? []
-        if types.contains(Self.marker) { return }
-        if types.contains(where: { Self.skipTypes.contains($0.rawValue) }) { return }
-        if let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier, settings.ignoredApps.contains(app) { return }
-        if types.contains(.fileURL) { return }
-        read(types)
+        // A clip of Nearclip's set again by another app (marker included): never sent back out; which one, is not known.
+        if types.contains(Self.marker) { return forget(cc) }
+        if types.contains(where: { Self.skipTypes.contains($0.rawValue) }) { return forget(cc) }
+        if let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier, settings.ignoredApps.contains(app) { return forget(cc) }
+        if types.contains(.fileURL) { return forget(cc) }
+        read(types, change: cc)
     }
 
-    private func read(_ types: [NSPasteboard.PasteboardType]) {
+    private func remember(_ key: String?, file: String?, change: Int) {
+        lastKey = key
+        lastFileKey = file
+        lastKeyChange = change
+    }
+
+    private func forget(_ change: Int) { remember(nil, file: nil, change: change) }
+
+    private func read(_ types: [NSPasteboard.PasteboardType], change: Int) {
         let imageFirst = types.first.map { Self.imageTypes.contains($0) } ?? false
         if imageFirst || !types.contains(.string), types.contains(where: { Self.imageTypes.contains($0) }) {
             if let raw = rawImage() {
-                encodeAndSend(raw)
+                encodeAndSend(raw, change: change)
                 return
             }
         }
-        if let s = pb.string(forType: .string), !s.isEmpty { onCopy?(.text(s)) }
+        guard let s = pb.string(forType: .string), !s.isEmpty else { return forget(change) }
+        let key = ContentKey.text(s)
+        let again = key == lastKey
+        remember(key, file: nil, change: change)
+        if !again { onCopy?(.text(s)) }
     }
 
     private func rawImage() -> RawImage? {
@@ -96,13 +119,24 @@ final class PasteboardMonitor: ClipboardWriter {
         return nil
     }
 
-    /// Announces the copy, encodes it off the main thread (a large screenshot takes a moment), then sends it.
-    private func encodeAndSend(_ raw: RawImage) {
+    /// Compares the picture with what the pasteboard held, announces the copy, encodes it off the main thread (a large
+    /// screenshot takes a moment), then sends it. The same picture set again is not even announced.
+    private func encodeAndSend(_ raw: RawImage, change: Int) {
         let gen = generation
-        let announced = onImageStart?()
         Task.detached(priority: .userInitiated) {
+            let key = Self.pixelKey(raw)
+            let start: (go: Bool, announced: String?) = await MainActor.run { [weak self] in
+                guard let self, gen == self.generation, !self.settings.paused else { return (false, nil) }
+                if let key, key == self.lastKey {
+                    self.remember(key, file: self.lastFileKey, change: change)
+                    return (false, nil)
+                }
+                self.remember(key, file: nil, change: change)
+                return (true, self.onImageStart?())
+            }
+            guard start.go else { return }
             let result = Self.encode(raw)
-            await MainActor.run { [weak self] in self?.finish(result, generation: gen, announced: announced) }
+            await MainActor.run { [weak self] in self?.finish(result, generation: gen, announced: start.announced) }
         }
     }
 
@@ -112,13 +146,20 @@ final class PasteboardMonitor: ClipboardWriter {
             return
         }
         switch result {
-        case .image(let data, let mime, let w, let h):
+        case .image(let data, let mime, let w, let h, let file):
+            lastFileKey = file
             onCopy?(.image(data, mime: mime, width: w, height: h, announced: announced))
         case .tooLarge:
             onImageCancel?(announced)
             onTooLarge?()
         case .unreadable:
             onImageCancel?(announced)
+        }
+    }
+
+    nonisolated private static func pixelKey(_ raw: RawImage) -> String? {
+        switch raw {
+        case .png(let d), .bitmap(let d), .jpeg(let d): return ContentKey.pixels(ofImageData: d)
         }
     }
 
@@ -142,12 +183,18 @@ final class PasteboardMonitor: ClipboardWriter {
             out = jpeg
             mime = "image/jpeg"
         }
-        return .image(out, mime: mime, width: rep.pixelsWide, height: rep.pixelsHigh)
+        return .image(out, mime: mime, width: rep.pixelsWide, height: rep.pixelsHigh, file: ContentKey.file(out))
     }
 
     // MARK: ClipboardWriter
 
-    func write(_ clip: Clip, blob: Data?) {
+    @discardableResult
+    func write(_ clip: Clip, blob: Data?) -> Bool {
+        // Already there (copied on this Mac too, or brought by Universal Clipboard): not written again.
+        let unchanged = pb.changeCount == lastKeyChange
+        let textKey = clip.isText ? clip.text.map(ContentKey.text) : nil
+        let fileKey = clip.isImage ? ContentKey.of(clip) : nil
+        if unchanged, (textKey != nil && textKey == lastKey) || (fileKey != nil && fileKey == lastFileKey) { return false }
         let item = NSPasteboardItem()
         if clip.isImage, let blob {
             if clip.mime == "image/jpeg" {
@@ -162,13 +209,26 @@ final class PasteboardMonitor: ClipboardWriter {
         } else if let text = clip.text {
             item.setString(text, forType: .string)
         } else {
-            return
+            return false
         }
         item.setData(Data(), forType: Self.marker)
         pb.clearContents()
         pb.writeObjects([item])
         lastChange = pb.changeCount
         generation += 1
+        remember(textKey, file: fileKey, change: lastChange)
+        if clip.isImage, let blob {
+            // The pixels, so the same picture coming back in another format (TIFF) is recognised too.
+            let written = lastChange
+            Task.detached(priority: .utility) {
+                let key = ContentKey.pixels(ofImageData: blob)
+                await MainActor.run { [weak self] in
+                    guard let self, self.lastKeyChange == written, self.lastKey == nil else { return }
+                    self.lastKey = key
+                }
+            }
+        }
+        return true
     }
 }
 

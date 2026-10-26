@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Nearclip.App.Controls;
 using Nearclip.App.Model;
 using Nearclip.App.Platform;
@@ -15,10 +16,11 @@ namespace Nearclip.App.Views;
 
 /// <summary>"Copied from iPhone": small borderless window above the tray, 2.5 s, hover keeps it, click opens history.
 /// For a large image it first shows "Receiving an image from iPhone…" with a progress bar (PROTOCOL.md §6.6) and turns
-/// into "Copied from iPhone" in place when the image is in.</summary>
+/// into "Copied from iPhone" in place when the image is in. A verification code from a phone (§6.7) asks "Copy it?"
+/// with Copy and Not now, and waits for an answer.</summary>
 public sealed partial class ToastWindow : Window
 {
-    enum Kind { None, Copied, Received, Transfer, Failed }
+    enum Kind { None, Copied, Received, Transfer, Failed, Code }
 
     readonly DispatcherTimerLike _timer;
     bool _hover;
@@ -26,6 +28,11 @@ public sealed partial class ToastWindow : Window
     string? _transferId;
     /// <summary>A transfer the user clicked away: its progress no longer brings the toast back (its arrival still does).</summary>
     string? _dismissedTransfer;
+    /// <summary>The code being offered.</summary>
+    StoredClip? _code;
+
+    /// <summary>A code waits for an answer: notices do not push it away (a newer code replaces it).</summary>
+    bool CodeWaiting => _kind == Kind.Code && AppWindow.IsVisible;
 
     public ToastWindow()
     {
@@ -49,6 +56,7 @@ public sealed partial class ToastWindow : Window
     /// <summary>A clip from another device was copied to the clipboard.</summary>
     internal void Show(StoredClip sc)
     {
+        if (CodeWaiting) return;
         var model = AppHost.Current.Model;
         var c = sc.Clip;
         var detail = c.IsImage
@@ -58,14 +66,18 @@ public sealed partial class ToastWindow : Window
     }
 
     /// <summary>An image that was shown arriving is in history but was not copied (auto-copy off, or an older clip).</summary>
-    internal void ShowReceived(StoredClip sc) =>
+    internal void ShowReceived(StoredClip sc)
+    {
+        if (CodeWaiting) return;
         ShowClip(sc, Loc.F("Toast_ImageFrom", AppHost.Current.Model.SourceName(sc)), Loc.S("Toast_SavedToHistory"), Kind.Received);
+    }
 
     /// <summary>A large image is on its way; stays up (no timer) until it is in or gone.</summary>
     internal void ShowTransfer(IncomingTransfer t)
     {
-        if (t.Id == _dismissedTransfer) return;
+        if (t.Id == _dismissedTransfer || CodeWaiting) return;
         var model = AppHost.Current.Model;
+        SetCodeLayout(false);
         SetIcon(model.DeviceGlyphOf(t.From), warning: false);
         TitleText.Text = Loc.F("Toast_Receiving", model.DeviceNameOf(t.From));
         PreviewText.Visibility = Visibility.Collapsed;
@@ -95,6 +107,8 @@ public sealed partial class ToastWindow : Window
     /// <summary>The image shown arriving did not make it.</summary>
     internal void ShowFailed(IncomingTransfer t)
     {
+        if (CodeWaiting) return;
+        SetCodeLayout(false);
         SetIcon("\uE7BA", warning: true);
         TitleText.Text = Loc.S("Toast_ReceiveFailed");
         PreviewText.Text = Loc.F("Toast_CopyAgain", AppHost.Current.Model.DeviceNameOf(t.From));
@@ -104,6 +118,63 @@ public sealed partial class ToastWindow : Window
         _kind = Kind.Failed;
         _transferId = null;
         Present(TitleText.Text + ". " + PreviewText.Text, TimeSpan.FromSeconds(3.5));
+    }
+
+    /// <summary>"A verification code arrived from Junseo's iPhone. Copy it?" with the code in large digits. Goes
+    /// after a minute, as codes expire; hovering keeps it.</summary>
+    internal void ShowCode(StoredClip sc)
+    {
+        var model = AppHost.Current.Model;
+        _code = sc;
+        SetCodeLayout(true);
+        SetIcon(model.SourceGlyph(sc), warning: false);
+        TitleText.Text = Loc.F("Toast_CodeArrived", model.SourceName(sc));
+        CodeText.Text = sc.Clip.Text ?? "";
+        AutomationProperties.SetName(CodeText, string.Join(' ', (sc.Clip.Text ?? "").ToCharArray()));
+        CopyButton.Content = Loc.S("Copy");
+        NotNowButton.Content = Loc.S("Toast_NotNow");
+        _kind = Kind.Code;
+        _transferId = null;
+        Present(TitleText.Text + " " + CodeText.Text, TimeSpan.FromSeconds(60), MeasureHeight());
+    }
+
+    /// <summary>Copy on a code offer: the code goes to this PC's clipboard, and the toast says so.</summary>
+    async void CopyCode()
+    {
+        if (_code is not { } sc) return;
+        _code = null;
+        _kind = Kind.None;
+        await AppHost.Current.Model.CopyCodeAsync(sc);
+        Show(sc);
+    }
+
+    void Copy_Click(object sender, RoutedEventArgs e) => CopyCode();
+
+    void NotNow_Click(object sender, RoutedEventArgs e)
+    {
+        _code = null;
+        _timer.Stop();
+        _kind = Kind.None;
+        AppWindow.Hide();
+    }
+
+    void SetCodeLayout(bool code)
+    {
+        CodePanel.Visibility = code ? Visibility.Visible : Visibility.Collapsed;
+        TitleText.MaxLines = code ? 2 : 1;
+        TitleText.TextWrapping = code ? TextWrapping.WrapWholeWords : TextWrapping.NoWrap;
+        IconGrid.VerticalAlignment = code ? VerticalAlignment.Top : VerticalAlignment.Center;
+        if (!code) return;
+        PreviewText.Visibility = Visibility.Collapsed;
+        ProgressRow.Visibility = Visibility.Collapsed;
+        ThumbBorder.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>The height the content needs at the toast's width (the code offer's title can wrap).</summary>
+    double MeasureHeight()
+    {
+        Root.Measure(new Windows.Foundation.Size(ToastWidth, double.PositiveInfinity));
+        return Math.Max(62, Math.Ceiling(Root.DesiredSize.Height));
     }
 
     /// <summary>No image is arriving any more (and nothing else took the toast over).</summary>
@@ -119,6 +190,7 @@ public sealed partial class ToastWindow : Window
     void ShowClip(StoredClip sc, string title, string detail, Kind kind)
     {
         var model = AppHost.Current.Model;
+        SetCodeLayout(false);
         SetIcon(model.SourceGlyph(sc), warning: false);
         TitleText.Text = title;
         PreviewText.Text = detail;
@@ -151,12 +223,14 @@ public sealed partial class ToastWindow : Window
         return (t.Received / 1024).ToString(culture) + " / " + Math.Max(1, t.Total / 1024).ToString(culture) + " KB";
     }
 
-    void Present(string accessibleName, TimeSpan? hideAfter)
+    const double ToastWidth = 340;
+
+    void Present(string accessibleName, TimeSpan? hideAfter, double height = 62)
     {
         AutomationProperties.SetName(Root, accessibleName);
         var scale = Native.Dpi(WindowHelper.Hwnd(this)) / 96.0;
         var area = WindowHelper.WorkAreaAtCursor();
-        int w = (int)(340 * scale), h = (int)(62 * scale), gap = (int)(12 * scale);
+        int w = (int)(ToastWidth * scale), h = (int)(height * scale), gap = (int)(12 * scale);
         AppWindow.MoveAndResize(new RectInt32(area.Right - w - gap, area.Bottom - h - gap, w, h));
         if (!AppWindow.IsVisible)
         {
@@ -193,6 +267,7 @@ public sealed partial class ToastWindow : Window
     {
         if (_hover) { _timer.Restart(TimeSpan.FromSeconds(1)); return; }
         _kind = Kind.None;
+        _code = null;
         AppWindow.Hide();
     }
 
@@ -202,11 +277,24 @@ public sealed partial class ToastWindow : Window
 
     void Root_Tapped(object sender, TappedRoutedEventArgs e)
     {
+        if (_kind == Kind.Code)
+        {
+            // Clicking a code offer anywhere but its buttons copies it, like Copy.
+            if (!IsWithin(e.OriginalSource as DependencyObject, CodeButtons)) CopyCode();
+            return;
+        }
         if (_kind == Kind.Transfer) _dismissedTransfer = _transferId;
         _timer.Stop();
         _kind = Kind.None;
         AppWindow.Hide();
         AppHost.Current.ToastClicked();
+    }
+
+    static bool IsWithin(DependencyObject? node, DependencyObject container)
+    {
+        for (var n = node; n is not null; n = VisualTreeHelper.GetParent(n))
+            if (ReferenceEquals(n, container)) return true;
+        return false;
     }
 }
 
