@@ -7,13 +7,13 @@ window.SITE_META = {
 
 window.SITE_X = {
   en: {
-    "dl.mac": "Download for Mac", "dl.win": "Download for Windows", "dl.android": "Download for Android", "dl.ios": "Get it on iPhone", "dl.other": "Download",
+    "dl.mac": "Download for Mac", "dl.win": "Get it from Microsoft Store", "dl.android": "Download for Android", "dl.ios": "Get it on iPhone", "dl.other": "Download",
     "dl.version": "Version %@ · free and open source", "dl.latest": "Version %@ · released %@",
     "film.play": "Play the film with sound", "film.pause": "Pause", "film.resume": "Play",
     "toast.receiving": "Receiving an image from %@…", "toast.copied": "Copied from %@", "toast.image": "Image · %@ MB", "toast.preparing": "Preparing…",
   },
   ko: {
-    "dl.mac": "Mac용 다운로드", "dl.win": "Windows용 다운로드", "dl.android": "Android용 다운로드", "dl.ios": "iPhone에서 쓰기", "dl.other": "다운로드",
+    "dl.mac": "Mac용 다운로드", "dl.win": "Microsoft Store에서 받기", "dl.android": "Android용 다운로드", "dl.ios": "iPhone에서 쓰기", "dl.other": "다운로드",
     "dl.version": "버전 %@ · 무료 오픈 소스", "dl.latest": "버전 %@ · %@ 출시",
     "film.play": "소리와 함께 영상 재생", "film.pause": "일시정지", "film.resume": "재생",
     "toast.receiving": "%@에서 이미지 받는 중…", "toast.copied": "%@에서 복사됨", "toast.image": "이미지 · %@MB", "toast.preparing": "준비 중…",
@@ -180,9 +180,11 @@ window.SITE_I18N = {
     "dl.mac.2": "열면 끝이에요. Apple의 서명과 공증을 받은 앱이고, 메뉴 막대에서 지내요.",
     "dl.mac.3": "처음 복사할 때 <b>항상 허용</b>을 골라야 클립보드를 읽을 수 있어요.",
     "dl.win.req": "Windows 10 1809 이상, Windows 11",
-    "dl.win.1": "아무 곳에나 압축을 풀고 <b>Nearclip.exe</b>를 실행하세요.",
-    "dl.win.2": "아직 코드 서명 전이라 SmartScreen이 뜨면 <b>추가 정보 › 실행</b>을 누르세요.",
-    "dl.win.3": "방화벽이 물어보면 <b>개인 네트워크</b>에서 허용하세요.",
+    "dl.win.store": "Microsoft Store<span class=\"long\">에서 받기</span>",
+    "dl.win.direct": "또는 GitHub에서 직접 다운로드",
+    "dl.win.1": "스토어 버전은 Microsoft의 서명을 받았고, 업데이트도 알아서 돼요.",
+    "dl.win.2": "ZIP으로 받았다면 아무 곳에나 압축을 풀고 <b>Nearclip.exe</b>를 실행하세요. SmartScreen이 뜨면 <b>추가 정보 › 실행</b>을 누르세요.",
+    "dl.win.3": "ZIP 버전은 방화벽이 물어보면 <b>개인 네트워크</b>에서 허용하세요.",
     "dl.android.req": "Android 8 이상",
     "dl.android.btn": "APK 다운로드",
     "dl.android.1": "휴대폰에서 APK 파일을 여세요.",

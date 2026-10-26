@@ -18,9 +18,11 @@ node tools/shot.mjs <url> <out.png> [width] [height] [fullPage] [light|dark] [wa
 - `public/assets/js/demo.js` is the live demo in the hero: four devices, one clipboard. A copy flies straight from one
   device to the other three; images show their progress first, like the apps. It plays by itself while on screen until
   the visitor presses a key on a device, and never with reduced motion.
-- `public/assets/js/site.js` picks the download for the visitor's device (`?os=mac|win|android|ios` forces one; Windows on
-  Arm gets the Arm64 build), reads the latest release's version from GitHub, and runs the examples, the film and the
+- `public/assets/js/site.js` picks the download for the visitor's device (`?os=mac|win|android|ios` forces one; Windows
+  goes to the Microsoft Store), reads the latest release's version from GitHub, and runs the examples, the film and the
   image-progress toast.
+- Windows leads with the Microsoft Store listing (`apps.microsoft.com/detail/9PNQ3Z9S83QS`); its card keeps the ZIPs
+  below it as the direct download from GitHub.
 - Download buttons link to `releases/latest/download/<file>`, so the release assets keep these names:
   `Nearclip-macOS.zip`, `Nearclip-Windows-x64.zip`, `Nearclip-Windows-arm64.zip`, `Nearclip-Android.apk`.
 - `public/assets/media/` is made by `tools/media.sh` from the promo film (`promo/`): the 16:9 and 9:16 cuts with their

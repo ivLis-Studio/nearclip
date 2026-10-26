@@ -21,6 +21,7 @@
 
 <p align="center">
   <a href="https://github.com/ivLis-Studio/nearclip/releases/latest"><b>Download</b></a> ·
+  <a href="https://apps.microsoft.com/detail/9PNQ3Z9S83QS"><b>Microsoft Store</b></a> ·
   <a href="https://ivlis-studio.github.io/nearclip/"><b>Website</b></a> ·
   <a href="#install">Install</a> ·
   <a href="#how-it-works">How it works</a> ·
@@ -108,14 +109,19 @@ Requires macOS 14 or later, Apple silicon or Intel.
 
 ### Windows
 
+Get it from the [**Microsoft Store**](https://apps.microsoft.com/detail/9PNQ3Z9S83QS). The Store version is signed by
+Microsoft and updates itself.
+
+Or download it directly from GitHub:
+
 1. Download **Nearclip-Windows-x64.zip** (**Nearclip-Windows-arm64.zip** for Snapdragon PCs) from
    [Releases](https://github.com/ivLis-Studio/nearclip/releases/latest), unzip it anywhere and run `Nearclip\Nearclip.exe`.
-2. The app isn't code-signed yet, so SmartScreen may say **"Windows protected your PC"**: click **More info › Run anyway**.
+2. The ZIP isn't code-signed yet, so SmartScreen may say **"Windows protected your PC"**: click **More info › Run anyway**.
 3. When the firewall asks, allow Nearclip on **private networks**. Onboarding and Settings show the firewall status and
    an *Allow…* button.
 
-Requires Windows 10 version 1809 or later, or Windows 11 (x64 or Arm64). The folder is self-contained — no installer and
-no .NET to install. Nearclip lives in the notification area; <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd> opens your history.
+Requires Windows 10 version 1809 or later, or Windows 11 (x64 or Arm64). The ZIP's folder is self-contained — no installer
+and no .NET to install. Nearclip lives in the notification area; <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd> opens your history.
 
 ### Android
 
@@ -280,9 +286,9 @@ only, no Visual Studio needed).
   or the text-selection menu, unless you turn on instant capture with Shizuku (restart Shizuku after a reboot on
   non-rooted phones; Android 12+ may show a clipboard-access notice per copy). Receiving works in the background.
 - Removing a device is cooperative; for a full key rotation, leave and pair the remaining devices again.
-- The Windows build isn't code-signed yet (SmartScreen warns on downloaded copies) and is a self-contained folder rather
-  than an installer. The Android APK is signed with Nearclip's release key — if you installed an earlier test build,
-  uninstall it first.
+- The Windows ZIP on GitHub isn't code-signed yet (SmartScreen warns on downloaded copies) and is a self-contained folder
+  rather than an installer; the Microsoft Store version is signed and installs like any Store app. The Android APK is
+  signed with Nearclip's release key — if you installed an earlier test build, uninstall it first.
 
 ## Screenshots
 

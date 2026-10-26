@@ -23,6 +23,7 @@ const BASE = "http://127.0.0.1:" + server.address().port + "/";
 let failures = 0, checks = 0;
 const ok = (cond, what) => { checks++; if (!cond) { failures++; console.log("  ✗ " + what); } };
 const DL = "https://github.com/ivLis-Studio/nearclip/releases/download/v1.0.0/";
+const STORE = "https://apps.microsoft.com/detail/9PNQ3Z9S83QS";
 const RELEASE = { tag_name: "v1.0.0", published_at: "2026-10-24T12:00:00Z",
   assets: ["Nearclip-macOS.zip", "Nearclip-Windows-x64.zip", "Nearclip-Windows-arm64.zip", "Nearclip-Android.apk"].map((name) => ({ name, browser_download_url: DL + name })) };
 
@@ -66,6 +67,8 @@ for (const lang of ["en", "ko"]) {
         lang: document.documentElement.lang, title: document.title, h1: document.querySelector("h1").textContent,
         missing: keys.filter((k) => !(k in dict)), unused: Object.keys(dict).filter((k) => !keys.includes(k)),
         main: document.querySelector(".dl-main").getAttribute("href"), label: document.querySelector(".dl-main-label").textContent,
+        icon: document.querySelector(".dl-main .ico").dataset.i, painted: !!document.querySelector(".dl-main .ico svg path"),
+        win: [...document.querySelectorAll("#dl-win .btns a")].map((a) => a.getAttribute("href")), or: document.querySelector("#dl-win .dl-or").textContent,
         version: document.querySelector(".dl-version").textContent, here: [...document.querySelectorAll(".dl.here")].map((n) => n.id),
         imgs: [...document.querySelectorAll("[data-src-l]")].map((i) => i.getAttribute("src")),
       };
@@ -74,9 +77,12 @@ for (const lang of ["en", "ko"]) {
     if (lang === "en" && os === "mac") console.log("languages and platforms"), ok(r.missing.length === 0, "every data-t key has Korean: missing " + r.missing.join(", ")), ok(r.unused.length === 0, "no unused Korean keys: " + r.unused.join(", "));
     ok(r.lang === lang, tag + " html lang");
     ok(lang === "ko" ? /여기서/.test(r.h1) && /여기서/.test(r.title) : /Copy here/.test(r.h1), tag + " headline and title in the language");
-    const want = { mac: DL + "Nearclip-macOS.zip", win: DL + "Nearclip-Windows-x64.zip", android: DL + "Nearclip-Android.apk", ios: "#dl-ios" }[os];
+    const want = { mac: DL + "Nearclip-macOS.zip", win: STORE, android: DL + "Nearclip-Android.apk", ios: "#dl-ios" }[os];
     ok(r.main === want, tag + " main download → " + r.main);
     ok(r.label === (await page.evaluate(([l, o]) => window.SITE_X[l]["dl." + o], [lang, os])), tag + " download label " + r.label);
+    ok(r.icon === (os === "win" ? "shopping-bag" : "download") && r.painted, tag + " main download icon " + r.icon);
+    ok(r.win.join() === [STORE, DL + "Nearclip-Windows-x64.zip", DL + "Nearclip-Windows-arm64.zip"].join(), tag + " Windows: the Store first, then the ZIPs from GitHub (" + r.win.join(", ") + ")");
+    ok(/GitHub/.test(r.or), tag + " Windows says where the direct download comes from: " + r.or);
     ok(/1\.0\.0/.test(r.version), tag + " release version shown: " + r.version);
     ok(r.here.join() === "dl-" + os, tag + " highlights its download card");
     ok(r.imgs.every((s) => s.includes("-" + lang + ".")), tag + " pictures in the language");
@@ -156,12 +162,24 @@ for (const [w, h] of [[360, 780], [390, 844]]) {
   for (const lang of ["en", "ko"]) {
     const { page, ctx, errors } = await open("?lang=" + lang + "&os=ios", { viewport: { width: w, height: h }, mobile: true, scheme: lang === "ko" ? "dark" : "light" });
     await page.evaluate(() => document.querySelectorAll(".reveal").forEach((n) => n.classList.add("in")));
-    const r = await page.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, film: document.querySelector("#film-video source").getAttribute("src"), vertical: document.querySelector("#player").classList.contains("vertical") }));
+    const r = await page.evaluate(() => ({ over: document.documentElement.scrollWidth - innerWidth, film: document.querySelector("#film-video source").getAttribute("src"), vertical: document.querySelector("#player").classList.contains("vertical"),
+      store: ((b) => b.scrollWidth <= b.clientWidth && getComputedStyle(b.querySelector(".long")).display !== "none")(document.querySelector("#dl-win .btn.primary")) }));
     ok(r.over <= 0, w + "px " + lang + ": no sideways scrolling (" + r.over + "px)");
     ok(r.vertical && r.film === "assets/media/film-" + lang + "-v.mp4", w + "px " + lang + ": the 9:16 film");
+    ok(r.store, w + "px " + lang + ": the whole Microsoft Store label fits its button");
     ok(errors.length === 0, w + "px " + lang + ": no errors " + errors.join(" | "));
     await ctx.close();
   }
+}
+
+// ---- 5b. computers: four cards in a row keep only the store's name on the Windows button, two in a row the whole label
+console.log("the Store button");
+for (const [w, lang] of [[1100, "en"], [1100, "ko"], [1440, "en"], [1440, "ko"], [1000, "en"], [1000, "ko"]]) {
+  const { page, ctx } = await open("?lang=" + lang + "&os=win", { viewport: { width: w, height: 900 } });
+  const r = await page.evaluate(() => { const b = document.querySelector("#dl-win .btn.primary"); return { fits: b.scrollWidth <= b.clientWidth, long: getComputedStyle(b.querySelector(".long")).display !== "none" }; });
+  ok(r.fits, w + "px " + lang + ": the Store button fits its label");
+  ok(r.long === (w <= 1080), w + "px " + lang + ": " + (w <= 1080 ? "the whole label" : "only the store's name") + " (" + (r.long ? "long" : "short") + ")");
+  await ctx.close();
 }
 
 // ---- 6. the other pages

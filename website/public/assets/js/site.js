@@ -6,6 +6,9 @@
   var LANGS = ["en", "ko"];
   var REPO = "ivLis-Studio/nearclip";
   var DL = "https://github.com/" + REPO + "/releases/latest/download/";
+  // Windows leads with the Microsoft Store; its ZIPs stay on the download card as the direct download.
+  var STORE = { win: "https://apps.microsoft.com/detail/9PNQ3Z9S83QS" };
+  var ASSET = { mac: "Nearclip-macOS.zip", android: "Nearclip-Android.apk" };
   var stored = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
   var keep = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
   var calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -25,7 +28,7 @@
     return s.replace(/%@/g, function () { return a.shift(); });
   };
 
-  // ---- platform: ?os= → this device. Windows on Arm gets the Arm64 build first.
+  // ---- platform: ?os= → this device
   function systemOS() {
     var ua = navigator.userAgent || "", p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
     if (/iPhone|iPad|iPod/.test(ua) || (/Mac/.test(p) && navigator.maxTouchPoints > 1)) return "ios";
@@ -35,7 +38,6 @@
     return "other";
   }
   var os = ["mac", "win", "android", "ios", "other"].indexOf(params.get("os")) >= 0 ? params.get("os") : systemOS();
-  var arm = false;
 
   var originals = $$("[data-t]").map(function (n) { return [n, n.innerHTML]; });
   var altOriginals = $$("[data-t-alt]").map(function (n) { return [n, n.getAttribute("alt")]; });
@@ -70,15 +72,19 @@
     applyLang(e.target.value);
   });
 
-  // ---- download buttons follow this device
-  function mainAsset() { return os === "mac" ? "Nearclip-macOS.zip" : os === "win" ? (arm ? "Nearclip-Windows-arm64.zip" : "Nearclip-Windows-x64.zip") : os === "android" ? "Nearclip-Android.apk" : null; }
+  // ---- download buttons follow this device: the Store for Windows, the latest release for Mac and Android
   function assetURL(name) {
     var a = release && release.assets.filter(function (x) { return x.name === name; })[0];
     return a ? a.browser_download_url : DL + name;
   }
+  function mainURL() { return STORE[os] || (ASSET[os] ? assetURL(ASSET[os]) : os === "ios" ? "#dl-ios" : "#download"); }
   function renderPlatform() {
-    var asset = mainAsset();
-    $$(".dl-main").forEach(function (a) { a.setAttribute("href", asset ? assetURL(asset) : os === "ios" ? "#dl-ios" : "#download"); });
+    var icon = STORE[os] ? "shopping-bag" : "download";
+    $$(".dl-main").forEach(function (a) {
+      a.setAttribute("href", mainURL());
+      var n = a.querySelector(".ico");
+      if (n.dataset.i !== icon) { n.dataset.i = icon; paint(n); }
+    });
     $$(".dl-main-label").forEach(function (n) { n.textContent = X("dl." + os); });
     $$("[data-plat]").forEach(function (n) { n.classList.toggle("here", n.dataset.plat === os); });
     $$("[data-asset]").forEach(function (a) { a.setAttribute("href", assetURL(a.dataset.asset)); });
@@ -98,10 +104,6 @@
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (j) { if (j && j.tag_name) { release = j; renderRelease(); renderPlatform(); } })
     .catch(function () {});
-  // Only a real Windows PC asks for its architecture (a ?os=win preview on another computer keeps x64).
-  if (os === "win" && systemOS() === "win" && navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
-    navigator.userAgentData.getHighEntropyValues(["architecture"]).then(function (v) { arm = v.architecture === "arm"; renderPlatform(); }).catch(function () {});
-  }
 
   // ---- header border on scroll, reveal on scroll
   var bar = $("#bar");

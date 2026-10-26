@@ -21,6 +21,7 @@
 
 <p align="center">
   <a href="https://github.com/ivLis-Studio/nearclip/releases/latest"><b>다운로드</b></a> ·
+  <a href="https://apps.microsoft.com/detail/9PNQ3Z9S83QS"><b>Microsoft Store</b></a> ·
   <a href="https://ivlis-studio.github.io/nearclip/?lang=ko"><b>웹사이트</b></a> ·
   <a href="#설치">설치</a> ·
   <a href="#동작-방식">동작 방식</a> ·
@@ -106,13 +107,18 @@ macOS 14 이상, Apple 실리콘과 Intel 모두 지원합니다.
 
 ### Windows
 
+[**Microsoft Store**](https://apps.microsoft.com/detail/9PNQ3Z9S83QS)에서 받으세요. 스토어 버전은 Microsoft의 서명을 받았고
+업데이트도 알아서 됩니다.
+
+GitHub에서 직접 받을 수도 있습니다.
+
 1. [릴리스](https://github.com/ivLis-Studio/nearclip/releases/latest)에서 **Nearclip-Windows-x64.zip**(스냅드래곤 PC는
    **Nearclip-Windows-arm64.zip**)을 내려받아 아무 곳에나 압축을 풀고 `Nearclip\Nearclip.exe`를 실행하세요.
-2. 아직 코드 서명 전이라 SmartScreen이 **"Windows의 PC 보호"**를 띄우면 **추가 정보 › 실행**을 누르세요.
+2. ZIP 버전은 아직 코드 서명 전이라 SmartScreen이 "**Windows의 PC 보호**"를 띄우면 **추가 정보 › 실행**을 누르세요.
 3. 방화벽이 물어보면 **개인 네트워크**에서 허용하세요. 시작 화면과 설정에서 방화벽 상태와 *허용…* 버튼을 볼 수 있습니다.
 
-Windows 10 1809 이상 또는 Windows 11(x64, Arm64)에서 동작합니다. 폴더 하나로 완결되어 설치 프로그램도, .NET 설치도
-필요 없습니다. 알림 영역에서 지내며, <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd>로 기록을 엽니다.
+Windows 10 1809 이상 또는 Windows 11(x64, Arm64)에서 동작합니다. ZIP 버전은 폴더 하나로 완결되어 설치 프로그램도, .NET
+설치도 필요 없습니다. 알림 영역에서 지내며, <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd>로 기록을 엽니다.
 
 ### Android
 
@@ -262,7 +268,8 @@ Visual Studio는 필요 없습니다).
   텍스트 선택 메뉴로 보냅니다(루팅하지 않은 폰은 재부팅 후 Shizuku를 다시 시작해야 하고, Android 12 이상은 복사할 때마다
   클립보드 접근 알림이 뜰 수 있습니다). 받기는 백그라운드에서 됩니다.
 - 기기 제거는 협조 방식입니다. 키를 완전히 바꾸려면 그룹에서 나간 뒤 남은 기기들을 다시 연결하세요.
-- Windows 빌드는 아직 코드 서명 전이라 내려받은 파일에 SmartScreen 경고가 뜨고, 설치 프로그램 대신 폴더 하나로 배포됩니다.
+- GitHub의 Windows ZIP은 아직 코드 서명 전이라 내려받은 파일에 SmartScreen 경고가 뜨고, 설치 프로그램 대신 폴더 하나로
+  배포됩니다. Microsoft Store 버전은 서명되어 있고 다른 스토어 앱처럼 설치됩니다.
   Android APK는 Nearclip 릴리스 키로 서명되어 있어, 예전 테스트 빌드를 설치했다면 먼저 삭제해야 합니다.
 
 ## 스크린샷
