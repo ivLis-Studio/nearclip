@@ -69,6 +69,8 @@ for (const lang of ["en", "ko"]) {
         main: document.querySelector(".dl-main").getAttribute("href"), label: document.querySelector(".dl-main-label").textContent,
         icon: document.querySelector(".dl-main .ico").dataset.i, painted: !!document.querySelector(".dl-main .ico svg path"),
         win: [...document.querySelectorAll("#dl-win .btns a")].map((a) => a.getAttribute("href")), or: document.querySelector("#dl-win .dl-or").textContent,
+        soon: ["mac", "android", "ios"].map((p) => { const s = document.querySelector("#dl-" + p + " .btns .btn.soon"); return !!s && s.tagName === "SPAN" && s.getAttribute("aria-disabled") === "true" && s === document.querySelector("#dl-" + p + " .btns > :first-child"); }),
+        direct: ["mac", "android", "ios"].map((p) => document.querySelector("#dl-" + p + " .btns a").getAttribute("href")),
         version: document.querySelector(".dl-version").textContent, here: [...document.querySelectorAll(".dl.here")].map((n) => n.id),
         imgs: [...document.querySelectorAll("[data-src-l]")].map((i) => i.getAttribute("src")),
       };
@@ -83,6 +85,8 @@ for (const lang of ["en", "ko"]) {
     ok(r.icon === (os === "win" ? "shopping-bag" : "download") && r.painted, tag + " main download icon " + r.icon);
     ok(r.win.join() === [STORE, DL + "Nearclip-Windows-x64.zip", DL + "Nearclip-Windows-arm64.zip"].join(), tag + " Windows: the Store first, then the ZIPs from GitHub (" + r.win.join(", ") + ")");
     ok(/GitHub/.test(r.or), tag + " Windows says where the direct download comes from: " + r.or);
+    ok(r.soon.every(Boolean), tag + " Mac, Android and iPhone lead with their store, coming soon and not clickable (" + r.soon.join(", ") + ")");
+    ok(r.direct.join() === [DL + "Nearclip-macOS.zip", DL + "Nearclip-Android.apk", "https://github.com/ivLis-Studio/nearclip#iphone-and-ipad"].join(), tag + " …with the direct download under it (" + r.direct.join(", ") + ")");
     ok(/1\.0\.0/.test(r.version), tag + " release version shown: " + r.version);
     ok(r.here.join() === "dl-" + os, tag + " highlights its download card");
     ok(r.imgs.every((s) => s.includes("-" + lang + ".")), tag + " pictures in the language");

@@ -381,6 +381,14 @@ html:lang(ko) h2 { letter-spacing: -0.02em; line-height: 1.2; }
 .dl .btns .row { display: flex; gap: 8px; }
 .dl .btns .row .btn { flex: 1; padding: 0 12px; }
 .dl .btn { width: 100%; height: 44px; font-size: 15px; }
+/* A store that is on its way: the store's name with "Coming soon" under it; nothing to click yet. */
+.dl .btn.primary { height: 52px; }
+.dl .btn.soon { cursor: default; }
+.btn.soon:hover { background: var(--iris); }
+.btn.soon:active { transform: none; }
+.btn.soon .two { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; min-width: 0; }
+.btn.soon .two b { font-weight: 600; }
+.btn.soon .two small { font-size: 12px; font-weight: 600; opacity: 0.82; letter-spacing: 0.01em; }
 .dl .dl-or { margin: 4px 0 0; text-align: center; color: var(--muted); font-size: 13px; }
 /* Four cards in a row leave no room for "Get it from Microsoft Store": the button keeps the store's name. */
 @container (max-width: 264px) { .dl .long { display: none; } }
