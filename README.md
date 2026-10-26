@@ -81,6 +81,13 @@ No Electron, no web views: each app uses its platform's own controls, fonts and 
   *Receiving an image from iPhone…* with the size and a progress bar at once — in the toast on computers, as a card in
   the phone apps, as a quiet banner on Android in the background — and the same place turns into *Copied from iPhone*.
 - **One shared history** on every device: search, filters (Text · Links · Images · Pinned), pin, delete everywhere.
+- **Verification codes, where you type them.** When a text message (on Android, KakaoTalk too) brings a 4–8 digit code,
+  the phone sends just the code to your other devices, which ask *“A verification code arrived from iPhone. Copy it?”*
+  — nothing to tap on the phone, nothing pasted on its own. Android reads its messaging notifications (on by default;
+  Android 15 and later need a one-time allowance through Shizuku or adb); on iPhone a Shortcuts automation on Message
+  runs *Send Verification Code*.
+- **No echo loops.** The same content copied again — by a screenshot tool that sets a picture twice, or by Link to
+  Windows or Universal Clipboard putting back what Nearclip just wrote — is never sent around again.
 - **Pairing without accounts.** Scan a QR code with a phone, or pick a nearby computer and compare a 6-digit code on
   both screens. Any paired device can add more.
 - **Mesh sync.** Every device connects to every device it can reach and passes clips on, so partly connected networks
@@ -240,6 +247,8 @@ only, no Visual Studio needed).
 | iOS UI flow (onboarding → pair → catch-up → send; remote; licenses) | `xcodebuild test -scheme NearclipiOS …` (see `apple/iOSUITests`) |
 | macOS acceptance demo (real app + simulated peers) | `python3 apple/tools/demo.py` |
 | Large-image progress in the real apps (a peer that sends slowly; screenshots) | `tools/acceptance/mac_transfer.py`, `windows_transfer.py`, `android_transfer.py`, `apple/tools/ios_transfer.py` |
+| Verification codes in the real apps (real SMS on the emulator, "Copy it?" on every platform) | `tools/acceptance/mac_code.py`, `windows_code.py`, `android_code.py`, `apple/tools/ios_code.py [--intent]` |
+| No echo loops on Windows (same text, CRLF, a clip put back, bitmap then PNG) | `python3 tools/acceptance/windows_echo.py` |
 | Remote connection in the real apps (throwaway Tailscale control server) | `apple/tools/remote_demo.py`, `apple/tools/ios_remote.py`, `tools/acceptance/android_remote.py`, `windows_remote.py` |
 | Remote connection against the real Tailscale service (a person signs in) | `python3 tools/acceptance/real_remote.py` |
 | Website (both languages, the live demo, film, phone layout) | `cd website && npm install && npm test` |
@@ -247,13 +256,20 @@ only, no Visual Studio needed).
 <details>
 <summary><b>What has been verified</b></summary>
 
-- **Engines**: Swift 12 tests, Kotlin 24 tests, C# 33 tests, Go bridge tests — every value in `spec/test-vectors.json`
-  plus real localhost pairing/sync scenarios and the tailnet dialing/discovery logic.
+- **Engines**: Swift 18 tests, Kotlin 29 tests, C# 47 tests, Go bridge tests — every value in `spec/test-vectors.json`
+  and `spec/otp-vectors.json` plus real localhost pairing/sync scenarios and the tailnet dialing/discovery logic.
 - **Interop**: `tools/interop/run.py` passes **48/48** scenarios across Swift × Kotlin × C# (QR and code pairing in every
   direction, live text in Korean + emoji, multi-chunk images, delete everywhere, catch-up after restart, removal,
   re-adding a removed device, 3-hop mesh forwarding in every permutation, image progress for every ordered pair, and
   remote: every ordered pair pairs on the LAN, comes back with remote connection on, finds the other through the
-  tailnet and syncs both ways).
+  tailnet and syncs both ways; a verification code keeps its mark across 3-hop forwarding).
+- **1.1 in the real apps**: a real text message on the Android 16 emulator reached a peer as just the code, with nothing
+  tapped; a message without a code sent nothing; an English code that Android 16 hid was reported, and after the
+  one-time allowance the next one went through. The Windows toast, the macOS capsule, the Android notification and
+  banner and the iOS banner each asked *Copy it?* without touching the clipboard, and Copy / Not now did what they say;
+  the iOS *Send Verification Code* action sent just the code. No echo loops in the Windows VM (the same text, a CRLF
+  variant, a clip put back by another app, a screenshot set as a bitmap and then as PNG). Pausing shows *Paused* for
+  the remote connection on all four apps.
 - **Large-image progress in the real apps** (a peer sending a 10.6 MB photo at 0.9 MB/s): the macOS app, the Windows 11
   ARM64 VM, the Android 16 emulator and the iPhone simulator showed *Receiving an image from …* with *Preparing…*, then
   the size counting up, and turned into *Copied from …* in place with the image on the clipboard. Cancelled
@@ -269,7 +285,8 @@ only, no Visual Studio needed).
   apps listed a peer that was not reachable over the LAN as *Connected · Remote* and received its clip. **Against the
   real Tailscale service**: the macOS app and the Android app signed in, listed each other as *Connected · Remote* after
   the LAN path was taken away, and synced both ways over a direct WireGuard path.
-- **Not verified yet**: real phones and a real Windows PC in this pass; two genuinely different networks (NAT traversal
+- **Not verified yet**: real phones and a real Windows PC in this pass (verification codes from real SMS and KakaoTalk
+  on Samsung and Pixel phones among them); two genuinely different networks (NAT traversal
   across the internet and the DERP fallback); iPhone and Windows against the real Tailscale service; battery use.
 
 </details>

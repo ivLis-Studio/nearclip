@@ -290,6 +290,22 @@ html:lang(ko) h2 { letter-spacing: -0.02em; line-height: 1.2; }
 .toast-demo .thumb { width: 46px; height: 46px; border-radius: 10px; flex: none; background: url(../media/lisbon.webp) center / cover; opacity: 0.35; transition: opacity .3s; }
 .toast-demo.done .thumb { opacity: 1; }
 .toast-demo.done .track { visibility: hidden; }
+/* Verification codes: a text message on the phone, the "Copy it?" toast on the computer. */
+.big.wide { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); align-items: center; gap: 30px; }
+.big.wide > div:first-child { display: flex; flex-direction: column; gap: 10px; }
+.big.wide .viz { margin-top: 0; }
+.code-demo { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.code-demo .sms { max-width: 300px; display: flex; gap: 9px; align-items: flex-start; padding: 12px 14px; border-radius: 18px 18px 18px 6px; background: var(--surface-2); font-size: 14px; line-height: 1.4; color: var(--ink); }
+.code-demo .sms .ico { color: var(--iris); flex: none; margin-top: 2px; }
+.code-demo .arrow { color: var(--faint); font-size: 20px; transform: rotate(90deg); }
+.code-toast { width: min(100%, 330px); display: flex; gap: 12px; padding: 14px 16px 14px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow-lg); text-align: left; }
+.code-toast .ic { width: 42px; height: 42px; border-radius: 50%; flex: none; background: var(--iris); color: #fff; display: grid; place-items: center; font-size: 19px; }
+.code-toast .body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.code-toast b { font-size: 14px; line-height: 1.35; }
+.code-toast strong { font-size: 30px; line-height: 1.1; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+.code-toast .btns { display: flex; gap: 8px; margin-top: 2px; }
+.code-toast .btns span { padding: 5px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; background: var(--surface-2); }
+.code-toast .btns .primary { background: var(--iris); color: #fff; }
 .hist-demo { width: min(100%, 380px); border-radius: 16px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow-lg); overflow: hidden; font-size: 13.5px; }
 .hist-demo .search { margin: 12px; display: flex; align-items: center; gap: 8px; padding: 8px 11px; border-radius: 10px; background: var(--surface-2); color: var(--muted); }
 .hist-demo .search b { color: var(--ink); font-weight: 500; }
@@ -420,6 +436,7 @@ footer .legal { flex-basis: 100%; font-size: 12.5px; color: var(--faint); margin
   .plat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 18px; }
   .plat .shot { height: 420px; }
   .feature-split, .split, .sec-top { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .big.wide { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid-3 { grid-template-columns: minmax(0, 1fr); }
   .dl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -80,6 +80,12 @@ Electron도, 웹뷰도 없습니다. 앱마다 그 플랫폼의 컨트롤, 글�
   *iPhone에서 이미지 받는 중…*과 용량, 진행률 바가 뜹니다(컴퓨터는 알림, 휴대폰 앱은 카드, Android 백그라운드는 조용한
   배너). 다 받으면 같은 자리가 *iPhone에서 복사됨*으로 바뀝니다.
 - 모든 기기에 **같은 기록**: 검색, 필터(텍스트·링크·이미지·고정됨), 고정, 모든 기기에서 삭제
+- **인증번호를 입력할 곳으로**: 문자(Android는 카카오톡도)로 4~8자리 인증번호가 오면 휴대폰이 번호만 다른 기기로 보내고,
+  받은 기기는 *“iPhone에서 인증번호가 도착했어요! 복사할까요?”*라고 묻습니다. 휴대폰에서 누를 것도, 저절로 붙여넣는 것도
+  없습니다. Android는 메시지 알림을 읽고(기본 켜짐, Android 15 이상은 Shizuku나 adb로 한 번 허용), iPhone은 단축어의 메시지
+  자동화가 *인증번호 보내기*를 실행합니다.
+- **되돌아오는 복사 없음**: 같은 내용을 다시 복사해도 — 이미지를 두 번 넣는 캡처 도구, Nearclip이 넣은 내용을 되돌려 놓는
+  Windows와 연결·유니버설 클립보드 — 다시 퍼지지 않습니다.
 - **계정 없는 연결**: 휴대폰으로 QR 코드를 스캔하거나, 주변 컴퓨터를 골라 두 화면의 6자리 코드를 비교합니다. 연결된 기기라면
   어느 기기에서든 새 기기를 추가할 수 있습니다.
 - **메시 동기화**: 닿는 모든 기기끼리 연결하고 받은 클립을 전달하므로, 일부만 연결돼도 결국 모두 같아집니다. 잠시 떨어져
@@ -227,6 +233,8 @@ Visual Studio는 필요 없습니다).
 | iOS UI 흐름(시작 → 연결 → 밀린 내용 → 보내기, 원격, 라이선스) | `xcodebuild test -scheme NearclipiOS …` (`apple/iOSUITests` 참고) |
 | macOS 인수 데모(실제 앱 + 가상 기기) | `python3 apple/tools/demo.py` |
 | 실제 앱의 큰 이미지 진행률(천천히 보내는 기기, 스크린샷) | `tools/acceptance/mac_transfer.py`, `windows_transfer.py`, `android_transfer.py`, `apple/tools/ios_transfer.py` |
+| 실제 앱의 인증번호(에뮬레이터의 실제 문자, 모든 플랫폼의 “복사할까요?”) | `tools/acceptance/mac_code.py`, `windows_code.py`, `android_code.py`, `apple/tools/ios_code.py [--intent]` |
+| Windows에서 되돌아오는 복사 없음(같은 텍스트, CRLF, 되돌려 놓은 클립, 비트맵→PNG) | `python3 tools/acceptance/windows_echo.py` |
 | 실제 앱의 원격 연결(일회용 Tailscale 조정 서버) | `apple/tools/remote_demo.py`, `apple/tools/ios_remote.py`, `tools/acceptance/android_remote.py`, `windows_remote.py` |
 | 실제 Tailscale 서비스 대상 원격 연결(사람이 로그인) | `python3 tools/acceptance/real_remote.py` |
 | 웹사이트(두 언어, 실시간 데모, 영상, 휴대폰 레이아웃) | `cd website && npm install && npm test` |
@@ -234,11 +242,18 @@ Visual Studio는 필요 없습니다).
 <details>
 <summary><b>지금까지 검증한 것</b></summary>
 
-- **엔진**: Swift 12개, Kotlin 24개, C# 33개 테스트와 Go 브리지 테스트 — `spec/test-vectors.json`의 모든 값, 실제
+- **엔진**: Swift 18개, Kotlin 29개, C# 47개 테스트와 Go 브리지 테스트 — `spec/test-vectors.json`·`spec/otp-vectors.json`의 모든 값, 실제
   localhost 연결·동기화 시나리오, 테일넷 연결·검색 로직.
 - **상호 운용**: `tools/interop/run.py`가 Swift × Kotlin × C# **48/48** 시나리오 통과(모든 방향의 QR·코드 연결, 한국어+이모지
   실시간 텍스트, 여러 조각 이미지, 모든 기기에서 삭제, 재시작 후 밀린 내용, 제거, 제거한 기기 다시 추가, 모든 순열의 3단계
   메시 전달, 모든 쌍의 이미지 진행률, 원격: 모든 쌍이 LAN에서 연결한 뒤 원격 연결로 다시 만나 테일넷으로 서로를 찾고 양방향 동기화).
+  3단계 전달을 거쳐도 인증번호 표시가 유지됩니다.
+- **1.1 실제 앱 확인**: Android 16 에뮬레이터에 실제 문자를 보내자 아무것도 누르지 않아도 번호만 다른 기기에 도착했고, 번호
+  없는 문자는 아무것도 보내지 않았습니다. Android 16이 가린 영어 인증번호는 그렇다고 알렸고, 한 번 허용한 뒤에는 다음
+  번호가 전달됐습니다. Windows 알림, macOS 캡슐, Android 알림·배너, iOS 배너가 클립보드를 건드리지 않고 “복사할까요?”를
+  물었고, 복사·나중에가 그대로 동작했습니다. iOS *인증번호 보내기* 동작은 번호만 보냈습니다. Windows VM에서 같은 텍스트,
+  줄바꿈만 다른 텍스트, 다른 앱이 되돌려 놓은 클립, 비트맵→PNG로 두 번 들어간 캡처가 다시 퍼지지 않았고, 네 앱 모두
+  일시정지 중 원격 연결을 *일시정지됨*으로 표시합니다.
 - **실제 앱의 큰 이미지 진행률**(10.6MB 사진을 0.9MB/s로 보내는 기기): macOS 앱, Windows 11 ARM64 VM, Android 16 에뮬레이터,
   iPhone 시뮬레이터가 *…에서 이미지 받는 중*과 *준비 중…*, 늘어나는 용량을 보여 준 뒤 같은 자리에서 *…에서 복사됨*으로 바뀌고
   클립보드에 이미지가 들어갔습니다. 알림 취소, 전송 중 끊김, 자동 복사 끔도 설계대로 동작했습니다.
@@ -252,7 +267,7 @@ Visual Studio는 필요 없습니다).
 - **원격 연결**(일회용 Tailscale 조정 서버, 실제 tsnet·WireGuard·DERP 코드): 네 앱 모두 LAN으로 닿지 않는 기기를
   *연결됨 · 원격*으로 표시하고 클립을 받았습니다. **실제 Tailscale 서비스**: macOS 앱과 Android 앱이 로그인한 뒤, LAN
   경로를 끊자 서로를 *연결됨 · 원격*으로 표시하고 직접 WireGuard 경로로 양방향 동기화했습니다.
-- **아직 검증하지 못한 것**: 이번 확인에서의 실제 휴대폰과 실제 Windows PC, 서로 다른 실제 네트워크(인터넷을 건너는 NAT 통과와
+- **아직 검증하지 못한 것**: 이번 확인에서의 실제 휴대폰과 실제 Windows PC(실제 휴대폰의 문자·카카오톡 인증번호 포함), 서로 다른 실제 네트워크(인터넷을 건너는 NAT 통과와
   DERP 중계), 실제 Tailscale 서비스에서의 iPhone·Windows, 배터리 사용량.
 
 </details>
