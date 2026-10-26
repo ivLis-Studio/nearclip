@@ -264,6 +264,12 @@ def scenario_mesh(impls, tmp):
             src.send(cmd="send_text", text=text)
             ev = dst.expect("forwarded clip", is_clip(text=text), timeout=30)
             assert ev.get("src") == src.id, ev
+        # a verification code keeps its mark on the way through B (PROTOCOL.md §6.7)
+        b.mark(); c.mark()
+        code = str(random.randint(100000, 999999))
+        a.send(cmd="send_text", text=code, otp=True)
+        assert c.expect("forwarded code", is_clip(text=code), timeout=30).get("otp") is True, "C lost the otp mark"
+        assert b.expect("code at B", is_clip(text=code)).get("otp") is True, "B lost the otp mark"
         # deletion from C reaches A through B
         cid = history_ids(a)[0]["id"]
         a.mark()

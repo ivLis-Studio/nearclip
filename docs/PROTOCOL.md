@@ -267,6 +267,7 @@ All are JSON messages (type byte `0x01`); `t` is the message type.
 | `src` | all | origin deviceId |
 | `kind` | all | `text` or `image` (unknown kinds MUST be ignored) |
 | `text` | text | the text, ≤ 4 MiB UTF-8 |
+| `otp` | text | `true`: a verification code found in a message (6.7); optional, absent otherwise |
 | `mime` | image | `image/png` or `image/jpeg` |
 | `size` | image | blob length in bytes, 1 … 33 554 432 (32 MiB) |
 | `sha` | image | `hex(SHA-256(blob))` |
@@ -360,6 +361,37 @@ The apps (DESIGN.md) show a transfer only if it is still running 0.3 s after it 
 "Copied from …"; when the image is in, the same toast, card or notification turns into "Copied from …" (or "Image from
 … · Saved to history" when it was not copied), and failures other than `cancelled` say where to copy it again.
 
+### 6.7 Verification codes
+
+A phone that finds a verification code in a new text message (Android: also KakaoTalk) can send just the code to the
+other devices, so that it can be pasted on the computer where it is asked for:
+
+```json
+{"t":"clip","live":true,"clip":{"id":"<uuid>","ts":1792800000000,"src":"<phone id>","kind":"text","text":"482915","otp":true}}
+```
+
+* A code clip is an ordinary text clip (6.1) with `otp: true`: it is stored, forwarded with the flag, deleted and
+  caught up like any other. `otp` is only meaningful on text clips; receivers drop it from other kinds.
+* Receivers MUST NOT write a code clip to the clipboard on their own (no auto-apply in 6.1, no mobile "copy latest
+  on open"). Instead the apps offer it: "A verification code arrived from Junseo's iPhone. Copy it?" with Copy and
+  Not now. A live code is offered when it arrives; a caught-up one only while it is less than 3 minutes old. "Copy"
+  writes it to that device's clipboard only.
+* Implementations that do not know `otp` treat the clip as an ordinary live text clip (Nearclip 1.0 copies it).
+* Only the code travels: the message, its sender and other notification content never leave the phone. The text is
+  exactly the code's digits, 4 to 8 of them.
+
+Finding the code (the phones; `spec/otp-vectors.json` holds the cases both implementations agree on): the message
+must contain a word that says it carries a code (`인증`, `코드`, `code`, `verification`, `OTP`, `passcode`, …). The
+code is the 4–8 digit number (or two groups of 3 joined by a space or a hyphen) nearest to such a word, a number set
+off by brackets, a colon or "is" winning ties; numbers that are part of a word, an amount (currency signs, units such
+as 원), a phone number, a date or a time, or a longer number are never taken. A message without a keyword has no code.
+
+Sources: Android reads new notifications of the default SMS app, Google Messages, Samsung Messages and KakaoTalk
+through notification access; Android 15+ hides codes from listeners it does not trust until the shell allows app op
+`RECEIVE_SENSITIVE_NOTIFICATIONS` (with Shizuku from Settings, or `adb shell cmd appops set <package>
+RECEIVE_SENSITIVE_NOTIFICATIONS allow`). iOS lets no app read other apps' notifications: a Shortcuts automation on
+Message runs the app's "Send Verification Code" action with the message text (text messages only).
+
 ## 7. Limits
 
 | Limit | Value |
@@ -409,7 +441,7 @@ object per line on **stdin** (commands). stderr is free-form logging.
 | `pair_failed` | `reason`: `declined`, `no_ticket` (QR ticket expired/used/wrong — the inviter closed after the hellos), `busy`, `commit`, `timeout`, `unreachable` (no address answered), `io` (other connection errors) |
 | `peer_up` / `peer_down` | `id` (+ `name` and `route`: `lan` or `remote` for `peer_up`) |
 | `tailnet` | `state`, `ip`, `peers` (number of Nearclip nodes seen in the tailnet) — whenever one of them changes |
-| `clip` | `id`, `src`, `kind`, `live`, `ts` + `text` (text) or `size`, `sha`, `mime` (image) |
+| `clip` | `id`, `src`, `kind`, `live`, `ts` + `text` (text; `otp: true` on a code, 6.7) or `size`, `sha`, `mime` (image) |
 | `transfer` | `id`, `from`, `state` (`preparing`, `receiving`, `failed`), `received`, `total` (+ `reason` when failed) — a live image on its way (6.6); it ends with `clip` |
 | `announced` | `id` — answer to `announce_image` |
 | `deleted` | `id` |
@@ -425,7 +457,7 @@ object per line on **stdin** (commands). stderr is free-form logging.
 | `pair_code` | `host`, `port` | join via code pairing: emit `pair_sas`, then `paired` or `pair_failed` |
 | `accept` / `decline` | `peer` | answer a `pair_prompt` |
 | `connect` | `host`, `port` | dial a member session |
-| `send_text` | `text` | new live text clip from this device |
+| `send_text` | `text` (+ `otp`: `true` for a verification code, 6.7) | new live text clip from this device |
 | `send_image` | `path`, `mime` (+ `id` from `announce_image`) | new live image clip (the file bytes are the blob) |
 | `announce_image` | | announce a live image (6.6), emit `announced` |
 | `cancel_image` | `id` | cancel an announcement |

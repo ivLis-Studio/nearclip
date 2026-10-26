@@ -33,7 +33,8 @@ public sealed record MemberRecord(
     long UpdatedAt,
     bool Removed);
 
-/// <summary>Wire form of a clip (PROTOCOL.md §6.1).</summary>
+/// <summary>Wire form of a clip (PROTOCOL.md §6.1). <see cref="Otp"/>: a verification code a phone found in a message
+/// (§6.7), offered rather than copied by the devices that receive it.</summary>
 public sealed record Clip(
     string Id,
     long Ts,
@@ -44,10 +45,12 @@ public sealed record Clip(
     long? Size = null,
     string? Sha = null,
     int? W = null,
-    int? H = null)
+    int? H = null,
+    bool? Otp = null)
 {
     public bool IsImage => Kind == "image";
     public bool IsText => Kind == "text";
+    public bool IsCode => Otp == true && IsText;
 }
 
 /// <summary>A clip in local history. <see cref="GroupId"/> is the group it belongs to; <see cref="LocalOnly"/> clips

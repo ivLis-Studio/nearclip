@@ -114,7 +114,8 @@ public sealed partial class NearclipNode
         // Forward to every other open member session so partially connected meshes converge.
         foreach (var other in _online.Values.ToList())
             if (other != from) SendClip(c, blob, live, other);
-        var apply = live && c.Src != DeviceId && c.Ts > _newestLocalTs;
+        // A verification code is offered by the app, not written to the clipboard on its own (§6.7).
+        var apply = live && c.Src != DeviceId && c.Ts > _newestLocalTs && !c.IsCode;
         if (apply)
         {
             _newestLocalTs = c.Ts;

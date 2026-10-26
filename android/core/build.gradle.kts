@@ -29,6 +29,7 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
     systemProperty("nearclip.vectors", rootProject.file("../spec/test-vectors.json").absolutePath)
+    systemProperty("nearclip.otpVectors", rootProject.file("../spec/otp-vectors.json").absolutePath)
     testLogging {
         events("passed", "failed", "skipped")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

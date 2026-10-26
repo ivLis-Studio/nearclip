@@ -115,6 +115,7 @@ internal object Persistence {
                     sourceName = c.str("srcName"),
                     sourcePlatform = c.str("srcPlatform"),
                     localOnly = c.bool("localOnly") ?: false,
+                    otp = c.bool("otp") ?: false,
                 ),
             )
         }
@@ -151,6 +152,7 @@ internal object Persistence {
                     c.sourceName?.let { put("srcName", it) }
                     c.sourcePlatform?.let { put("srcPlatform", it) }
                     if (c.localOnly) put("localOnly", true)
+                    if (c.otp) put("otp", true)
                 },
             )
         }

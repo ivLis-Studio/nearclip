@@ -111,9 +111,12 @@ data class Clip(
     val sourcePlatform: String? = null,
     /** Set when the clip exceeded the protocol limits: kept in local history but never synced. */
     val localOnly: Boolean = false,
+    /** A verification code a phone found in a message (PROTOCOL §6.7): offered, not copied, by the devices receiving it. */
+    val otp: Boolean = false,
 ) {
     val isImage: Boolean get() = kind == ClipKind.IMAGE
     val isText: Boolean get() = kind == ClipKind.TEXT
+    val isCode: Boolean get() = otp && isText
 
     fun wireJson(): JsonObject = buildJsonObject {
         put("id", id)
@@ -121,7 +124,10 @@ data class Clip(
         put("src", src)
         put("kind", kind)
         when (kind) {
-            ClipKind.TEXT -> put("text", text ?: "")
+            ClipKind.TEXT -> {
+                put("text", text ?: "")
+                if (otp) put("otp", true)
+            }
             ClipKind.IMAGE -> {
                 put("mime", mime)
                 put("size", size)
@@ -147,7 +153,7 @@ data class Clip(
                 ClipKind.TEXT -> {
                     val text = obj.str("text") ?: return null
                     if (text.toByteArray(Charsets.UTF_8).size > MAX_TEXT_BYTES) return null
-                    Clip(id, ts, src, ClipKind.TEXT, text = text, groupId = groupId, receivedAt = now)
+                    Clip(id, ts, src, ClipKind.TEXT, text = text, groupId = groupId, receivedAt = now, otp = obj.bool("otp") == true)
                 }
                 ClipKind.IMAGE -> {
                     val mime = obj.str("mime")?.lowercase() ?: return null

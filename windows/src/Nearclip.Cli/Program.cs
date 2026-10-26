@@ -60,6 +60,7 @@ void WriteClip(Utf8JsonWriter w, Clip c, bool? live)
     if (c.Size is { } size) w.WriteNumber("size", size);
     if (c.Sha is not null) w.WriteString("sha", c.Sha);
     if (c.Mime is not null) w.WriteString("mime", c.Mime);
+    if (c.IsCode) w.WriteBoolean("otp", true);
 }
 
 void WriteMembers(Utf8JsonWriter w, IEnumerable<MemberRecord> members)
@@ -77,7 +78,7 @@ try
         StateDirectory = Path.GetFullPath(stateDir!),
         DeviceName = name,
         Platform = "cli",
-        AppVersion = "1.0.0",
+        AppVersion = "1.1.0",
         Model = "dotnet",
         Port = port,
         SecretStore = new FileSecretStore(Path.Combine(Path.GetFullPath(stateDir!), "secrets")),
@@ -212,7 +213,7 @@ void Handle(string cmd, JsonElement o)
             else Emit(w => { w.WriteString("ev", "error"); w.WriteString("msg", "connect needs host and port"); });
             break;
         case "send_text":
-            if (WireJson.Str(o, "text") is { } text) node.SendText(text);
+            if (WireJson.Str(o, "text") is { } text) node.SendText(text, WireJson.Bool(o, "otp") == true);
             break;
         case "send_image":
         {

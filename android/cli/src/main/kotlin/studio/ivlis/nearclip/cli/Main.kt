@@ -13,6 +13,7 @@ import studio.ivlis.nearclip.core.model.MemberRecord
 import studio.ivlis.nearclip.core.model.Platform
 import studio.ivlis.nearclip.core.pairing.PairingUri
 import studio.ivlis.nearclip.core.proto.Wire
+import studio.ivlis.nearclip.core.proto.bool
 import studio.ivlis.nearclip.core.proto.int
 import studio.ivlis.nearclip.core.proto.str
 import studio.ivlis.nearclip.core.store.FileStore
@@ -54,6 +55,7 @@ private fun clipJson(c: Clip, live: Boolean?, ev: String?) = buildJsonObject {
     c.size?.let { put("size", it) }
     c.sha?.let { put("sha", it) }
     c.mime?.let { put("mime", it) }
+    if (c.isCode) put("otp", true)
 }
 
 private fun membersJson(list: List<MemberRecord>) = buildJsonObject {
@@ -102,7 +104,7 @@ fun main(args: Array<String>) {
         TailnetOptions(d, controlUrl = tailnetControl, logPath = File(d, "tailnet.log").absolutePath, testMode = tailnetControl != null)
     }
     val engine = try {
-        NearclipEngine(FileStore(dir), EngineConfig(platform = Platform.CLI, defaultName = name, appVersion = "1.0.0", port = port,
+        NearclipEngine(FileStore(dir), EngineConfig(platform = Platform.CLI, defaultName = name, appVersion = "1.1.0", port = port,
             tailnet = tailnet))
     } catch (e: Exception) {
         log("init failed: ${e}")
@@ -195,7 +197,7 @@ fun main(args: Array<String>) {
                     if (host != null && p != null && p in 1..65535) engine.connect(Endpoint(host, p))
                     else emit(buildJsonObject { put("ev", "error"); put("msg", "connect needs host and port") })
                 }
-                "send_text" -> o.str("text")?.let { engine.sendText(it) }
+                "send_text" -> o.str("text")?.let { engine.sendText(it, otp = o.bool("otp") == true) }
                 "send_image" -> {
                     val path = o.str("path")
                     val bytes = path?.let { runCatching { File(it).readBytes() }.getOrNull() }

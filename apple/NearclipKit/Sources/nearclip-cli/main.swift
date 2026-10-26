@@ -50,6 +50,7 @@ func emit(_ obj: [String: Any]) {
     if let s = c.size { o["size"] = s }
     if let s = c.sha { o["sha"] = s }
     if let m = c.mime { o["mime"] = m }
+    if c.isCode { o["otp"] = true }
     return o
 }
 
@@ -70,7 +71,7 @@ if let tailnetDir {
 }
 let node: NearclipNode
 do {
-    var config = NearclipNode.Config(stateDirectory: stateURL, deviceName: name, platform: platform, appVersion: "1.0.0",
+    var config = NearclipNode.Config(stateDirectory: stateURL, deviceName: name, platform: platform, appVersion: "1.1.0",
                                      port: port, bonjour: false,
                                      secretStore: FileSecretStore(directory: stateURL.appendingPathComponent("secrets")),
                                      tailnet: tailnetOptions)
@@ -177,7 +178,7 @@ func handle(_ cmd: String, _ o: [String: Any]) {
         node.connect(host: host, port: p16)
     case "send_text":
         guard let t = o["text"] as? String else { return }
-        node.sendText(t)
+        node.sendText(t, otp: (o["otp"] as? Bool) ?? false)
     case "send_image":
         guard let path = o["path"] as? String, let data = FileManager.default.contents(atPath: path) else {
             out.async { emit(["ev": "error", "msg": "cannot read image"]) }

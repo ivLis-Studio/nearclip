@@ -41,7 +41,8 @@ public struct MemberRecord: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
-/// Wire form of a clip (PROTOCOL.md §6.1).
+/// Wire form of a clip (PROTOCOL.md §6.1). `otp`: a verification code a phone found in a message (§6.7), offered
+/// rather than copied by the devices that receive it.
 public struct Clip: Codable, Hashable, Identifiable, Sendable {
     public var id: String
     public var ts: Int64
@@ -53,15 +54,17 @@ public struct Clip: Codable, Hashable, Identifiable, Sendable {
     public var sha: String?
     public var w: Int?
     public var h: Int?
+    public var otp: Bool?
 
     public init(id: String, ts: Int64, src: String, kind: String, text: String? = nil, mime: String? = nil,
-                size: Int? = nil, sha: String? = nil, w: Int? = nil, h: Int? = nil) {
+                size: Int? = nil, sha: String? = nil, w: Int? = nil, h: Int? = nil, otp: Bool? = nil) {
         self.id = id; self.ts = ts; self.src = src; self.kind = kind; self.text = text; self.mime = mime
-        self.size = size; self.sha = sha; self.w = w; self.h = h
+        self.size = size; self.sha = sha; self.w = w; self.h = h; self.otp = otp
     }
 
     public var isImage: Bool { kind == "image" }
     public var isText: Bool { kind == "text" }
+    public var isCode: Bool { otp == true && isText }
 }
 
 /// A clip in local history.

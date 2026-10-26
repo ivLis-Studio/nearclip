@@ -175,6 +175,7 @@ public static class WireJson
         if (c.Sha is not null) w.WriteString("sha", c.Sha);
         if (c.W is { } width) w.WriteNumber("w", width);
         if (c.H is { } height) w.WriteNumber("h", height);
+        if (c.IsCode) w.WriteBoolean("otp", true);
         w.WriteEndObject();
     }
 
@@ -229,7 +230,8 @@ public static class WireJson
         var kind = Str(e, "kind");
         if (id.Length == 0 || kind is null) return null;
         return new Clip(id, Long(e, "ts") ?? 0, Ids.Norm(Str(e, "src")), kind, Str(e, "text"), Str(e, "mime"), Long(e, "size"),
-            Str(e, "sha")?.ToLowerInvariant(), (int?)Long(e, "w"), (int?)Long(e, "h"));
+            Str(e, "sha")?.ToLowerInvariant(), (int?)Long(e, "w"), (int?)Long(e, "h"),
+            kind == "text" && Bool(e, "otp") == true ? true : null);
     }
 
     public static List<IdTs> ReadIdTs(JsonElement o, string key) =>

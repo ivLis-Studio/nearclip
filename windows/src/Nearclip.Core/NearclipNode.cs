@@ -168,7 +168,8 @@ public sealed partial class NearclipNode : IDisposable
 
     public byte[]? ReadBlob(string id) => _store.ReadBlob(Ids.Norm(id));
 
-    public StoredClip? SendText(string text) => Q.Invoke(() =>
+    /// <param name="otp">A verification code found in a message (PROTOCOL.md §6.7).</param>
+    public StoredClip? SendText(string text, bool otp = false) => Q.Invoke(() =>
     {
         if (string.IsNullOrEmpty(text)) return null;
         if (System.Text.Encoding.UTF8.GetByteCount(text) > Wire.MaxText)
@@ -176,7 +177,7 @@ public sealed partial class NearclipNode : IDisposable
             Emit(new NodeEvent.TooLarge("text"));
             return null;
         }
-        var c = new Clip(Ids.New(), NextLocalTs(), DeviceId, "text", Text: text);
+        var c = new Clip(Ids.New(), NextLocalTs(), DeviceId, "text", Text: text, Otp: otp ? true : null);
         return Produce(c, null);
     });
 

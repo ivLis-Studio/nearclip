@@ -161,12 +161,14 @@ public final class NearclipNode: @unchecked Sendable {
     public func blobData(for id: String) -> Data? { store.blobData(id) }
     public func blobURL(for id: String) -> URL { store.blobURL(id) }
 
+    /// `otp`: a verification code found in a message (PROTOCOL.md §6.7).
     @discardableResult
-    public func sendText(_ text: String) -> StoredClip? {
+    public func sendText(_ text: String, otp: Bool = false) -> StoredClip? {
         queue.sync {
             guard !text.isEmpty else { return nil }
             guard text.utf8.count <= Wire.maxText else { emit(.tooLarge(kind: "text")); return nil }
-            let c = Clip(id: newNearclipId(), ts: max(nowMs(), newestLocalTs + 1), src: deviceId, kind: "text", text: text)
+            let c = Clip(id: newNearclipId(), ts: max(nowMs(), newestLocalTs + 1), src: deviceId, kind: "text", text: text,
+                         otp: otp ? true : nil)
             return produce(c, blob: nil)
         }
     }
@@ -982,6 +984,7 @@ public final class NearclipNode: @unchecked Sendable {
         var c = m.clip
         c.id = c.id.lowercased()
         c.src = c.src.lowercased()
+        if !c.isText { c.otp = nil }
         let live = m.live ?? false
         guard c.kind == "text" || c.kind == "image" else { return }
         if store.has(c.id) || store.state.tombstones[c.id] != nil {
@@ -1041,7 +1044,8 @@ public final class NearclipNode: @unchecked Sendable {
                             srcName: src?.name, srcPlatform: src?.platform, textFile: nil)
         store.add(sc, blob: blob)
         for other in online.values where other !== s { sendClip(c, blob: blob, live: live, to: other) }
-        let apply = live && c.src != deviceId && c.ts > newestLocalTs
+        // A verification code is offered by the app, not written to the clipboard on its own (§6.7).
+        let apply = live && c.src != deviceId && c.ts > newestLocalTs && !c.isCode
         if apply {
             newestLocalTs = c.ts
             store.state.newestLocalTs = c.ts

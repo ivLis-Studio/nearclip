@@ -242,7 +242,8 @@ class NearclipEngine(
 
     fun blobFile(clip: Clip): File = store.file(Persistence.blobFileName(clip))
 
-    fun sendText(text: String): SendResult = call {
+    /** [otp]: a verification code found in a message (PROTOCOL §6.7). */
+    fun sendText(text: String, otp: Boolean = false): SendResult = call {
         if (text.isEmpty()) return@call SendResult(null, 0)
         if (paused) return@call SendResult(null, 0, paused = true)
         val tooLarge = text.toByteArray(Charsets.UTF_8).size > Clip.MAX_TEXT_BYTES
@@ -250,7 +251,7 @@ class NearclipEngine(
         val c = Clip(
             id = newId(), ts = max(now, st.newestLocalTs + 1), src = deviceId, kind = ClipKind.TEXT, text = text,
             groupId = group.id, receivedAt = now, sourceName = st.deviceName, sourcePlatform = config.platform,
-            localOnly = tooLarge,
+            localOnly = tooLarge, otp = otp && !tooLarge,
         )
         if (tooLarge) emit(EngineEvent.TooLarge(ClipKind.TEXT))
         produce(c)
@@ -1330,7 +1331,8 @@ class NearclipEngine(
         )
         addToHistory(stored)
         for (o in online.values) if (o !== from) sendClip(o, stored, live)
-        val apply = live && c.src != deviceId && c.ts > st.newestLocalTs
+        // A verification code is offered by the app, not written to the clipboard on its own (PROTOCOL §6.7).
+        val apply = live && c.src != deviceId && c.ts > st.newestLocalTs && !c.isCode
         if (apply) {
             st.newestLocalTs = c.ts
             markPersist()
