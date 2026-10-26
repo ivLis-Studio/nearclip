@@ -242,43 +242,44 @@
     };
   };
 
-  // ------------------------------------------------------------------ Android: a text message, selection, toolbar
-  X.androidMessages = function (parent, { T, dark = true }) {
-    const root = el("div.am" + (dark ? ".dark" : ""), {}, parent);
-    const bar = el("div.am-bar", {}, root);
-    icon("m", "arrow_back", 24, bar);
-    el("div.am-av", { text: T.initial }, bar);
-    el("span.am-name", { text: T.sender }, bar);
-    el("div.spacer", {}, bar);
-    icon("m", "more_vert", 24, bar);
-    const thread = el("div.am-thread", {}, root);
-    el("div.am-day", { text: T.day }, thread);
-    const bubble = el("div.am-bubble", {}, thread);
-    const pre = el("span", { text: T.msgPre }, bubble);
-    const code = el("span.am-code", {}, bubble);
-    const hl = el("i.am-hl", {}, code);
+  // ------------------------------------------------------------------ Android: the lock screen, a text message arriving
+  // The phone lies on the desk with its screen off (always-on clock). The message wakes it and lands in the
+  // notification list; Nearclip reads the notification, so the code is found without anyone touching the phone.
+  X.androidLock = function (parent, { T }) {
+    const root = el("div.al", {}, parent);
+    const wall = el("div.al-wall", {}, root);
+    const clock = el("div.al-clock", { text: T.lockTime }, root);
+    const date = el("div.al-date", { text: T.lockDate }, root);
+    const card = el("div.al-card", {}, root);
+    const av = el("div.al-av", { text: T.initial }, card);
+    icon("f", "chat_filled", 11, el("i.al-badge", {}, av));
+    const col = el("div.al-col", {}, card);
+    const head = el("div.al-head", {}, col);
+    el("b", { text: T.sender }, head);
+    el("span", { text: " · " + T.now }, head);
+    const body = el("div.al-body", {}, col);
+    el("span", { text: T.msgPre }, body);
+    const code = el("span.al-code", {}, body);
+    const hl = el("i.al-hl", {}, code);
     el("span", { text: T.code }, code);
-    const hL = el("i.am-handle.l", {}, code);
-    const hR = el("i.am-handle.r", {}, code);
-    el("span", { text: T.msgPost }, bubble);
-    el("div.am-time", { text: T.time }, thread);
-    const input = el("div.am-input", {}, root);
-    icon("m", "add", 24, el("span.am-plus", {}, input));
-    el("div.am-field", { text: T.field }, input);
-    const tb = el("div.am-tb", {}, root);
-    const items = T.toolbar.map((s, i) => el("span" + (i === T.toolbar.length - 1 ? ".send" : ""), { text: s }, tb));
+    el("span", { text: T.msgPost }, body);
+    const lock = el("div.al-lock", {}, root);
+    icon("m", "lock", 22, lock);
     return {
-      root, code, toolbar: tb, sendItem: items[items.length - 1],
-      update(t, { selectAt, tapAt }) {
-        const sel = selectAt != null && t >= selectAt && (tapAt == null || t < tapAt + 0.35);
-        const s = sel ? E.outCubic(prog(t, selectAt, selectAt + 0.18)) : 0;
-        set(hl, { opacity: sel ? (0.42 * s).toFixed(3) : "0" });
-        set(hL, { opacity: sel ? s.toFixed(3) : "0" });
-        set(hR, { opacity: sel ? s.toFixed(3) : "0" });
-        const tbOn = selectAt != null ? NC.win(t, selectAt + 0.12, tapAt + 0.12, 0.22, 0.16) : 0;
-        set(tb, { opacity: tbOn.toFixed(3), transform: "translate(-50%," + ((1 - tbOn) * 8).toFixed(1) + "px) scale(" + (0.92 + 0.08 * tbOn).toFixed(3) + ")" });
-        const press = tapAt != null ? NC.win(t, tapAt - 0.08, tapAt + 0.05, 0.06, 0.15) : 0;
-        set(items[items.length - 1], { background: "rgba(188,195,255," + (0.12 + 0.2 * press).toFixed(3) + ")" });
+      root, code,
+      update(t, { wakeAt, arriveAt, detectAt }) {
+        const wake = E.outCubic(prog(t, wakeAt, wakeAt + 0.3));
+        set(wall, { opacity: wake.toFixed(3) });
+        set(clock, { opacity: (0.55 + 0.45 * wake).toFixed(3) });
+        set(date, { opacity: (0.45 + 0.55 * wake).toFixed(3) });
+        set(lock, { opacity: wake.toFixed(3) });
+        const s = t < arriveAt ? 0 : spring(t - arriveAt, 0.45, 0.8);
+        set(card, { opacity: Math.min(1, prog(t, arriveAt, arriveAt + 0.14)).toFixed(3),
+          transform: "translateY(" + ((1 - s) * -26).toFixed(2) + "px) scale(" + (0.95 + 0.05 * Math.min(1.02, s)).toFixed(4) + ")" });
+        const d = E.outCubic(prog(t, detectAt, detectAt + 0.28));
+        const bump = NC.win(t, detectAt + 0.1, detectAt + 0.5, 0.12, 0.28);
+        set(hl, { width: "calc(" + (d * 100).toFixed(2) + "% + " + (d * 6).toFixed(2) + "px)", opacity: t < detectAt ? "0" : "0.45" });
+        set(code, { transform: "scale(" + (1 + 0.05 * bump).toFixed(4) + ")" });
       },
     };
   };

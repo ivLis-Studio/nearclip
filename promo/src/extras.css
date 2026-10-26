@@ -42,28 +42,22 @@
 .wb-ok { position: absolute; left: 0; right: 0; bottom: -40px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: #1f9d5a; }
 
 /* ---------------------------------------------------------------- Android messages (dark) */
-.am { position: absolute; inset: 0; background: #f7f7fb; color: #1a1b21; font-family: var(--android); }
-.am.dark { background: #111216; color: #e4e2ea; }
-.am-bar { position: absolute; left: 14px; right: 14px; top: 52px; height: 52px; display: flex; align-items: center; gap: 14px; }
-.am-av { width: 40px; height: 40px; border-radius: 50%; background: var(--iris); color: #fff; display: flex; align-items: center; justify-content: center; font: 500 18px/1 var(--android); }
-.am-name { font-size: 19px; }
-.am-thread { position: absolute; left: 0; right: 0; top: 190px; }
-.am-day { text-align: center; font-size: 12.5px; color: #8e909c; margin-bottom: 18px; }
-.am-bubble { margin: 0 64px 0 16px; padding: 14px 18px; border-radius: 24px 24px 24px 8px; background: #26272e; font-size: 17px; line-height: 27px; color: #e8e8ef; }
-.am:not(.dark) .am-bubble { background: #e9eaf3; color: #1a1b21; }
-.am-code { position: relative; display: inline-block; font-weight: 500; }
-.am-code span { position: relative; }
-.am-hl { position: absolute; left: -2px; right: -2px; top: 1px; bottom: 1px; background: #8f9bff; border-radius: 3px; opacity: 0; }
-.am-handle { position: absolute; top: 25px; width: 20px; height: 20px; background: #a8b1ff; opacity: 0; }
-.am-handle.l { left: -20px; border-radius: 50% 0 50% 50%; }
-.am-handle.r { right: -20px; border-radius: 0 50% 50% 50%; }
-.am-time { margin: 8px 0 0 22px; font-size: 12px; color: #8e909c; }
-.am-input { position: absolute; left: 12px; right: 12px; bottom: 34px; height: 52px; display: flex; align-items: center; gap: 10px; }
-.am-plus { width: 44px; height: 44px; border-radius: 50%; background: #23242b; display: inline-flex; align-items: center; justify-content: center; color: #c7c9d6; }
-.am-field { flex: 1; height: 52px; border-radius: 26px; background: #23242b; display: flex; align-items: center; padding: 0 20px; font-size: 16px; color: #8e909c; }
-.am-tb { position: absolute; left: 50%; top: 168px; display: flex; align-items: center; height: 46px; padding: 0 6px; border-radius: 23px; background: #2c2d35; box-shadow: 0 6px 18px rgba(0,0,0,0.5); font-size: 14.5px; color: #e4e2ea; white-space: nowrap; transform-origin: 50% 100%; opacity: 0; }
-.am-tb span { height: 34px; display: flex; align-items: center; padding: 0 14px; border-radius: 17px; }
-.am-tb span.send { color: #c4caff; font-weight: 500; }
+/* Android lock screen: always-on clock on black, woken by the message into a flat wallpaper. */
+.al { position: absolute; inset: 0; background: #000; color: #e6e7f4; font-family: var(--android); }
+.al-wall { position: absolute; inset: 0; background: #1f2134; opacity: 0; }
+.al-clock { position: absolute; left: 0; right: 0; top: 104px; text-align: center; font: 400 96px/1 var(--android); letter-spacing: -1px; color: #dfe2ff; font-variant-numeric: tabular-nums; }
+.al-date { position: absolute; left: 0; right: 0; top: 214px; text-align: center; font-size: 16px; color: #c3c6de; }
+.al-card { position: absolute; left: 14px; right: 14px; top: 268px; display: flex; gap: 14px; padding: 16px 18px 17px 16px; border-radius: 26px; background: #2d3046; transform-origin: 50% 0; opacity: 0; }
+.al-av { position: relative; flex: none; width: 44px; height: 44px; border-radius: 50%; background: var(--iris); color: #fff; display: flex; align-items: center; justify-content: center; font: 500 19px/1 var(--android); }
+.al-badge { position: absolute; right: -3px; bottom: -3px; width: 19px; height: 19px; border-radius: 50%; background: #a8c7fa; color: #10204a; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #2d3046; }
+.al-col { flex: 1; min-width: 0; }
+.al-head { font-size: 13.5px; color: #a3a6bf; margin: 1px 0 4px; white-space: nowrap; }
+.al-head b { font-size: 15.5px; font-weight: 500; color: #eeeff8; }
+.al-body { font-size: 15px; line-height: 22px; color: #d6d8e8; }
+.al-code { position: relative; display: inline-block; font-weight: 600; color: #fff; transform-origin: 50% 60%; }
+.al-code span { position: relative; }
+.al-hl { position: absolute; left: -3px; top: 1px; bottom: 1px; width: 0; background: #8f9bff; border-radius: 4px; opacity: 0; }
+.al-lock { position: absolute; left: 0; right: 0; bottom: 64px; display: flex; justify-content: center; color: #c3c6de; opacity: 0; }
 
 /* ---------------------------------------------------------------- overlays */
 .key { position: absolute; left: 0; top: 0; height: 92px; transform-origin: 50% 100%; }

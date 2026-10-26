@@ -164,6 +164,40 @@
     };
   };
 
+  // macOS verification-code capsule (ToastController.codeOffer): "A verification code arrived from …. Copy it?", the
+  // code in large digits, Copy and Not Now. Copy puts the code on the clipboard and the capsule turns into the
+  // "Copied from …" notice (copyShownCode), which goes after 1.8 s.
+  A.macCodeToast = function (parent, { dark = true, title, copied, code, copy, notNow, dev = "android" } = {}) {
+    const root = el("div.mac-toast.mac-code" + (dark ? ".dark" : ""), {}, parent);
+    const offer = el("div.mac-code-offer", {}, root);
+    sym(devSym[dev], 14, "#fff", el("div.mac-toast-ic", {}, offer));
+    const col = el("div.mac-code-col", {}, offer);
+    el("b.mac-code-title", { text: title }, col);
+    const digits = el("div.mac-code-digits", { text: code }, col);
+    const btns = el("div.mac-code-btns", {}, col);
+    const copyBtn = el("span.mac-code-btn.prominent", { text: copy }, btns);
+    el("span.mac-code-btn", { text: notNow }, btns);
+    const done = el("div.mac-code-done", {}, root);
+    sym(devSym[dev], 14, "#fff", el("div.mac-toast-ic", {}, done));
+    const col2 = el("div.mac-toast-col", {}, done);
+    el("b", { text: copied }, col2);
+    el("span", { text: code }, col2);
+    return {
+      root, copyBtn, digits,
+      update(t, { start, copyAt, end = copyAt + 1.8 }) {
+        if (t < start || t > end + 0.32) { set(root, { display: "none" }); return; }
+        const s = spring(t - start, 0.42, 0.78);
+        const out = t > end ? E.inCubic(prog(t, end, end + 0.3)) : 0;
+        const swapped = t >= copyAt + 0.06;
+        set(offer, { display: swapped ? "none" : "" });
+        set(done, { display: swapped ? "" : "none", opacity: swapped ? (0.55 + 0.45 * E.outCubic(prog(t, copyAt + 0.06, copyAt + 0.2))).toFixed(3) : "1" });
+        const press = NC.win(t, copyAt - 0.07, copyAt + 0.04, 0.03, 0.05);
+        set(copyBtn, { opacity: (1 - 0.3 * press).toFixed(3) });
+        set(root, { display: "", opacity: (Math.min(1, prog(t, start, start + 0.12)) * (1 - out)).toFixed(3), transform: "translateX(" + ((1 - s) * 60 + out * 30).toFixed(1) + "px)" });
+      },
+    };
+  };
+
   // ------------------------------------------------------------------ Windows: the tray flyout (360×520)
   A.winFlyout = function (parent, { dark = false, items = [], T, status, devices = [] } = {}) {
     const root = el("div.win-fly" + (dark ? ".dark" : ""), {}, parent);

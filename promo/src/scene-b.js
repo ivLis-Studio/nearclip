@@ -300,27 +300,29 @@
     const u = E.inOutCubic(prog(t, 8.45, 8.95));
     set(S.S2.root, { clipPath: u < 1 ? "inset(0px 0px 0px " + ((1 - u) * W).toFixed(1) + "px)" : "none" });
     set(S.S2.world, { transform: "translateX(" + ((1 - u) * 170).toFixed(1) + "px)" });
-    S.sms.update(t, { selectAt: t2.select, tapAt: t2.tap });
-    const code = local(S.sms.code, S.px2.screen), send = M.sendLocal;
-    if (t < 10.2) S.touch2.update(t, { x: code.cx, y: code.cy, show: 9.42, hide: 10.1, down: t2.down, up: 10.04, long: true });
-    else S.touch2.update(t, { x: send.cx, y: send.cy, show: 10.36, hide: 10.86, down: 10.58, up: 10.7 });
-    S.andToast2.update(t, { start: 10.74, end: 12.2, text: T.sent(3) });
+    // The phone: off, woken by the message; nobody touches it. Nearclip finds the code and sends just that.
+    S.lock2.update(t, { wakeAt: t2.sms - 0.06, arriveAt: t2.sms, detectAt: t2.detect });
+    set(S.px2.status, { opacity: E.outCubic(prog(t, t2.sms - 0.06, t2.sms + 0.24)).toFixed(3) });
     const sr = rect(S.px2.screen), ps = sr.w / S.px2.screen.offsetWidth;
-    const from = [sr.x + send.cx * ps, sr.y + send.cy * ps];
+    const code = M.codeLocal, from = [sr.x + code.cx * ps, sr.y + code.cy * ps];
     const mr = rect(S.mac2.screen), mk = mr.w / S.mac2.screen.offsetWidth;
-    const to = [mr.x + mr.w - (14 + 160) * mk, mr.y + (40 + 26) * mk];
+    const dg = M.capCodeLocal, to = [mr.x + dg.cx * mk, mr.y + dg.cy * mk];
     S.chip2.update(t, { start: t2.launch, end: t2.land, from, to, text: "482913", arc: V ? -160 : -230, toScale: 0.6 });
-    S.macToast2.update(t, { start: t2.land, end: t2.land + 2.3, from: T.copiedFrom(DEV.name.android), preview: "482913", dev: "android" });
+    // The Mac: the capsule asks "Copy it?"; Copy turns it into "Copied from Galaxy S25", then ⌘V into the page.
+    S.macCode2.update(t, { start: t2.land, copyAt: t2.copy });
     const kc = LY.keys.d2, kx = kc[0] - 105;
     S.keyCmd2.update(t, { show: t2.cmd - 0.24, hide: t2.up + 0.42, down: t2.cmd, up: t2.up, x: kx, y: kc[1] });
     S.keyV2.update(t, { show: t2.cmd - 0.18, hide: t2.up + 0.46, down: t2.v, up: t2.up, x: kx + 118, y: kc[1] });
     S.browser2.update(t, { code: "482913", pasteAt: t2.paste, okAt: t2.ok });
-    const btn = M.btnLocal, bx = M.boxesLocal;
-    const mv = E.inOutCubic(prog(t, 12.42, 12.9));
-    const px = lerp(bx.x + bx.w + 40, btn.cx + 18, mv), py = lerp(bx.cy + 30, btn.cy + 6, mv);
-    const press = win(t, 12.93, 13.02, 0.04, 0.1);
-    S.ptr2.update(t, { x: px, y: py, show: t >= 12.36 && t < 14.6, s: 1.15 * (1 - 0.1 * press) });
-    S.cap2.update(t, [9.15, t2.paste + 0.05], 14.55, 0.3);
+    // The pointer comes up from the page to Copy, clicks, goes back down while ⌘V fills the boxes, and clicks Continue.
+    const cb = M.copyLocal, bx = M.boxesLocal, btn = M.btnLocal;
+    const p0 = [bx.x + bx.w * 0.82, bx.cy + 70], p1 = [cb.cx + 6, cb.cy + 5], p2 = [btn.cx + 18, btn.cy + 6];
+    const mv1 = E.inOutCubic(prog(t, t2.land + 0.3, t2.copy - 0.12)), mv2 = E.inOutCubic(prog(t, t2.copy + 0.22, t2.click - 0.1));
+    const px = t < t2.copy + 0.22 ? lerp(p0[0], p1[0], mv1) : lerp(p1[0], p2[0], mv2);
+    const py = t < t2.copy + 0.22 ? lerp(p0[1], p1[1], mv1) : lerp(p1[1], p2[1], mv2);
+    const press = Math.max(win(t, t2.copy - 0.06, t2.copy + 0.03, 0.04, 0.1), win(t, t2.click - 0.05, t2.click + 0.04, 0.04, 0.1));
+    S.ptr2.update(t, { x: px, y: py, show: t >= t2.land + 0.2 && t < 14.6, s: 1.15 * (1 - 0.1 * press) });
+    S.cap2.update(t, [9.15, t2.copy + 0.03], 14.55, 0.3);
   }
 
   function d3(t) {
@@ -525,17 +527,17 @@
   sfx("paste", t1.paste, { pan: 0.4 });
   sfx("pindrop", t1.pin, { pan: 0.45 });
   sfx("wipe", 8.45);
-  sfx("tap", t2.down, { pan: -0.55, long: true });
-  sfx("select", t2.select, { pan: -0.55 });
-  sfx("tap", 10.58, { pan: -0.55 });
-  sfx("toast", 10.74, { pan: -0.55 });
+  sfx("sms", t2.sms, { pan: -0.55 });
+  sfx("detect", t2.detect, { pan: -0.55 });
   sfx("fly", t2.launch, { from: -0.55, to: 0.5 });
   sfx("land", t2.land, { pan: 0.5 });
   sfx("toast", t2.land + 0.02, { pan: 0.5 });
+  sfx("click", t2.copy, { pan: 0.55 });
+  sfx("pop", t2.copy + 0.07, { pan: 0.55 });
   sfx("key", t2.cmd, { big: true });
   sfx("key", t2.v);
   sfx("digits", t2.paste, { pan: 0.15 });
-  sfx("click", 12.94, { pan: 0.2 });
+  sfx("click", t2.click, { pan: 0.2 });
   sfx("ok", t2.ok, { pan: 0.2 });
   sfx("fresh", t3.fresh, { pan: -0.5 });
   sfx("tap", 15.68, { pan: -0.5 });
@@ -610,8 +612,10 @@
     M.selW = M.selText.offsetWidth;
     const L1 = LY.d1;
     M.macC = [L1.mac[0] + (S.mac1.B + S.mac1.SW / 2) * L1.mac[2], L1.mac[1] + (S.mac1.B + S.mac1.SH / 2) * L1.mac[2]];
-    const tb = S.sms.toolbar, it = S.sms.sendItem;
-    M.sendLocal = { cx: tb.offsetLeft - tb.offsetWidth / 2 + it.offsetLeft + it.offsetWidth / 2, cy: tb.offsetTop + it.offsetTop + it.offsetHeight / 2 };
+    M.codeLocal = local(S.lock2.code, S.px2.screen);
+    set(S.macCode2.root, { display: "" });
+    M.copyLocal = local(S.macCode2.copyBtn, S.mac2.screen);
+    M.capCodeLocal = local(S.macCode2.digits, S.mac2.screen);
     M.btnLocal = local(S.browser2.btn, S.mac2.screen);
     M.boxesLocal = local(S.browser2.boxes, S.mac2.screen);
     M.okW = M1.ok.offsetWidth;

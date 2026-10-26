@@ -850,6 +850,15 @@ def build(events, duration, music, parts=False):
         elif name == "reply":
             sfx.add(sfx_pop(820, 1300, 0.07, 0.18), t, 1.0, pan=p)
             sfx.add(sfx_ping(1), t + 0.02, 0.9, pan=p)
+        elif name == "sms":
+            # a text message on the phone: a buzz on the desk and a two-note tone
+            sfx.add(sfx_haptic(), t - 0.02, 0.8, pan=p)
+            sfx.add(sfx_ping(1), t, 1.15, pan=p)
+            sfx.add(sfx_ping(2), t + 0.12, 1.0, pan=p)
+        elif name == "detect":
+            # Nearclip finds the code: a short bright sweep over the digits
+            sfx.add(sfx_whoosh(0.24, 1800, 5600, 0.07, 1.8), t - 0.03, 1.0, pan=p)
+            sfx.add(sfx_tick(0.32, 0.12), t + 0.16, 1.0, pan=p)
         elif name == "tile":
             sfx.add(sfx_whoosh(0.3, 600 * 2 ** (i * 0.12), 3400 * 2 ** (i * 0.12), 0.22, 1.2), t - 0.04, 1.0, pan=p)
         elif name == "card":

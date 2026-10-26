@@ -33,7 +33,7 @@ the film shows the pairs nothing else connects.
 | --- | --- |
 | 0–8 | Hook on Iris: "[Mac]에서 복사하고, [Windows]에서 붙여넣기." — the names roll through mixed pairs only, then the camera pulls back out of the Mac's wallpaper |
 | 8–17 | Mac → Windows: select an address in a note, ⌘C, Ctrl+V into a map search on the PC, the place drops a pin |
-| 18–29 | Android → Mac (colour wipe): "Send to my devices" on a sign-in code, ⌘V fills the code in Safari |
+| 18–29 | Android → Mac (colour wipe): a sign-in code texted to the phone wakes its lock screen and nobody touches it — the code travels to the Mac on its own, the capsule asks "Copy it?", Copy, ⌘V fills the code in Safari |
 | 30–39 | iPhone → Windows: the Paste button sends a photo, Ctrl+V answers "Got the Lisbon photo?" in a chat on the PC |
 | 40–51 | All four: the same history in the macOS panel, the Windows flyout and the Android and iOS apps; a clip copied on Windows ripples into the other three |
 | 52–67 | Four cards, one bar each, on the drop: QR pairing · another network (Mac ↔ Galaxy, remote connection) · end-to-end encryption (PC ↔ iPhone) · one history (search, pin) |
@@ -45,7 +45,7 @@ the film shows the pairs nothing else connects.
   `src/devices.js` draws the flat MacBook, monitor, Pixel and iPhone; `src/apps.js` rebuilds Nearclip's own UI on each
   platform from the apps (`apple/macOS/HistoryView.swift`, `apple/iOS/HomeView.swift`, `android/.../ui/home`,
   `windows/.../Views/FlyoutWindow.xaml`) with their real strings; `src/extras.js` has the apps around it (a note
-  on the Mac, a map and a chat in Windows 11 windows, a sign-in page in Safari, a text message on Android) and the
+  on the Mac, a map and a chat in Windows 11 windows, a sign-in page in Safari, a text message on an Android lock screen) and the
   keycaps, pointers, touches and the travelling clip; `src/scene-a.js` builds
   the hook and the three demos, `src/scene-b.js` the four-platform grid, the cards, the end card and the timeline.
 - `render.mjs` drives headless Chrome, averages sub-frames for motion blur and encodes chunks in parallel. The stage

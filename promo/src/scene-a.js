@@ -5,7 +5,8 @@
 //   0–8    hook: "[Mac]에서 복사하고, [Windows]에서 붙여넣기." — the names roll through mixed pairs, then the camera
 //          pulls back out of the Mac's wallpaper
 //   8–17   Mac → Windows: copy an address in a note on the Mac, Ctrl+V into a map search on the PC
-//   18–29  Android → Mac: "Send to my devices" on a sign-in code, ⌘V into the sign-in page on the Mac
+//   18–29  Android → Mac: a sign-in code texted to the phone (screen off, nobody touches it) comes to the Mac by itself;
+//          the capsule asks "Copy it?", Copy, ⌘V into the sign-in page
 //   30–39  iPhone → Windows: the Paste button sends a photo, Ctrl+V drops it into a chat on the PC
 //   40–51  all four: the same history on macOS, Windows, Android and iOS, clips rippling from one to the others
 //   52–67  four cards on solid colour: QR pairing · other networks · end-to-end encryption · one history
@@ -32,7 +33,7 @@
       hook: V ? [[{ slot: 0 }, { text: "에서" }], [{ text: "복사하고," }], [{ slot: 1 }, { text: "에서" }], [{ text: "붙여넣기." }]]
         : [[{ slot: 0 }, { text: "에서 복사하고," }], [{ slot: 1 }, { text: "에서 붙여넣기." }]],
       d1: ["Mac에서 복사하면,", "Windows PC에 바로."],
-      d2: ["Android에서 보내고,", "Mac에서 바로 붙여넣기."],
+      d2: ["문자로 온 인증번호,", "Mac에서 바로 복사."],
       d3: ["iPhone 사진도,", "Windows PC에 그대로."],
       all: ["Mac · Windows · Android · iPhone", "모두 하나의 클립보드로."],
       labels: ["macOS", "Windows", "Android", "iOS"],
@@ -48,7 +49,7 @@
       hook: V ? [[{ text: "Copy on" }], [{ slot: 0 }, { text: "," }], [{ text: "paste on" }], [{ slot: 1 }, { text: "." }]]
         : [[{ text: "Copy on " }, { slot: 0 }, { text: "," }], [{ text: "paste on " }, { slot: 1 }, { text: "." }]],
       d1: ["Copy on your Mac,", "paste on your Windows PC."],
-      d2: ["Send from Android,", "paste on your Mac."],
+      d2: ["A code on your phone,", "ready on your Mac."],
       d3: ["Photos from your iPhone,", "straight to your PC."],
       all: ["Mac · Windows · Android · iPhone", "One clipboard for all of them."],
       labels: ["macOS", "Windows", "Android", "iOS"],
@@ -68,9 +69,11 @@
   const UIT = {
     ko: { search: "기록 검색", filters: ["전체", "텍스트", "링크", "이미지", "고정됨"], today: "오늘", sendClipboard: "클립보드 보내기", paste: "붙여넣기",
       connected: (n) => "기기 " + n + "대에 연결됨", connectedShort: (n) => n + "대 연결됨", copiedFrom: (x) => x + "에서 복사됨", sent: (n) => "기기 " + n + "대로 보냄",
+      codeArrived: (x) => x + "에서 인증번호가 도착했어요! 복사할까요?", copy: "복사", notNow: "나중에",
       newImage: "클립보드에 새 이미지", tapPaste: "붙여넣기를 눌러 보내세요", idle: "복사한 내용 보내기", idleSub: "복사한 뒤 붙여넣기를 누르세요", image: "이미지" },
     en: { search: "Search history", filters: ["All", "Text", "Links", "Images", "Pinned"], today: "Today", sendClipboard: "Send clipboard", paste: "Paste",
       connected: (n) => "Connected to " + n + (n === 1 ? " device" : " devices"), connectedShort: (n) => n + " connected", copiedFrom: (x) => "Copied from " + x, sent: (n) => "Sent to " + n + (n === 1 ? " device" : " devices"),
+      codeArrived: (x) => "A verification code arrived from " + x + ". Copy it?", copy: "Copy", notNow: "Not Now",
       newImage: "New image on your clipboard", tapPaste: "Tap Paste to send it to your devices", idle: "Send what you copied", idleSub: "Copy, then tap Paste", image: "Image" },
   };
   const T = UIT[LANG] || UIT.en;
@@ -87,7 +90,7 @@
         browser: { tab: "본인 확인 – ivLis", url: "ivl.is/verify", heading: "본인 확인", body: "휴대폰으로 받은 인증번호 6자리를 입력하세요.", button: "확인", done: "확인되었습니다" },
         map: { title: "지도", placeholder: "장소, 주소 검색", place: "성수동 브런치 카페", address: "서울 성동구 연무장길 41-1", directions: "길찾기", save: "저장" },
         chat: { title: "여행 준비", room: "여행 준비", members: "3명", day: "오늘", a1: "하", a2: "준", a1name: "하늘", ask: "리스본 사진 있어? 트램 나온 거!", reply: "완벽해, 고마워!", time: "오후 3:42", placeholder: "메시지 입력" },
-        sms: { sender: "ivLis", initial: "i", day: "오늘 오후 3:41", msgPre: "[ivLis] 로그인 인증번호는 ", code: "482913", msgPost: " 입니다.", time: "오후 3:41", field: "문자 메시지", toolbar: ["복사", "모두 선택", "내 기기로 보내기"] } }
+        sms: { sender: "ivLis", initial: "i", now: "지금", lockTime: "3:41", lockDate: "10월 24일 금요일", msgPre: "[ivLis] 로그인 인증번호는 ", code: "482913", msgPost: " 입니다." } }
     : { address: "41-1 Yeonmujang-gil, Seoul", base1: "Slides for tomorrow's 10 AM meeting", base4: "Tracking no. 6029 1847 3301", all1: "Meeting moved to 8 PM",
         noteDate: "October 24, 2026 at 3:12 PM", noteTitle: "Saturday brunch", noteLines: [["Time", "11:00 AM · table for 4"], ["Place", "Brunch café in Seongsu"], ["Address", "41-1 Yeonmujang-gil, Seoul"]],
         macClock: "Fri Oct 24  3:41 PM", winClock: ["3:41 PM", "10/24/2026"], menus: ["File", "Edit", "Format", "View", "Window", "Help"], notes: "Notes",
@@ -95,7 +98,7 @@
         browser: { tab: "Verify it's you – ivLis", url: "ivl.is/verify", heading: "Verify it's you", body: "Enter the 6-digit code we sent to your phone.", button: "Continue", done: "You're verified" },
         map: { title: "Maps", placeholder: "Search places or addresses", place: "Brunch café in Seongsu", address: "41-1 Yeonmujang-gil, Seoul", directions: "Directions", save: "Save" },
         chat: { title: "Trip planning", room: "Trip planning", members: "3 people", day: "Today", a1: "S", a2: "J", a1name: "Sky", ask: "Got the Lisbon photo? The one with the tram!", reply: "Perfect, thanks!", time: "3:42 PM", placeholder: "Type a message" },
-        sms: { sender: "ivLis", initial: "i", day: "Today 3:41 PM", msgPre: "Your ivLis sign-in code is ", code: "482913", msgPost: ".", time: "3:41 PM", field: "Text message", toolbar: ["Copy", "Select all", "Send to my devices"] } };
+        sms: { sender: "ivLis", initial: "i", now: "now", lockTime: "3:41", lockDate: "Friday, October 24", msgPre: "Your ivLis sign-in code is ", code: "482913", msgPost: "." } };
 
   // ------------------------------------------------------------------ the clips
   const PHOTO = "assets/lisbon.jpg";
@@ -197,14 +200,15 @@
 
   // ================================================================== D2: Android → Mac (beats 18–29)
   const S2 = scene(INK);
-  const t2 = { touch: b(19.0), down: b(19.35), select: b(19.95), tapMove: b(20.8), tap: b(21.3), launch: b(21.55), land: b(23.15), cmd: b(24.1), v: b(24.35), up: b(24.75), paste: b(24.4), click: b(26.0), ok: b(26.2) };
+  // sms: the message wakes the phone · detect: Nearclip finds the code in the notification · launch/land: the code
+  // travels by itself · copy: Copy in the capsule · cmd/v/paste/up: ⌘V into the page · click/ok: Continue, verified
+  const t2 = { sms: b(18.5), detect: b(19.4), launch: b(20.6), land: b(22.2), copy: b(24.2), cmd: b(25.0), v: b(25.25), up: b(25.65), paste: b(25.3), click: b(25.96), ok: b(26.2) };
   const mac2 = NC.D.macbook(S2.world, { wallpaper: IRIS, menuApp: "Safari", menus: TXT.safariMenus, clock: TXT.macClock });
-  const px2 = NC.D.pixel(S2.world, { dark: true });
+  const px2 = NC.D.pixel(S2.world, { dark: true, clock: "" });
   const browser2 = NC.X.macBrowser(mac2.desk, V ? { x: 140, y: 30, w: 1000, h: 580, T: TXT.browser } : { x: 170, y: 40, w: 940, h: 600, T: TXT.browser });
-  const sms = NC.X.androidMessages(px2.app, { T: TXT.sms, dark: true });
-  const andToast2 = NC.A.androidToast(px2.screen, { dark: true });
-  const macToast2 = NC.A.macToast(mac2.screen, { dark: true });
-  const touch2 = NC.X.touch(px2.screen, { dark: true });
+  const lock2 = NC.X.androidLock(px2.app, { T: TXT.sms });
+  const macCode2 = NC.A.macCodeToast(mac2.screen, { dark: true, title: T.codeArrived(DEV.name.android), copied: T.copiedFrom(DEV.name.android),
+    code: TXT.sms.code, copy: T.copy, notNow: T.notNow, dev: "android" });
   const ptr2 = NC.X.pointer(mac2.screen);
   const keyCmd2 = NC.X.keycap(S2.top, { label: "⌘", sub: "command", w: 104 });
   const keyV2 = NC.X.keycap(S2.top, { label: "V", w: 92 });
@@ -248,7 +252,7 @@
   const SEQ = [[0, [0, 1]], [2, [2, 0]], [3, [3, 2]], [4, [1, 3]], [5, [0, 1]]];
 
   NC.SCENES = { S1, S2, S3, SH, pc1, mac1, note1, map1, winToast1, ptr1, keyCmd1, keyC1, keyCtrl1, keyV1, chip1, cap1, t1,
-    mac2, px2, browser2, sms, andToast2, macToast2, touch2, ptr2, keyCmd2, keyV2, chip2, cap2, t2,
+    mac2, px2, browser2, lock2, macCode2, ptr2, keyCmd2, keyV2, chip2, cap2, t2,
     pc3, ip3, chat3, ios3, winToast3, touch3, keyCtrl3, keyV3, chip3, cap3, t3,
     hookLines, slots, SEQ, scene, caption, list, LY, C, T, DEV, TXT, CLIP, BASE, PLATS, b, W, H, V, LANG, IRIS, INK, PAPER, sfx, pan, blur, AUDIO, BLUR, DURATION };
 })();
