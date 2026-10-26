@@ -1,8 +1,8 @@
 #requires -Version 5.1
 <#
   Builds the Microsoft Store (MSIX) edition of Nearclip: one package per architecture and the bundle Partner Center takes.
-    scripts\package-msix.ps1 -Version 1.0.0                          # x64 and Arm64 into artifacts\store
-    scripts\package-msix.ps1 -Version 1.0.0 -TestCertificate         # ...plus test-signed copies to sideload in a VM
+    scripts\package-msix.ps1 -Version 1.1.0                          # x64 and Arm64 into artifacts\store
+    scripts\package-msix.ps1 -Version 1.1.0 -TestCertificate         # ...plus test-signed copies to sideload in a VM
 
   Each package is the GitHub build of the app (self-contained, nctailnet.dll included) published with -p:NearclipStore=true,
   which packs it with packaging\Package.appxmanifest and packaging\Images (single-project MSIX: the build merges the app's

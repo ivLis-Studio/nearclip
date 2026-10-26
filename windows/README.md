@@ -100,8 +100,8 @@ The Store edition is the same app packed as MSIX: identity `ivLis-STUDIO.Nearcli
 
 ```powershell
 cd windows
-scripts\package-msix.ps1 -Version 1.0.0                    # artifacts\store\Nearclip-1.0.0.msixbundle (+ one .msix per arch)
-scripts\package-msix.ps1 -Version 1.0.0 -TestCertificate   # ...plus test-signed copies and a .cer to sideload on a test PC
+scripts\package-msix.ps1 -Version 1.1.0                    # artifacts\store\Nearclip-1.1.0.msixbundle (+ one .msix per arch)
+scripts\package-msix.ps1 -Version 1.1.0 -TestCertificate   # ...plus test-signed copies and a .cer to sideload on a test PC
 ```
 
 Upload the unsigned bundle to Partner Center (the Store signs it); bump `Version` in the manifest first for every update.
