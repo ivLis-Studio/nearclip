@@ -6,6 +6,15 @@
 <!-- The README banner (docs/readme/banner-<lang>-<light|dark>.png): node tools/banner.mjs. The live demo frozen mid-copy. -->
 <link rel="stylesheet" href="../public/assets/css/site.css">
 <style>
+  /* The banner keeps its own look (the PNGs in docs/readme): the old page colours, and the demo as a 2 × 2 grid. */
+  :root { --bg: #F5F5F7; --line: rgba(0,0,0,0.09); --accent-ink: #3E4BE6; --surface: #FFFFFF; --ink: #1D1D1F; --ink-2: #48484D; --muted: #6E6E73; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0F1012; --line: rgba(255,255,255,0.09); --accent-ink: #8B96FF; --surface: #1A1B1E; --ink: #F5F5F7; --ink-2: #D1D1D6; --muted: #98989D; }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", sans-serif; }
+  .demo { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .tile { height: 262px; }
+  .t-row:nth-child(n+4) { display: none; }
   html, body { background: transparent; margin: 0; }
   body { width: 1600px; height: 600px; overflow: hidden; }
   .card { position: absolute; inset: 0; border-radius: 40px; background: var(--bg); border: 1px solid var(--line); display: grid; grid-template-columns: 1fr 600px; gap: 56px; align-items: center; padding: 0 64px 0 96px; overflow: hidden; }

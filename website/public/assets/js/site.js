@@ -1,4 +1,5 @@
-// Page behaviour: language, platform, icons, the live demo, examples, film, image-progress toast, release info.
+// Page behaviour: language, platform, icons, the live demo, the pairs table, examples, film, the code and image toasts,
+// release info and the GitHub star count.
 (function () {
   "use strict";
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -6,12 +7,15 @@
   var LANGS = ["en", "ko"];
   var REPO = "ivLis-Studio/nearclip";
   var DL = "https://github.com/" + REPO + "/releases/latest/download/";
-  // Windows leads with the Microsoft Store; its ZIPs stay on the download card as the direct download.
+  // Windows leads with the Microsoft Store; its ZIPs stay in the download list as the direct download.
   var STORE = { win: "https://apps.microsoft.com/detail/9PNQ3Z9S83QS" };
   var ASSET = { mac: "Nearclip-macOS.zip", android: "Nearclip-Android.apk" };
+  // The star count shows next to the Star buttons once there's a real crowd behind it.
+  var STAR_MIN = 10;
   var stored = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
   var keep = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
   var calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var onScreen = function (node, threshold, fn) { new IntersectionObserver(function (es) { fn(es[0].isIntersecting); }, { threshold: threshold }).observe(node); };
 
   // ---- icons
   function paint(n) { n.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + (window.ICONS[n.dataset.i] || "") + "</svg>"; }
@@ -61,6 +65,8 @@
     demo.setStrings(window.DEMO[l]);
     renderPlatform();
     renderRelease();
+    renderStars();
+    renderMatrix();
     setFilm();
     resetToast();
   }
@@ -90,8 +96,8 @@
     $$("[data-asset]").forEach(function (a) { a.setAttribute("href", assetURL(a.dataset.asset)); });
   }
 
-  // ---- latest release from GitHub: version and date (the links work without it)
-  var release = null;
+  // ---- GitHub: the latest release (version, date, asset links) and the star count. Everything works without them.
+  var release = null, stars = null;
   function renderRelease() {
     if (!release) return;
     var v = release.tag_name.replace(/^v/, "");
@@ -100,47 +106,77 @@
     $$(".dl-version").forEach(function (n) { n.textContent = X("dl.version", v); });
     $$(".dl-version-long").forEach(function (n) { n.textContent = X("dl.latest", v, when); });
   }
-  fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (j) { if (j && j.tag_name) { release = j; renderRelease(); renderPlatform(); } })
-    .catch(function () {});
+  function renderStars() {
+    if (stars == null || stars < STAR_MIN) return;
+    var shown = stars.toLocaleString(lang === "ko" ? "ko-KR" : "en-US");
+    $$(".star-count").forEach(function (n) { n.textContent = shown; n.hidden = false; });
+    $$(".star-mini, .star-cta").forEach(function (a) { a.setAttribute("title", X("star.count", shown)); });
+  }
+  var gh = function (path) {
+    return fetch("https://api.github.com/repos/" + REPO + path, { headers: { Accept: "application/vnd.github+json" } })
+      .then(function (r) { return r.ok ? r.json() : null; });
+  };
+  gh("/releases/latest").then(function (j) { if (j && j.tag_name) { release = j; renderRelease(); renderPlatform(); } }).catch(function () {});
+  gh("").then(function (j) { if (j && typeof j.stargazers_count === "number") { stars = j.stargazers_count; renderStars(); } }).catch(function () {});
 
-  // ---- header border on scroll, reveal on scroll
+  // ---- header rule once the page moves
   var bar = $("#bar");
   addEventListener("scroll", function () { bar.classList.toggle("scrolled", scrollY > 8); }, { passive: true });
-  var io = new IntersectionObserver(function (es) {
-    es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
-  }, { rootMargin: "0px 0px -8% 0px" });
-  $$(".reveal").forEach(function (n) { io.observe(n); });
+
+  // ---- the pairs table: four of twelve without Nearclip, twelve with it. The first time it's on screen it fills in by
+  // itself (not with reduced motion); the switch is the visitor's after that.
+  var matrix = $("#matrix"), modes = $$(".seg button"), matrixTouched = false;
+  $$("td.nc", matrix).forEach(function (td, i) { td.style.setProperty("--i", i); });
+  function renderMatrix() {
+    var mode = matrix.dataset.mode;
+    $("#matrix-num").textContent = mode === "after" ? "12" : "4";
+    $("#matrix-note").textContent = X("matrix.note." + mode);
+  }
+  function setMode(mode) {
+    matrix.dataset.mode = mode;
+    modes.forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === mode)); });
+    renderMatrix();
+  }
+  modes.forEach(function (b) { b.addEventListener("click", function () { matrixTouched = true; setMode(b.dataset.mode); }); });
+  if (!calm) {
+    setMode("before");
+    var filled = false;
+    onScreen(matrix, 0.55, function (seen) {
+      if (!seen || filled) return;
+      filled = true;
+      setTimeout(function () { if (!matrixTouched) setMode("after"); }, 900);
+    });
+  }
 
   // ---- examples: tabs with arrow keys; they turn by themselves while on screen until someone picks one
   var ptabs = $$(".pair-tab"), stage = $("#pair-stage"), pairTimer = 0, pairAuto = !calm, pairSeen = false;
   function selectPair(tab, focus) {
-    ptabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; });
+    ptabs.forEach(function (t) { var on = t === tab; t.setAttribute("aria-selected", String(on)); t.tabIndex = on ? 0 : -1; t.classList.remove("timing"); });
     stage.setAttribute("aria-labelledby", tab.id);
     $$("img", stage).forEach(function (img) { img.classList.toggle("on", img.dataset.pair === tab.dataset.pair); });
     if (focus) tab.focus();
   }
   function pairTick() {
     clearTimeout(pairTimer);
+    ptabs.forEach(function (t) { t.classList.remove("timing"); });
     if (!pairAuto || !pairSeen) return;
-    pairTimer = setTimeout(function () {
-      var i = ptabs.findIndex(function (t) { return t.getAttribute("aria-selected") === "true"; });
-      selectPair(ptabs[(i + 1) % ptabs.length]);
-      pairTick();
-    }, 5200);
+    var i = ptabs.findIndex(function (t) { return t.getAttribute("aria-selected") === "true"; });
+    void ptabs[i].offsetWidth;
+    ptabs[i].classList.add("timing");
+    pairTimer = setTimeout(function () { selectPair(ptabs[(i + 1) % ptabs.length]); pairTick(); }, 5200);
   }
+  function takeOver() { pairAuto = false; clearTimeout(pairTimer); ptabs.forEach(function (t) { t.classList.remove("timing"); }); }
   ptabs.forEach(function (t, i) {
-    t.addEventListener("click", function () { pairAuto = false; clearTimeout(pairTimer); selectPair(t); });
+    t.addEventListener("click", function () { takeOver(); selectPair(t); });
     t.addEventListener("keydown", function (e) {
       var d = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
       if (!d) return;
       e.preventDefault();
-      pairAuto = false; clearTimeout(pairTimer);
+      takeOver();
       selectPair(ptabs[(i + d + ptabs.length) % ptabs.length], true);
     });
   });
-  new IntersectionObserver(function (es) { pairSeen = es[0].isIntersecting; if (pairSeen) pairTick(); else clearTimeout(pairTimer); }, { threshold: 0.4 }).observe(stage);
+  onScreen(stage, 0.4, function (seen) { pairSeen = seen; if (seen) pairTick(); else { clearTimeout(pairTimer); ptabs.forEach(function (t) { t.classList.remove("timing"); }); } });
 
   // ---- film: muted and looping while on screen (not with reduced motion or Data Saver); Sound on starts it over.
   // Phones held upright get the 9:16 cut.
@@ -187,17 +223,22 @@
     setPauseButton();
   }
   (upright.addEventListener ? upright.addEventListener.bind(upright, "change") : upright.addListener.bind(upright))(setFilm);
-  new IntersectionObserver(function (es) {
-    inView = es[0].isIntersecting;
+  onScreen(player, 0.35, function (seen) {
+    inView = seen;
     if (!ambient || held) return;
     if (inView) quietPlay(); else video.pause();
-  }, { threshold: 0.35 }).observe(player);
+  });
   $("#play").addEventListener("click", playWithSound);
   $("#film-sound").addEventListener("click", playWithSound);
   video.addEventListener("click", function () { if (ambient) playWithSound(); });
   pauseButton.addEventListener("click", function () { if (video.paused) { held = false; quietPlay(); } else { held = true; video.pause(); } });
   video.addEventListener("play", function () { if (!ambient) { video.controls = true; player.classList.add("playing"); } setPauseButton(); });
   video.addEventListener("pause", setPauseButton);
+
+  // ---- verification codes: the text arrives, the code crosses over, the computer asks "Copy it?" — on loop while on
+  // screen. With reduced motion the stage holds the question still.
+  var codes = $("#codes-stage");
+  if (!calm) onScreen(codes, 0.4, function (seen) { codes.classList.toggle("play", seen); });
 
   // ---- the image-progress toast: announced, counting up, then "Copied from iPhone"
   var td = $("#toast-demo"), tdRun = 0, tdTimer = 0, tdInView = false;
@@ -226,12 +267,11 @@
     requestAnimationFrame(step);
   }
   function resetToast() { tdRun++; clearTimeout(tdTimer); if (calm || !tdInView) finishToast(); else runToast(); }
-  new IntersectionObserver(function (es) {
+  onScreen(td, 0.5, function (seen) {
     var was = tdInView;
-    tdInView = es[0].isIntersecting;
+    tdInView = seen;
     if (tdInView && !was && !calm) runToast();
-  }, { threshold: 0.5 }).observe(td);
+  });
 
   applyLang(lang);
 })();
-

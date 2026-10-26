@@ -14,7 +14,7 @@ const NAMES = [
   "link", "type", "palette", "clipboard", "clipboard-copy", "clipboard-paste", "send", "zap", "refresh-cw", "eye-off", "circle-pause",
   "keyboard", "languages", "sun-moon", "server-off", "user-round-x", "waypoints", "trash-2", "hash", "file-text", "external-link",
   "book-open", "command", "bell", "route", "house", "signal", "circle-check", "info", "package", "terminal", "scan-line", "hand",
-  "shopping-bag", "message-square-text",
+  "shopping-bag", "message-square-text", "star", "plus",
 ];
 const out = {};
 for (const n of NAMES) {

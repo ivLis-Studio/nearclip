@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nearclip — Copy here. Paste there.</title>
 <meta name="description" content="One clipboard for Mac, Windows, Android and iPhone. Copy on one device, paste on another — no account, no server, end-to-end encrypted. Free and open source.">
-<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#F2F1EC" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0F1012" media="(prefers-color-scheme: dark)">
 <link rel="icon" type="image/png" href="assets/media/favicon-64.png">
 <link rel="apple-touch-icon" href="assets/media/apple-touch-icon.png">
@@ -22,11 +22,12 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://ivlis-studio.github.io/nearclip/assets/media/og-en.png">
-<link rel="preload" href="assets/media/lisbon.webp" as="image">
+<link rel="preload" href="assets/fonts/pretendard/woff2-dynamic-subset/PretendardVariable.subset.91.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/fonts/pretendard/pretendardvariable-dynamic-subset.css">
 <link rel="stylesheet" href="assets/css/site.css">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Nearclip","operatingSystem":"macOS 14 or later, Windows 10 1809 or later, Android 8 or later, iOS 17 or later","applicationCategory":"UtilitiesApplication",
- "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Organization","name":"ivLis Studio"},
+ "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"author":{"@type":"Organization","name":"ivLis STUDIO","url":"https://ivlis.kr"},
  "downloadUrl":"https://github.com/ivLis-Studio/nearclip/releases/latest","license":"https://opensource.org/licenses/MIT"}
 </script>
 </head>
@@ -35,9 +36,9 @@
 
 <header class="bar" id="bar">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Nearclip"><img src="assets/media/icon-512.png" alt="" width="30" height="30"><span>Nearclip</span></a>
+    <a class="brand" href="#top"><img src="assets/media/icon-512.png" alt="" width="28" height="28"><span>Nearclip</span></a>
     <nav class="nav" aria-label="Sections">
-      <a href="#pairs" data-t="nav.pairs">Why Nearclip</a>
+      <a href="#film" data-t="nav.film">Film</a>
       <a href="#how" data-t="nav.how">How it works</a>
       <a href="#apps" data-t="nav.apps">Apps</a>
       <a href="#security" data-t="nav.security">Privacy</a>
@@ -45,10 +46,10 @@
       <a href="#faq" data-t="nav.faq">FAQ</a>
     </nav>
     <div class="bar-end">
-      <label class="lang"><span class="sr" data-t="lang.label">Language</span><i class="ico" data-i="globe"></i>
+      <label class="lang"><span class="sr" data-t="lang.label">Language</span>
         <select id="lang-select"><option value="en">English</option><option value="ko">한국어</option></select>
       </label>
-      <a class="btn ghost small" href="https://github.com/ivLis-Studio/nearclip"><i class="ico" data-i="code"></i>GitHub</a>
+      <a class="star-mini" href="https://github.com/ivLis-Studio/nearclip"><i class="ico" data-i="star"></i><span aria-hidden="true">Star</span><span class="sr" data-t="bar.star">Star Nearclip on GitHub</span><span class="star-count" aria-hidden="true" hidden></span></a>
     </div>
   </div>
 </header>
@@ -57,42 +58,118 @@
 <!-- ============================================================ hero -->
 <section class="hero" id="top">
   <div class="wrap">
-    <div>
-      <span class="eyebrow"><i class="ico" data-i="sparkles"></i><span data-t="hero.eyebrow">Free for Mac, Windows, Android and iPhone</span></span>
-      <h1 data-t="hero.title">Copy here.<br><span class="accent">Paste there.</span></h1>
+    <a class="hero-new" href="#codes"><b data-t="hero.newtag">New</b><span data-t="hero.new">Verification codes from your phone, ready on your computer</span><i class="ico" data-i="arrow-right"></i></a>
+    <h1 data-t="hero.title">Copy here.<br><span class="two">Paste there.</span></h1>
+    <div class="hero-row">
       <p class="lede" data-t="hero.lede">One clipboard for every device you own, whoever made it. Copy on your Mac, paste on your Windows PC, Galaxy or iPhone — with no account, no server and end-to-end encryption.</p>
       <div class="ctas">
-        <a class="btn primary dl-main" href="#download"><i class="ico" data-i="download"></i><span class="dl-main-label">Download for Mac</span></a>
-        <a class="btn ghost" href="#film"><i class="ico" data-i="play"></i><span data-t="cta.film">Watch the film</span></a>
-      </div>
-      <div class="fine">
-        <span><i class="ico" data-i="check"></i><span class="dl-version" data-t="fine.free">Free and open source</span></span>
-        <span><i class="ico" data-i="check"></i><span data-t="fine.account">No account, no server</span></span>
-        <span><i class="ico" data-i="check"></i><span data-t="fine.e2e">End-to-end encrypted</span></span>
-      </div>
-      <div class="plats" aria-label="Platforms">
-        <a href="#dl-mac" data-plat="mac"><i class="ico" data-i="laptop"></i>macOS</a>
-        <a href="#dl-win" data-plat="win"><i class="ico" data-i="monitor"></i>Windows</a>
-        <a href="#dl-android" data-plat="android"><i class="ico" data-i="smartphone"></i>Android</a>
-        <a href="#dl-ios" data-plat="ios"><i class="ico" data-i="tablet-smartphone"></i>iPhone &amp; iPad</a>
+        <a class="btn ink big dl-main" href="#download"><i class="ico" data-i="download"></i><span class="dl-main-label">Download for Mac</span></a>
+        <a class="btn-text" href="#film"><i class="ico" data-i="play"></i><span data-t="cta.film">Watch the film</span><span class="dim">0:39</span></a>
       </div>
     </div>
+    <ul class="facts">
+      <li><b data-t="fact.1.t">No account</b><span data-t="fact.1.d">Nothing to sign up for</span></li>
+      <li><b data-t="fact.2.t">No server</b><span data-t="fact.2.d">Your devices talk directly</span></li>
+      <li><b data-t="fact.3.t">End-to-end encrypted</b><span data-t="fact.3.d">Only your devices can read it</span></li>
+      <li><b class="dl-version" data-t="fine.free">Free and open source</b><span data-t="fact.4.d">MIT License</span></li>
+    </ul>
+  </div>
+</section>
+
+<div class="demo-band">
+  <div class="wrap">
     <div class="demo-box">
       <div id="demo"></div>
       <p class="demo-hint" data-t="demo.hint">Try it: press <kbd>⌘C</kbd>, <kbd>Ctrl C</kbd>, <b>Send</b> or <b>Paste</b> on any device.</p>
       <p class="sr" aria-live="polite" id="demo-live"></p>
     </div>
   </div>
+</div>
+
+<!-- ============================================================ pairs -->
+<section class="section" id="pairs">
+  <div class="wrap">
+    <header class="sec-head">
+      <p class="label"><span class="no">01</span><span data-t="pairs.kicker">Across ecosystems</span></p>
+      <div>
+        <h2 data-t="pairs.title">Twelve pairs.<br>All of them work.</h2>
+        <p class="lede" data-t="pairs.lede">Mac and iPhone already share a clipboard, and so do some Windows PCs and Android phones. That's four of the twelve ways your devices can pair up. Nearclip connects all twelve, in both directions.</p>
+      </div>
+    </header>
+
+    <div class="matrix-block">
+      <div class="matrix-side">
+        <div class="seg" role="group" aria-labelledby="matrix-title">
+          <button type="button" aria-pressed="false" data-mode="before"><span data-t="matrix.before">Without Nearclip</span></button>
+          <button type="button" aria-pressed="true" data-mode="after"><span data-t="matrix.after">With Nearclip</span></button>
+        </div>
+        <p class="tally"><b id="matrix-num">12</b><span>/ 12</span></p>
+        <p class="tally-note" id="matrix-note">All twelve, in both directions — every device with every device.</p>
+      </div>
+      <div class="matrix-scroll">
+        <table class="matrix" id="matrix" data-mode="after">
+          <caption class="sr" id="matrix-title" data-t="matrix.caption">Which devices share a clipboard: copy on the device in the row, paste on the device in the column.</caption>
+          <thead><tr><td class="corner"><span data-t="matrix.corner">Copy on ↓<br>Paste on →</span></td><th scope="col">Mac</th><th scope="col">Windows</th><th scope="col">Android</th><th scope="col">iPhone</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Mac</th>
+              <td class="self"><span class="sr" data-t="matrix.self">Same platform</span></td>
+              <td class="nc"><span class="b" data-t="matrix.none">Doesn't connect</span><span class="a">Nearclip</span></td>
+              <td class="nc"><span class="b" data-t="matrix.none">Doesn't connect</span><span class="a">Nearclip</span></td>
+              <td class="nc native"><span class="b" data-t="matrix.apple">Universal Clipboard</span><span class="a">Nearclip</span></td></tr>
+            <tr><th scope="row">Windows</th>
+              <td class="nc"><span class="b" data-t="matrix.none">Doesn't connect</span><span class="a">Nearclip</span></td>
+              <td class="self"><span class="sr" data-t="matrix.self">Same platform</span></td>
+              <td class="nc native"><span class="b" data-t="matrix.ms">Phone Link, some phones</span><span class="a">Nearclip</span></td>
+              <td class="nc"><span class="b" data-t="matrix.none">Doesn't connect</span><span class="a">Nearclip</span></td></tr>
+            <tr><th scope="row">Android</th>
+              <td class="nc"><span class="b" data-t="matrix.none">Doesn't connect</span><span class="a">Nearclip</span></td>
+              <td class="nc native"><span class="b" data-t="matrix.ms">Phone Link, some phones</span><span class="a">Nearclip</span></td>
+              <td class="self"><span class="sr" data-t="matrix.self">Same platform</span></td>
+              <td class="nc"><span class="b" data-t="matrix.none">Doesn't connect</span><span class="a">Nearclip</span></td></tr>
+            <tr><th scope="row">iPhone</th>
+              <td class="nc native"><span class="b" data-t="matrix.apple">Universal Clipboard</span><span class="a">Nearclip</span></td>
+              <td class="nc"><span class="b" data-t="matrix.none">Doesn't connect</span><span class="a">Nearclip</span></td>
+              <td class="nc"><span class="b" data-t="matrix.none">Doesn't connect</span><span class="a">Nearclip</span></td>
+              <td class="self"><span class="sr" data-t="matrix.self">Same platform</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="moments">
+      <p class="label" id="moments-label" data-t="pairs.moments">Three of them, from the film</p>
+      <div class="pair-tabs" role="tablist" aria-labelledby="moments-label">
+        <button class="pair-tab" role="tab" type="button" id="pt-1" aria-controls="pair-stage" aria-selected="true" data-pair="1">
+          <span class="no">01</span><b data-t="pairs.1.t">Mac → Windows PC</b><span class="d" data-t="pairs.1.d">The address in your notes, straight into the map on your PC.</span>
+        </button>
+        <button class="pair-tab" role="tab" type="button" id="pt-2" aria-controls="pair-stage" aria-selected="false" tabindex="-1" data-pair="2">
+          <span class="no">02</span><b data-t="pairs.2.t">Android → Mac</b><span class="d" data-t="pairs.2.d">A code texted to your Galaxy — Copy on your Mac, ⌘V, you're in.</span>
+        </button>
+        <button class="pair-tab" role="tab" type="button" id="pt-3" aria-controls="pair-stage" aria-selected="false" tabindex="-1" data-pair="3">
+          <span class="no">03</span><b data-t="pairs.3.t">iPhone → Windows PC</b><span class="d" data-t="pairs.3.d">The photo you just took, Ctrl+V into a chat on your PC.</span>
+        </button>
+      </div>
+      <div class="pair-stage" id="pair-stage" role="tabpanel" aria-labelledby="pt-1">
+        <img class="on" data-pair="1" data-src-l="assets/media/pair-1-%L.webp" src="assets/media/pair-1-en.webp" alt="A Mac copies an address from a note; the Windows PC pastes it into a map search and shows Copied from MacBook Pro." loading="lazy" width="2400" height="977" data-t-alt="pairs.1.alt">
+        <img data-pair="2" data-src-l="assets/media/pair-2-%L.webp" src="assets/media/pair-2-en.webp" alt="A sign-in code texted to an Android phone shows up on a Mac, which offers to copy it; ⌘V fills the verification boxes in Safari." loading="lazy" width="2400" height="977" data-t-alt="pairs.2.alt">
+        <img data-pair="3" data-src-l="assets/media/pair-3-%L.webp" src="assets/media/pair-3-en.webp" alt="An iPhone sends a photo with the Paste button; it appears in a chat on a Windows PC." loading="lazy" width="2400" height="977" data-t-alt="pairs.3.alt">
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- ============================================================ film -->
-<section class="film" id="film" aria-label="Film">
-  <div class="wrap reveal">
+<section class="section night" id="film" aria-labelledby="film-title">
+  <div class="wrap">
+    <header class="sec-head">
+      <p class="label"><span class="no">02</span><span data-t="film.kicker">Film</span></p>
+      <div><h2 id="film-title" data-t="film.title">Four devices.<br>One clipboard.</h2></div>
+    </header>
     <div class="player" id="player">
       <video id="film-video" playsinline preload="none" poster="assets/media/poster-en.webp">
         <source src="assets/media/film-en.mp4" type="video/mp4">
       </video>
-      <button class="play" id="play" type="button" aria-label="Play the film with sound"><span class="play-pill"><span class="play-dot"><i class="ico" data-i="play"></i></span><span data-t="film.watch">Watch the film</span><small>0:39</small></span></button>
+      <button class="play" id="play" type="button" aria-label="Play the film with sound"><span class="play-in"><i class="ico" data-i="play"></i><span data-t="film.watch">Watch the film</span><small>0:39</small></span></button>
       <div class="film-ctrl">
         <button type="button" class="pill" id="film-sound"><i class="ico" data-i="volume-2"></i><span data-t="film.sound">Sound on</span></button>
         <button type="button" class="round" id="film-pause" aria-label="Pause"><i class="ico" data-i="pause"></i></button>
@@ -105,161 +182,159 @@
   </div>
 </section>
 
-<!-- ============================================================ pairs -->
-<section id="pairs">
+<!-- ============================================================ how -->
+<section class="section" id="how">
   <div class="wrap">
-    <div class="section-head reveal">
-      <span class="kicker" data-t="pairs.kicker">Across ecosystems</span>
-      <h2 data-t="pairs.title">The pairs nothing else connects.</h2>
-      <p data-t="pairs.lede">Mac and iPhone already share a clipboard, and so do some Windows PCs and Android phones. Nearclip connects everything else — every device with every device.</p>
-    </div>
-    <div class="pairs reveal">
-      <div class="pair-tabs" role="tablist" aria-label="Examples">
-        <button class="pair-tab" role="tab" type="button" id="pt-1" aria-controls="pair-stage" aria-selected="true" data-pair="1">
-          <span class="route"><i class="ico" data-i="laptop"></i><i class="ico" data-i="arrow-right"></i><i class="ico" data-i="monitor"></i></span>
-          <span><b data-t="pairs.1.t">Mac → Windows PC</b><span data-t="pairs.1.d">The address in your notes, straight into the map on your PC.</span></span>
-        </button>
-        <button class="pair-tab" role="tab" type="button" id="pt-2" aria-controls="pair-stage" aria-selected="false" tabindex="-1" data-pair="2">
-          <span class="route"><i class="ico" data-i="smartphone"></i><i class="ico" data-i="arrow-right"></i><i class="ico" data-i="laptop"></i></span>
-          <span><b data-t="pairs.2.t">Android → Mac</b><span data-t="pairs.2.d">A code texted to your Galaxy — Copy on your Mac, ⌘V, you're in.</span></span>
-        </button>
-        <button class="pair-tab" role="tab" type="button" id="pt-3" aria-controls="pair-stage" aria-selected="false" tabindex="-1" data-pair="3">
-          <span class="route"><i class="ico" data-i="smartphone"></i><i class="ico" data-i="arrow-right"></i><i class="ico" data-i="monitor"></i></span>
-          <span><b data-t="pairs.3.t">iPhone → Windows PC</b><span data-t="pairs.3.d">The photo you just took, Ctrl+V into a chat on your PC.</span></span>
-        </button>
-      </div>
+    <header class="sec-head">
+      <p class="label"><span class="no">03</span><span data-t="how.kicker">How it works</span></p>
       <div>
-        <div class="pair-stage" id="pair-stage" role="tabpanel" aria-labelledby="pt-1">
-          <img class="on" data-pair="1" data-src-l="assets/media/pair-1-%L.webp" src="assets/media/pair-1-en.webp" alt="A Mac copies an address from a note; the Windows PC pastes it into a map search and shows Copied from MacBook Pro." loading="lazy" width="2400" height="977" data-t-alt="pairs.1.alt">
-          <img class="dark" data-pair="2" data-src-l="assets/media/pair-2-%L.webp" src="assets/media/pair-2-en.webp" alt="A sign-in code texted to an Android phone shows up on a Mac, which offers to copy it; ⌘V fills the verification boxes in Safari." loading="lazy" width="2400" height="977" data-t-alt="pairs.2.alt">
-          <img data-pair="3" data-src-l="assets/media/pair-3-%L.webp" src="assets/media/pair-3-en.webp" alt="An iPhone sends a photo with the Paste button; it appears in a chat on a Windows PC." loading="lazy" width="2400" height="977" data-t-alt="pairs.3.alt">
-        </div>
-        <p class="pairs-note" data-t="pairs.note">Mac ↔ Galaxy, Windows ↔ iPhone, iPad ↔ Windows… any combination works, up and down the list.</p>
+        <h2 data-t="how.title">Set up in a minute.<br>Then just copy.</h2>
+        <p class="lede" data-t="how.lede">No sign-up, no cables, no cloud. Your devices find each other on your Wi-Fi and talk directly.</p>
       </div>
-    </div>
+    </header>
+    <ol class="steps">
+      <li class="step">
+        <span class="step-no" aria-hidden="true">1</span>
+        <h3 data-t="how.1.t">Install it everywhere</h3>
+        <p data-t="how.1.d">Mac, Windows PC, Android phone, iPhone and iPad. Four native apps, all free.</p>
+        <div class="step-art art-install" aria-hidden="true"><span>Mac</span><span>Windows</span><span>Android</span><span>iPhone</span><span>iPad</span></div>
+      </li>
+      <li class="step">
+        <span class="step-no" aria-hidden="true">2</span>
+        <h3 data-t="how.2.t">Add your devices</h3>
+        <p data-t="how.2.d">Scan the QR code with your phone, or check that both computers show the same 6-digit code.</p>
+        <div class="step-art art-pair" aria-hidden="true">
+          <img src="assets/media/qr.svg" alt="" width="96" height="96">
+          <span class="code"><small data-t="how.2.code">Pairing code</small><b>482 913</b><em><i class="ico" data-i="circle-check"></i><span data-t="how.2.match">Same on both screens</span></em></span>
+        </div>
+      </li>
+      <li class="step">
+        <span class="step-no" aria-hidden="true">3</span>
+        <h3 data-t="how.3.t">Copy as usual</h3>
+        <p data-t="how.3.d">On a computer, copying is all it takes. On a phone it's one tap — iOS and Android keep the clipboard from apps in the background.</p>
+        <div class="step-art art-copy" aria-hidden="true">
+          <span class="kc">⌘</span><span class="kc">C</span><i class="ico" data-i="arrow-right"></i>
+          <span class="mini-toast"><i class="ico" data-i="laptop"></i><span data-t="how.3.toast">Copied from MacBook Pro</span></span>
+        </div>
+      </li>
+    </ol>
   </div>
 </section>
 
-<!-- ============================================================ how -->
-<section id="how" class="alt">
+<!-- ============================================================ verification codes -->
+<section class="section codes" id="codes">
   <div class="wrap">
-    <div class="section-head reveal">
-      <span class="kicker" data-t="how.kicker">How it works</span>
-      <h2 data-t="how.title">Set up in a minute. Then just copy.</h2>
-      <p data-t="how.lede">No sign-up, no cables, no cloud. Your devices find each other on your Wi-Fi and talk directly.</p>
-    </div>
-    <div class="steps">
-      <div class="step reveal">
-        <span class="n">1</span>
-        <h3 data-t="how.1.t">Install it everywhere</h3>
-        <p data-t="how.1.d">Mac, Windows PC, Android phone, iPhone and iPad. Four native apps, all free.</p>
-        <div class="art">
-          <div class="os-grid" aria-hidden="true">
-            <span><i class="ico" data-i="laptop"></i>Mac<em><i class="ico" data-i="check"></i></em></span>
-            <span><i class="ico" data-i="monitor"></i>Windows<em><i class="ico" data-i="check"></i></em></span>
-            <span><i class="ico" data-i="smartphone"></i>Android<em><i class="ico" data-i="check"></i></em></span>
-            <span><i class="ico" data-i="tablet-smartphone"></i>iPhone<em><i class="ico" data-i="check"></i></em></span>
-          </div>
+    <header class="sec-head">
+      <p class="label"><span class="no">04</span><span data-t="codes.kicker">New in 1.1</span></p>
+      <div>
+        <h2 data-t="codes.title">Codes on your phone,<br>ready on your computer.</h2>
+        <p class="lede" data-t="codes.lede">A text message or KakaoTalk brings a verification code, and your computer asks “Copy it?” — nothing to tap on the phone. Only the code travels; the message stays where it is.</p>
+      </div>
+    </header>
+    <div class="codes-grid">
+      <div class="codes-stage" id="codes-stage" aria-hidden="true">
+        <div class="notif">
+          <span class="dev-tag">iPhone</span>
+          <span class="n-ic"><i class="ico" data-i="message-square-text"></i></span>
+          <span class="n-body"><span class="n-head"><b data-t="codes.app">Messages</b><small data-t="codes.now">now</small></span><span class="n-text" data-t="codes.sms">[Nearclip] Your verification code is <mark>482915</mark>.</span></span>
+        </div>
+        <span class="hop">482915</span>
+        <div class="capsule ask">
+          <span class="dev-tag">Mac</span>
+          <span class="c-ic"><i class="ico" data-i="smartphone"></i></span>
+          <span class="c-body">
+            <b data-t="codes.toast">A verification code arrived from Junseo's iPhone. Copy it?</b>
+            <strong>482915</strong>
+            <span class="c-btns"><span class="c-copy" data-t="codes.copy">Copy</span><span class="c-later" data-t="codes.later">Not now</span></span>
+          </span>
+        </div>
+        <div class="capsule done">
+          <span class="dev-tag">Mac</span>
+          <span class="c-ic"><i class="ico" data-i="smartphone"></i></span>
+          <span class="c-body"><b data-t="codes.done">Copied from Junseo's iPhone</b><small>482915</small></span>
         </div>
       </div>
-      <div class="step reveal">
-        <span class="n">2</span>
-        <h3 data-t="how.2.t">Add your devices</h3>
-        <p data-t="how.2.d">Scan the QR code with your phone, or check that both computers show the same 6-digit code.</p>
-        <div class="art">
-          <div class="pair-art" aria-hidden="true">
-            <div class="qr"><img src="assets/media/qr.svg" alt="" width="114" height="114"></div>
-            <div class="code-cmp">
-              <small data-t="how.2.code">Pairing code</small>
-              <b>482 913</b>
-              <span class="match"><i class="ico" data-i="circle-check"></i><span data-t="how.2.match">Same on both screens</span></span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="step reveal">
-        <span class="n">3</span>
-        <h3 data-t="how.3.t">Copy as usual</h3>
-        <p data-t="how.3.d">On a computer, copying is all it takes. On a phone it's one tap — iOS and Android keep the clipboard from apps in the background.</p>
-        <div class="art">
-          <div class="copy-art" aria-hidden="true">
-            <span class="kcap"><b>⌘</b><small>command</small></span>
-            <span class="kcap down"><b>C</b></span>
-            <i class="ico arrow" data-i="arrow-right"></i>
-            <span class="phone-mini"><i class="hot"></i><i></i><i></i><span class="tap"><i class="ico" data-i="clipboard-paste"></i><span data-t="how.3.tap">Paste</span></span></span>
-          </div>
-        </div>
-      </div>
+      <dl class="specs">
+        <div><dt>Android</dt><dd data-t="codes.android">On by default. Nearclip reads new text messages and KakaoTalk notifications and sends only the 4–8 digit code.</dd></div>
+        <div><dt>iPhone</dt><dd data-t="codes.ios">Connect one Shortcuts automation to Send Verification Code, and codes in text messages go out by themselves.</dd></div>
+        <div><dt data-t="codes.desk.t">Mac &amp; Windows</dt><dd data-t="codes.desk">They ask “Copy it?” with Copy and Not now. Nothing is pasted on its own.</dd></div>
+      </dl>
     </div>
   </div>
 </section>
 
 <!-- ============================================================ apps -->
-<section id="apps">
+<section class="section" id="apps">
   <div class="wrap">
-    <div class="section-head reveal">
-      <span class="kicker" data-t="apps.kicker">Four native apps</span>
-      <h2 data-t="apps.title">Made for each platform, not ported to it.</h2>
-      <p data-t="apps.lede">No Electron, no web views. Swift on Apple devices, WinUI 3 on Windows, Jetpack Compose on Android — each one where you'd expect it, with the same history inside.</p>
-    </div>
-    <div class="plat-grid">
-      <div class="plat reveal">
+    <header class="sec-head">
+      <p class="label"><span class="no">05</span><span data-t="apps.kicker">Four native apps</span></p>
+      <div>
+        <h2 data-t="apps.title">Made for each platform,<br>not ported to it.</h2>
+        <p class="lede" data-t="apps.lede">No Electron, no web views. Swift on Apple devices, WinUI 3 on Windows, Jetpack Compose on Android — each one where you'd expect it, with the same history inside.</p>
+      </div>
+    </header>
+    <div class="lineup">
+      <article class="app">
         <div class="shot"><img data-src-l="assets/media/app-mac-%L.webp" src="assets/media/app-mac-en.webp" width="675" height="940" alt="Nearclip's history panel under the Mac menu bar" data-t-alt="apps.mac.alt" loading="lazy"></div>
-        <h3><i class="ico" data-i="laptop"></i>macOS</h3>
+        <h3>macOS</h3>
         <p class="sub" data-t="apps.mac.sub">Menu bar app · macOS 14+</p>
         <ul>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.mac.1">Copy as usual — it's already on your other devices</span></li>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.mac.2"><kbd>⌃⌘V</kbd> opens a Spotlight-style history panel</span></li>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.mac.3">Liquid Glass on macOS 26, Apple silicon and Intel</span></li>
+          <li data-t="apps.mac.1">Copy as usual — it's already on your other devices</li>
+          <li data-t="apps.mac.2"><kbd>⌃⌘V</kbd> opens a Spotlight-style history panel</li>
+          <li data-t="apps.mac.3">Liquid Glass on macOS 26, Apple silicon and Intel</li>
         </ul>
-      </div>
-      <div class="plat reveal">
+      </article>
+      <article class="app">
         <div class="shot"><img data-src-l="assets/media/app-win-%L.webp" src="assets/media/app-win-en.webp" width="644" height="940" alt="Nearclip's flyout above the Windows taskbar" data-t-alt="apps.win.alt" loading="lazy"></div>
-        <h3><i class="ico" data-i="monitor"></i>Windows</h3>
+        <h3>Windows</h3>
         <p class="sub" data-t="apps.win.sub">Tray app · Windows 10 1809+ and 11</p>
         <ul>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.win.1">Copies sync the moment you press Ctrl+C</span></li>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.win.2"><kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd> opens a Win+V-style flyout</span></li>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.win.3">Mica, light and dark, x64 and Arm64</span></li>
+          <li data-t="apps.win.1">Copies sync the moment you press Ctrl+C</li>
+          <li data-t="apps.win.2"><kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd> opens a Win+V-style flyout</li>
+          <li data-t="apps.win.3">Mica, light and dark, x64 and Arm64</li>
         </ul>
-      </div>
-      <div class="plat reveal">
+      </article>
+      <article class="app">
         <div class="shot"><img data-src-l="assets/media/app-android-%L.webp" src="assets/media/app-android-en.webp" width="447" height="940" alt="Nearclip's history on an Android phone" data-t-alt="apps.android.alt" loading="lazy"></div>
-        <h3><i class="ico" data-i="smartphone"></i>Android</h3>
+        <h3>Android</h3>
         <p class="sub" data-t="apps.android.sub">Material You · Android 8+</p>
         <ul>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.android.1">Receives in the background, straight to the clipboard</span></li>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.android.2">Send from the app, a Quick Settings tile, Share or the text menu</span></li>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.android.3">Optional instant capture with Shizuku</span></li>
+          <li data-t="apps.android.1">Receives in the background, straight to the clipboard</li>
+          <li data-t="apps.android.2">Send from the app, a Quick Settings tile, Share or the text menu</li>
+          <li data-t="apps.android.3">Optional instant capture with Shizuku</li>
         </ul>
-      </div>
-      <div class="plat reveal">
+      </article>
+      <article class="app">
         <div class="shot"><img data-src-l="assets/media/app-ios-%L.webp" src="assets/media/app-ios-en.webp" width="459" height="940" alt="Nearclip's history on an iPhone with the Paste button" data-t-alt="apps.ios.alt" loading="lazy"></div>
-        <h3><i class="ico" data-i="tablet-smartphone"></i>iPhone &amp; iPad</h3>
+        <h3 data-t="apps.ios.name">iPhone &amp; iPad</h3>
         <p class="sub" data-t="apps.ios.sub">SwiftUI · iOS 17+</p>
         <ul>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.ios.1">Tap Paste to send what you copied</span></li>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.ios.2">Or send it automatically when you open the app</span></li>
-          <li><i class="ico" data-i="check"></i><span data-t="apps.ios.3">Catches up on everything you missed, instantly</span></li>
+          <li data-t="apps.ios.1">Tap Paste to send what you copied</li>
+          <li data-t="apps.ios.2">Or send it automatically when you open the app</li>
+          <li data-t="apps.ios.3">Catches up on everything you missed, instantly</li>
         </ul>
-      </div>
+      </article>
     </div>
   </div>
 </section>
 
-<!-- ============================================================ features -->
-<section id="features" class="alt">
+<!-- ============================================================ details -->
+<section class="section" id="features">
   <div class="wrap">
-    <div class="section-head reveal">
-      <span class="kicker" data-t="feat.kicker">The details</span>
-      <h2 data-t="feat.title">Quiet when it works. Clear when it matters.</h2>
-      <p data-t="feat.lede">Everything you copy lands where you need it, and you always know where it came from.</p>
-    </div>
-    <div class="feature-split">
-      <div class="big reveal">
-        <h3 data-t="feat.img.t">Big photos, no guessing.</h3>
-        <p data-t="feat.img.d">Copy a large image and your other devices show it coming at once — size and progress first, then the picture, ready to paste. Up to 32 MB.</p>
-        <div class="viz">
+    <header class="sec-head">
+      <p class="label"><span class="no">06</span><span data-t="feat.kicker">The details</span></p>
+      <div>
+        <h2 data-t="feat.title">Quiet when it works.<br>Clear when it matters.</h2>
+        <p class="lede" data-t="feat.lede">Everything you copy lands where you need it, and you always know where it came from.</p>
+      </div>
+    </header>
+    <div class="frows">
+      <div class="frow">
+        <div class="ftext">
+          <h3 data-t="feat.img.t">Big photos, no guessing.</h3>
+          <p data-t="feat.img.d">Copy a large image and your other devices show it coming at once — size and progress first, then the picture, ready to paste. Up to 32 MB.</p>
+        </div>
+        <div class="fviz">
           <div class="toast-demo" id="toast-demo" aria-hidden="true">
             <span class="ic"><i class="ico" data-i="smartphone"></i></span>
             <span><b id="toast-title">Receiving an image from iPhone…</b><small id="toast-sub">0.0 / 8.4 MB</small><span class="track"><i id="toast-bar"></i></span></span>
@@ -267,202 +342,189 @@
           </div>
         </div>
       </div>
-      <div class="big reveal">
-        <h3 data-t="feat.hist.t">One history, on every device.</h3>
-        <p data-t="feat.hist.d">Search it, filter it, pin what you reuse. Delete a clip once and it's gone from all of them.</p>
-        <div class="viz">
+      <div class="frow">
+        <div class="ftext">
+          <h3 data-t="feat.hist.t">One history, on every device.</h3>
+          <p data-t="feat.hist.d">Search it, filter it, pin what you reuse. Delete a clip once and it's gone from all of them.</p>
+        </div>
+        <div class="fviz">
           <div class="hist-demo" aria-hidden="true">
             <div class="search"><i class="ico" data-i="search"></i><b data-t="feat.hist.q">brunch</b></div>
             <div class="filters"><span class="on" data-t="feat.hist.all">All</span><span data-t="feat.hist.text">Text</span><span data-t="feat.hist.links">Links</span><span data-t="feat.hist.images">Images</span><span data-t="feat.hist.pinned">Pinned</span></div>
             <ul>
-              <li class="sel"><i class="t-ic"><i class="ico" data-i="type"></i></i><span><b data-t="feat.hist.r1">Saturday <mark>brunch</mark> · 11:00 AM, table for 4</b><small data-t="feat.hist.r1m">MacBook Pro · Just now</small></span><i class="ico" data-i="pin"></i></li>
+              <li class="sel"><i class="t-ic"><i class="ico" data-i="type"></i></i><span><b data-t="feat.hist.r1">Saturday <mark>brunch</mark> · 11:00 AM, table for 4</b><small data-t="feat.hist.r1m">MacBook Pro · Just now</small></span><i class="ico pin" data-i="pin"></i></li>
               <li><i class="t-ic"><i class="ico" data-i="type"></i></i><span><b data-t="feat.hist.r2"><mark>Brunch</mark> café in Seongsu · 41-1 Yeonmujang-gil</b><small data-t="feat.hist.r2m">Galaxy S25 · 2 min ago</small></span></li>
             </ul>
           </div>
         </div>
       </div>
-      <div class="big wide reveal">
-        <div>
-          <h3 data-t="feat.code.t">Codes on your phone, ready on your computer.</h3>
-          <p data-t="feat.code.d">A text message or KakaoTalk brings a verification code, and your computer asks “Copy it?” — nothing to tap on the phone. Only the code travels; the message stays where it is. Android does it by itself; on iPhone a Shortcuts automation sends codes from text messages.</p>
-        </div>
-        <div class="viz">
-          <div class="code-demo" aria-hidden="true">
-            <div class="sms"><i class="ico" data-i="message-square-text"></i><span data-t="feat.code.sms">[Nearclip] Your verification code is 482915.</span></div>
-            <i class="ico arrow" data-i="arrow-right"></i>
-            <div class="code-toast">
-              <span class="ic"><i class="ico" data-i="smartphone"></i></span>
-              <span class="body">
-                <b data-t="feat.code.toast">A verification code arrived from Junseo's iPhone. Copy it?</b>
-                <strong>482915</strong>
-                <span class="btns"><span class="primary" data-t="feat.code.copy">Copy</span><span data-t="feat.code.later">Not now</span></span>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-    <div class="grid-4">
-      <div class="feat reveal"><i class="ico" data-i="refresh-cw"></i><h3 data-t="feat.1.t">Catches up</h3><p data-t="feat.1.d">A device that was asleep or away gets the last 7 days the moment it's back.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="waypoints"></i><h3 data-t="feat.2.t">Mesh, not a hub</h3><p data-t="feat.2.d">Every device passes clips on to the others, so partly connected networks still stay in sync.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="eye-off"></i><h3 data-t="feat.3.t">Passwords stay put</h3><p data-t="feat.3.d">Anything your password manager marks private is never synced. Ignore apps or pause anytime.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="keyboard"></i><h3 data-t="feat.4.t">Keyboard first</h3><p data-t="feat.4.d"><kbd>⌃⌘V</kbd> on a Mac, <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd> on Windows: find a clip, press Return, done.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="type"></i><h3 data-t="feat.5.t">Text, links, images</h3><p data-t="feat.5.d">Plain text up to 4 MB, links, colors and pictures, with a preview of each.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="bell"></i><h3 data-t="feat.6.t">Always know the source</h3><p data-t="feat.6.d">"Copied from iPhone" — a quiet note tells you every time a clip arrives.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="sun-moon"></i><h3 data-t="feat.7.t">Feels at home</h3><p data-t="feat.7.d">Light and dark, English and Korean, and each platform's own look and controls.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="code"></i><h3 data-t="feat.8.t">Open source</h3><p data-t="feat.8.d">MIT licensed. Read the protocol, run the tests, build it yourself.</p></div>
-    </div>
+    <ol class="index">
+      <li><span class="no">01</span><div><h3 data-t="feat.1.t">Catches up</h3><p data-t="feat.1.d">A device that was asleep or away gets the last 7 days the moment it's back.</p></div></li>
+      <li><span class="no">02</span><div><h3 data-t="feat.2.t">Mesh, not a hub</h3><p data-t="feat.2.d">Every device passes clips on to the others, so partly connected networks still stay in sync.</p></div></li>
+      <li><span class="no">03</span><div><h3 data-t="feat.3.t">Passwords stay put</h3><p data-t="feat.3.d">Anything your password manager marks private is never synced. Ignore apps or pause anytime.</p></div></li>
+      <li><span class="no">04</span><div><h3 data-t="feat.4.t">Keyboard first</h3><p data-t="feat.4.d"><kbd>⌃⌘V</kbd> on a Mac, <kbd>Win</kbd> <kbd>Alt</kbd> <kbd>V</kbd> on Windows: find a clip, press Return, done.</p></div></li>
+      <li><span class="no">05</span><div><h3 data-t="feat.5.t">Text, links, images</h3><p data-t="feat.5.d">Plain text up to 4 MB, links, colors and pictures, with a preview of each.</p></div></li>
+      <li><span class="no">06</span><div><h3 data-t="feat.6.t">Always know the source</h3><p data-t="feat.6.d">"Copied from iPhone" — a quiet note tells you every time a clip arrives.</p></div></li>
+      <li><span class="no">07</span><div><h3 data-t="feat.7.t">Feels at home</h3><p data-t="feat.7.d">Light and dark, English and Korean, and each platform's own look and controls.</p></div></li>
+      <li><span class="no">08</span><div><h3 data-t="feat.8.t">Open source</h3><p data-t="feat.8.d">MIT licensed. Read the protocol, run the tests, build it yourself.</p></div></li>
+    </ol>
   </div>
 </section>
 
-<!-- ============================================================ remote -->
-<section id="remote">
-  <div class="wrap split">
-    <div class="reveal">
-      <span class="kicker" data-t="remote.kicker">Remote connection</span>
-      <h2 data-t="remote.title">Another network?<br>Still one clipboard.</h2>
-      <p class="section-lede" data-t="remote.lede">Turn on Remote connection and sign in with the same free Tailscale account on each device. Tailscale is built into Nearclip — nothing else to install, no VPN to set up.</p>
+<!-- ============================================================ privacy and remote connection -->
+<section class="section night" id="security">
+  <div class="wrap">
+    <header class="sec-head">
+      <p class="label"><span class="no">07</span><span data-t="sec.kicker">Privacy</span></p>
+      <div>
+        <h2 data-t="sec.title">No server to trust.<br>There isn't one.</h2>
+        <p class="lede" data-t="sec.lede">Nearclip has no cloud, no account and no analytics. Your clips travel from your device to your device, encrypted with keys only they hold.</p>
+      </div>
+    </header>
+    <div class="wire" aria-hidden="true">
+      <div class="end"><small data-t="sec.viz.pc">Studio PC</small><b data-t="sec.viz.msg">Meeting moved to 8 PM</b></div>
+      <div class="cipher"><i class="ico" data-i="lock"></i><span>9f2c e81a 44b0 7d1c 03aa 6e95</span></div>
+      <div class="end"><small>iPhone</small><b data-t="sec.viz.msg">Meeting moved to 8 PM</b></div>
+    </div>
+    <p class="wire-cap" data-t="sec.viz.cap">Readable on both ends. Gibberish in between.</p>
+    <ol class="specs4">
+      <li><span class="no">01</span><h3 data-t="sec.1.t">No server, no account</h3><p data-t="sec.1.d">Devices find each other on your network (Bonjour / mDNS) and connect directly.</p></li>
+      <li><span class="no">02</span><h3 data-t="sec.2.t">End-to-end encrypted</h3><p data-t="sec.2.d">Fresh keys for every connection (P-256 ECDH, AES-256-GCM): even recorded traffic stays unreadable.</p></li>
+      <li><span class="no">03</span><h3 data-t="sec.3.t">Paired by you</h3><p data-t="sec.3.d">A QR code or a 6-digit code you compare. A device in the middle can't fake a match.</p></li>
+      <li><span class="no">04</span><h3 data-t="sec.4.t">Delete everywhere</h3><p data-t="sec.4.d">Remove a clip, clear history or leave the group — it applies on every device.</p></li>
+    </ol>
+
+    <div class="remote" id="remote">
+      <div class="remote-copy">
+        <p class="label" data-t="remote.kicker">Remote connection</p>
+        <h3 data-t="remote.title">Another network?<br>Still one clipboard.</h3>
+        <p data-t="remote.lede">Turn on Remote connection and sign in with the same free Tailscale account on each device. Tailscale is built into Nearclip — nothing else to install, no VPN to set up.</p>
+      </div>
+      <div class="route-viz" aria-hidden="true">
+        <div class="node"><i class="ico" data-i="laptop"></i><b>MacBook Pro</b><small><i class="ico" data-i="house"></i><span data-t="remote.viz.home">Home Wi-Fi</span></small></div>
+        <div class="link"><span data-t="remote.viz.ts">Tailscale built in</span></div>
+        <div class="node"><i class="ico" data-i="smartphone"></i><b>Galaxy S25</b><small><i class="ico" data-i="signal"></i>LTE</small></div>
+        <p class="status"><span data-t="remote.viz.route">Connected · Remote</span></p>
+      </div>
       <ul class="points">
-        <li><i class="ico" data-i="wifi"></i><span><b data-t="remote.1.t">Wi-Fi first</b><span data-t="remote.1.d">On the same network, devices keep connecting directly.</span></span></li>
-        <li><i class="ico" data-i="route"></i><span><b data-t="remote.2.t">You see the route</b><span data-t="remote.2.d">Connected · Same network, or Connected · Remote.</span></span></li>
-        <li><i class="ico" data-i="lock"></i><span><b data-t="remote.3.t">Still end-to-end encrypted</b><span data-t="remote.3.d">Tailscale carries the connection, never a readable clip.</span></span></li>
-        <li><i class="ico" data-i="circle-pause"></i><span><b data-t="remote.4.t">Off until you want it</b><span data-t="remote.4.d">Without it, nothing ever leaves your network.</span></span></li>
+        <li><b data-t="remote.1.t">Wi-Fi first</b><span data-t="remote.1.d">On the same network, devices keep connecting directly.</span></li>
+        <li><b data-t="remote.2.t">You see the route</b><span data-t="remote.2.d">Connected · Same network, or Connected · Remote.</span></li>
+        <li><b data-t="remote.3.t">Still end-to-end encrypted</b><span data-t="remote.3.d">Tailscale carries the connection, never a readable clip.</span></li>
+        <li><b data-t="remote.4.t">Off until you want it</b><span data-t="remote.4.d">Without it, nothing ever leaves your network.</span></li>
       </ul>
     </div>
-    <div class="reveal">
-      <div class="remote-viz" aria-hidden="true">
-        <span class="ts"><i class="ico" data-i="waypoints"></i><span data-t="remote.viz.ts">Tailscale built in</span></span>
-        <div class="nodes">
-          <svg class="arc" viewBox="0 0 100 40" preserveAspectRatio="none"><path d="M0 38 Q50 -16 100 38"/></svg>
-          <div class="node"><span class="dev"><i class="ico" data-i="laptop"></i></span><b>MacBook Pro</b><small><i class="ico" data-i="house"></i><span data-t="remote.viz.home">Home Wi-Fi</span></small></div>
-          <div class="node"><span class="dev"><i class="ico" data-i="smartphone"></i></span><b>Galaxy S25</b><small><i class="ico" data-i="signal"></i>LTE</small></div>
-        </div>
-        <div class="route"><span data-t="remote.viz.route">Connected · Remote</span></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ============================================================ security -->
-<section id="security" class="alt">
-  <div class="wrap">
-    <div class="sec-top">
-      <div class="reveal">
-        <span class="kicker" data-t="sec.kicker">Privacy</span>
-        <h2 data-t="sec.title">No server to trust. There isn't one.</h2>
-        <p class="section-lede" data-t="sec.lede">Nearclip has no cloud, no account and no analytics. Your clips travel from your device to your device, encrypted with keys only they hold.</p>
-      </div>
-      <div class="reveal">
-        <div class="e2e" aria-hidden="true">
-          <div class="lane">
-            <span class="end"><i><i class="ico" data-i="monitor"></i></i><small data-t="sec.viz.pc">Studio PC</small></span>
-            <span class="wire"><span class="pkt"><i class="ico" data-i="lock"></i>9f2c·e81a·44b0</span></span>
-            <span class="end"><i><i class="ico" data-i="smartphone"></i></i><small>iPhone</small></span>
-          </div>
-          <p class="cap" data-t="sec.viz.cap"><b>Meeting moved to 8 PM</b> on both ends. Gibberish in between.</p>
-        </div>
-      </div>
-    </div>
-    <div class="grid-4">
-      <div class="feat reveal"><i class="ico" data-i="server-off"></i><h3 data-t="sec.1.t">No server, no account</h3><p data-t="sec.1.d">Devices find each other on your network (Bonjour / mDNS) and connect directly.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="lock"></i><h3 data-t="sec.2.t">End-to-end encrypted</h3><p data-t="sec.2.d">Fresh keys for every connection (P-256 ECDH, AES-256-GCM): even recorded traffic stays unreadable.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="qr-code"></i><h3 data-t="sec.3.t">Paired by you</h3><p data-t="sec.3.d">A QR code or a 6-digit code you compare. A device in the middle can't fake a match.</p></div>
-      <div class="feat reveal"><i class="ico" data-i="trash-2"></i><h3 data-t="sec.4.t">Delete everywhere</h3><p data-t="sec.4.d">Remove a clip, clear history or leave the group — it applies on every device.</p></div>
-    </div>
-    <p class="dl-meta reveal"><a href="https://github.com/ivLis-Studio/nearclip/blob/main/docs/PROTOCOL.md"><i class="ico" data-i="book-open"></i><span data-t="sec.protocol">Read the protocol</span></a><a href="privacy.html"><i class="ico" data-i="shield-check"></i><span data-t="sec.policy">Privacy policy</span></a></p>
+    <p class="sec-links"><a href="https://github.com/ivLis-Studio/nearclip/blob/main/docs/PROTOCOL.md"><span data-t="sec.protocol">Read the protocol</span><i class="ico" data-i="arrow-up-right"></i></a><a href="privacy.html"><span data-t="sec.policy">Privacy policy</span><i class="ico" data-i="arrow-right"></i></a></p>
   </div>
 </section>
 
 <!-- ============================================================ download -->
-<section id="download">
+<section class="section" id="download">
   <div class="wrap">
-    <div class="section-head center reveal">
-      <span class="kicker" data-t="dl.kicker">Download</span>
-      <h2 data-t="dl.title">Get Nearclip on all of them.</h2>
-      <p data-t="dl.lede">Free on every platform. Install it on two devices and you're done.</p>
-    </div>
-    <div class="dl-grid">
-      <div class="dl reveal" id="dl-mac" data-plat="mac">
-        <span class="os-ic"><i class="ico" data-i="laptop"></i></span>
-        <h3>Mac</h3>
-        <p class="req" data-t="dl.mac.req">macOS 14 or later · Apple silicon and Intel</p>
+    <header class="sec-head">
+      <p class="label"><span class="no">08</span><span data-t="dl.kicker">Download</span></p>
+      <div>
+        <h2 data-t="dl.title">Get Nearclip<br>on all of them.</h2>
+        <p class="lede" data-t="dl.lede">Free on every platform. Install it on two devices and you're done.</p>
+      </div>
+    </header>
+    <div class="dl-list">
+      <div class="dl" id="dl-mac" data-plat="mac">
+        <div class="dl-name"><h3>Mac</h3><p class="req" data-t="dl.mac.req">macOS 14 or later · Apple silicon and Intel</p><span class="here-tag" data-t="dl.here">Your device</span></div>
         <div class="btns">
-          <span class="btn primary soon" aria-disabled="true"><i class="ico" data-i="shopping-bag"></i><span class="two"><b data-t="dl.mac.store">Mac App Store</b><small data-t="dl.soon">Coming soon</small></span></span>
-          <a class="btn ghost" data-asset="Nearclip-macOS.zip" href="https://github.com/ivLis-Studio/nearclip/releases/latest/download/Nearclip-macOS.zip"><i class="ico" data-i="download"></i><span data-t="dl.direct">Download directly</span></a>
+          <span class="btn soon" aria-disabled="true"><i class="ico" data-i="shopping-bag"></i><span class="two"><b data-t="dl.mac.store">Mac App Store</b><small data-t="dl.soon">Coming soon</small></span></span>
+          <a class="btn line" data-asset="Nearclip-macOS.zip" href="https://github.com/ivLis-Studio/nearclip/releases/latest/download/Nearclip-macOS.zip"><i class="ico" data-i="download"></i><span data-t="dl.direct">Download directly</span></a>
         </div>
-        <ol>
+        <ol class="dl-steps">
           <li data-t="dl.mac.1">Unzip and move <b>Nearclip</b> to Applications.</li>
           <li data-t="dl.mac.2">Open it — it's signed and notarized by Apple. It lives in the menu bar.</li>
           <li data-t="dl.mac.3">On your first copy, choose <b>Always Allow</b> so Nearclip can read the clipboard.</li>
         </ol>
       </div>
-      <div class="dl reveal" id="dl-win" data-plat="win">
-        <span class="os-ic"><i class="ico" data-i="monitor"></i></span>
-        <h3>Windows</h3>
-        <p class="req" data-t="dl.win.req">Windows 10 1809 or later, Windows 11</p>
+      <div class="dl" id="dl-win" data-plat="win">
+        <div class="dl-name"><h3>Windows</h3><p class="req" data-t="dl.win.req">Windows 10 1809 or later, Windows 11</p><span class="here-tag" data-t="dl.here">Your device</span></div>
         <div class="btns">
-          <a class="btn primary" href="https://apps.microsoft.com/detail/9PNQ3Z9S83QS"><i class="ico" data-i="shopping-bag"></i><span data-t="dl.win.store"><span class="long">Get it from </span>Microsoft Store</span></a>
+          <a class="btn ink" href="https://apps.microsoft.com/detail/9PNQ3Z9S83QS"><i class="ico" data-i="shopping-bag"></i><span data-t="dl.win.store"><span class="long">Get it from </span>Microsoft Store</span></a>
           <p class="dl-or" data-t="dl.win.direct">or download from GitHub</p>
           <div class="row">
-            <a class="btn ghost" data-asset="Nearclip-Windows-x64.zip" href="https://github.com/ivLis-Studio/nearclip/releases/latest/download/Nearclip-Windows-x64.zip"><i class="ico" data-i="download"></i>x64</a>
-            <a class="btn ghost" data-asset="Nearclip-Windows-arm64.zip" href="https://github.com/ivLis-Studio/nearclip/releases/latest/download/Nearclip-Windows-arm64.zip"><i class="ico" data-i="download"></i>Arm64</a>
+            <a class="btn line" data-asset="Nearclip-Windows-x64.zip" href="https://github.com/ivLis-Studio/nearclip/releases/latest/download/Nearclip-Windows-x64.zip"><i class="ico" data-i="download"></i>x64</a>
+            <a class="btn line" data-asset="Nearclip-Windows-arm64.zip" href="https://github.com/ivLis-Studio/nearclip/releases/latest/download/Nearclip-Windows-arm64.zip"><i class="ico" data-i="download"></i>Arm64</a>
           </div>
         </div>
-        <ol>
+        <ol class="dl-steps">
           <li data-t="dl.win.1">The Store version is signed by Microsoft and updates itself.</li>
           <li data-t="dl.win.2">Got the ZIP? Unzip it and run <b>Nearclip.exe</b>. If SmartScreen appears, choose <b>More info › Run anyway</b>.</li>
           <li data-t="dl.win.3">With the ZIP, allow <b>private networks</b> when the firewall asks.</li>
         </ol>
       </div>
-      <div class="dl reveal" id="dl-android" data-plat="android">
-        <span class="os-ic"><i class="ico" data-i="smartphone"></i></span>
-        <h3>Android</h3>
-        <p class="req" data-t="dl.android.req">Android 8 or later</p>
+      <div class="dl" id="dl-android" data-plat="android">
+        <div class="dl-name"><h3>Android</h3><p class="req" data-t="dl.android.req">Android 8 or later</p><span class="here-tag" data-t="dl.here">Your device</span></div>
         <div class="btns">
-          <span class="btn primary soon" aria-disabled="true"><i class="ico" data-i="shopping-bag"></i><span class="two"><b data-t="dl.android.store">Google Play</b><small data-t="dl.soon">Coming soon</small></span></span>
-          <a class="btn ghost" data-asset="Nearclip-Android.apk" href="https://github.com/ivLis-Studio/nearclip/releases/latest/download/Nearclip-Android.apk"><i class="ico" data-i="download"></i><span data-t="dl.direct">Download directly</span></a>
+          <span class="btn soon" aria-disabled="true"><i class="ico" data-i="shopping-bag"></i><span class="two"><b data-t="dl.android.store">Google Play</b><small data-t="dl.soon">Coming soon</small></span></span>
+          <a class="btn line" data-asset="Nearclip-Android.apk" href="https://github.com/ivLis-Studio/nearclip/releases/latest/download/Nearclip-Android.apk"><i class="ico" data-i="download"></i><span data-t="dl.direct">Download directly</span></a>
         </div>
-        <ol>
+        <ol class="dl-steps">
           <li data-t="dl.android.1">Open the APK on your phone.</li>
           <li data-t="dl.android.2">Allow your browser to <b>install unknown apps</b> when asked.</li>
           <li data-t="dl.android.3">Allow notifications — they keep the connection alive in the background.</li>
         </ol>
       </div>
-      <div class="dl reveal" id="dl-ios" data-plat="ios">
-        <span class="os-ic"><i class="ico" data-i="tablet-smartphone"></i></span>
-        <h3 data-t="dl.ios.name">iPhone &amp; iPad</h3>
-        <p class="req" data-t="dl.ios.req">iOS 17 or later</p>
+      <div class="dl" id="dl-ios" data-plat="ios">
+        <div class="dl-name"><h3 data-t="dl.ios.name">iPhone &amp; iPad</h3><p class="req" data-t="dl.ios.req">iOS 17 or later</p><span class="here-tag" data-t="dl.here">Your device</span></div>
         <div class="btns">
-          <span class="btn primary soon" aria-disabled="true"><i class="ico" data-i="shopping-bag"></i><span class="two"><b data-t="dl.ios.store">App Store</b><small data-t="dl.soon">Coming soon</small></span></span>
-          <a class="btn ghost" href="https://github.com/ivLis-Studio/nearclip#iphone-and-ipad"><i class="ico" data-i="terminal"></i><span data-t="dl.ios.btn">Build from source</span></a>
+          <span class="btn soon" aria-disabled="true"><i class="ico" data-i="shopping-bag"></i><span class="two"><b data-t="dl.ios.store">App Store</b><small data-t="dl.soon">Coming soon</small></span></span>
+          <a class="btn line" href="https://github.com/ivLis-Studio/nearclip#iphone-and-ipad"><i class="ico" data-i="terminal"></i><span data-t="dl.ios.btn">Build from source</span></a>
         </div>
-        <ol>
+        <ol class="dl-steps">
           <li data-t="dl.ios.1">The App Store version is on its way. Until then, build it yourself.</li>
           <li data-t="dl.ios.2">Open the project in <b>Xcode</b>, pick your Apple ID as the team and run it on your iPhone.</li>
           <li data-t="dl.ios.3">With a free Apple ID, reinstall every 7 days.</li>
         </ol>
       </div>
     </div>
-    <p class="dl-meta reveal">
+    <p class="dl-meta">
       <span class="dl-version-long" data-t="dl.latest">Latest release on GitHub</span>
-      <a href="https://github.com/ivLis-Studio/nearclip/releases/latest"><i class="ico" data-i="package"></i><span data-t="dl.releases">Release notes and SHA-256</span></a>
-      <a href="https://github.com/ivLis-Studio/nearclip"><i class="ico" data-i="code"></i><span data-t="dl.source">Source code</span></a>
+      <a href="https://github.com/ivLis-Studio/nearclip/releases/latest"><span data-t="dl.releases">Release notes and SHA-256</span><i class="ico" data-i="arrow-up-right"></i></a>
+      <a href="https://github.com/ivLis-Studio/nearclip"><span data-t="dl.source">Source code</span><i class="ico" data-i="arrow-up-right"></i></a>
     </p>
   </div>
 </section>
 
-<!-- ============================================================ faq -->
-<section id="faq" class="alt">
-  <div class="wrap">
-    <div class="section-head center reveal">
-      <span class="kicker">FAQ</span>
-      <h2 data-t="faq.title">Questions, answered.</h2>
+<!-- ============================================================ star -->
+<section class="section iris" id="star">
+  <div class="wrap star-grid">
+    <div class="star-copy">
+      <p class="label"><span class="no">★</span><span data-t="star.kicker">Free and open source</span></p>
+      <h2 data-t="star.title">Like Nearclip?<br><span class="two">Give it a star.</span></h2>
+      <p class="lede" data-t="star.lede">Nearclip is free and open source — no ads, no subscription, no account. A star on GitHub is the simplest way to say thanks, and it helps more people find it.</p>
+      <div class="ctas">
+        <a class="btn ink big star-cta" href="https://github.com/ivLis-Studio/nearclip"><i class="ico" data-i="star"></i><span data-t="star.btn">Star on GitHub</span><span class="star-count" hidden></span></a>
+        <a class="btn-text" href="https://github.com/ivLis-Studio/nearclip/issues"><span data-t="star.issue">Found a bug or have an idea? Open an issue</span><i class="ico" data-i="arrow-up-right"></i></a>
+      </div>
+      <p class="thanks" data-t="star.thanks">Thank you for trying it.</p>
     </div>
-    <div class="faq reveal">
+    <aside class="maker">
+      <p class="label" data-t="maker.label">Made by</p>
+      <p class="maker-name">ivLis STUDIO</p>
+      <p class="maker-d" data-t="maker.d">A creative developer making ideas real in code. More of the work is at ivlis.kr.</p>
+      <a class="btn line on-iris" href="https://ivlis.kr"><span>ivlis.kr</span><i class="ico" data-i="arrow-up-right"></i></a>
+    </aside>
+  </div>
+</section>
+
+<!-- ============================================================ faq -->
+<section class="section" id="faq">
+  <div class="wrap faq-grid">
+    <header class="faq-head">
+      <p class="label"><span class="no">09</span><span>FAQ</span></p>
+      <h2 data-t="faq.title">Questions,<br>answered.</h2>
+    </header>
+    <div class="faq">
       <details><summary data-t="faq.1.q">Is Nearclip really free?</summary><p data-t="faq.1.a">Yes. No ads, no subscription, no account. It's open source under the MIT license.</p></details>
       <details><summary data-t="faq.2.q">Does my clipboard go through a server?</summary><p data-t="faq.2.a">No. On your network the devices connect directly. With Remote connection on, Tailscale may relay the connection when no direct path is possible — but it stays end-to-end encrypted, so only your devices can read it. Nearclip itself runs no server at all.</p></details>
       <details><summary data-t="faq.3.q">Do my devices have to be on the same Wi-Fi?</summary><p data-t="faq.3.a">By default, yes. Turn on Remote connection in Settings and sign in with the same free Tailscale account on each device to sync across networks — home, office or mobile data.</p></details>
       <details><summary data-t="faq.4.q">Why do I have to tap on my phone?</summary><p data-t="faq.4.a">iOS and Android 10+ don't let apps read the clipboard in the background. Receiving is automatic on Android; on iPhone it happens while Nearclip is open, and it catches up the moment you open it. On Android, optional instant capture with Shizuku can send text and links right after you copy them.</p></details>
+      <details><summary data-t="faq.9.q">How do verification codes work?</summary><p data-t="faq.9.a">On Android, Nearclip reads new text messages and KakaoTalk notifications (with notification access) and sends only the 4–8 digit code; Android 15 and later ask you to allow it once in Settings. On iPhone, connect one Shortcuts automation to Send Verification Code. Your computers then ask “Copy it?” — nothing is pasted on its own.</p></details>
       <details><summary data-t="faq.5.q">What about passwords?</summary><p data-t="faq.5.a">Items your password manager marks as private are never synced. On a computer you can also ignore whole apps, and every device can pause syncing.</p></details>
       <details><summary data-t="faq.6.q">How big can a clip be?</summary><p data-t="faq.6.a">Text up to 4 MB and images up to 32 MB. Big images show a progress bar on your other devices as soon as you copy.</p></details>
       <details><summary data-t="faq.7.q">My devices don't see each other.</summary><p data-t="faq.7.a">Guest and office Wi-Fi often block device-to-device traffic. Try Connect by address in Add device, or turn on Remote connection. On Windows, make sure Nearclip is allowed on private networks.</p></details>
@@ -470,33 +532,37 @@
     </div>
   </div>
 </section>
-
-<!-- ============================================================ final -->
-<section class="final">
-  <div class="wrap reveal">
-    <img src="assets/media/icon-512.png" alt="" width="128" height="128">
-    <h2>Nearclip</h2>
-    <p class="tag" data-t="final.tag">Copy here. Paste there.</p>
-    <p class="by">by <b>ivLis STUDIO</b></p>
-    <div class="ctas">
-      <a class="btn primary dl-main" href="#download"><i class="ico" data-i="download"></i><span class="dl-main-label">Download for Mac</span></a>
-      <a class="btn ghost" href="https://github.com/ivLis-Studio/nearclip"><i class="ico" data-i="code"></i><span data-t="final.source">View the source</span></a>
-    </div>
-  </div>
-</section>
 </main>
 
-<footer>
+<footer class="foot">
   <div class="wrap">
-    <span>© 2026 ivLis Studio · <span data-t="foot.license">MIT License</span></span>
-    <nav aria-label="Links">
-      <a href="https://github.com/ivLis-Studio/nearclip">GitHub</a>
-      <a href="https://github.com/ivLis-Studio/nearclip/releases" data-t="foot.releases">Releases</a>
-      <a href="https://github.com/ivLis-Studio/nearclip/blob/main/docs/PROTOCOL.md" data-t="foot.protocol">Protocol</a>
-      <a href="https://github.com/ivLis-Studio/nearclip/issues" data-t="foot.issues">Report a problem</a>
-      <a href="privacy.html" data-t="foot.privacy">Privacy</a>
-    </nav>
-    <p class="legal" data-t="foot.legal">Icons: Lucide (ISC). Remote connection embeds Tailscale (BSD-3-Clause); Tailscale is a trademark of Tailscale Inc. Mac, iPhone and iPad are trademarks of Apple Inc.; Windows is a trademark of Microsoft; Android is a trademark of Google LLC; Galaxy is a trademark of Samsung. Nearclip is not affiliated with any of them.</p>
+    <div class="foot-top">
+      <p class="foot-tag" data-t="foot.tag">Copy here.<br>Paste there.</p>
+      <nav class="foot-cols" aria-label="Links">
+        <div>
+          <p class="label">Nearclip</p>
+          <a href="#download" data-t="foot.download">Download</a>
+          <a href="https://github.com/ivLis-Studio/nearclip/releases" data-t="foot.releases">Releases</a>
+          <a href="privacy.html" data-t="foot.privacy">Privacy policy</a>
+        </div>
+        <div>
+          <p class="label" data-t="foot.code">Source</p>
+          <a href="https://github.com/ivLis-Studio/nearclip">GitHub</a>
+          <a href="https://github.com/ivLis-Studio/nearclip/blob/main/docs/PROTOCOL.md" data-t="foot.protocol">Protocol</a>
+          <a href="https://github.com/ivLis-Studio/nearclip/issues" data-t="foot.issues">Report a problem</a>
+        </div>
+        <div>
+          <p class="label" data-t="foot.maker">Made by</p>
+          <a href="https://ivlis.kr">ivLis STUDIO</a>
+          <a href="https://ivlis.kr">ivlis.kr</a>
+        </div>
+      </nav>
+    </div>
+    <p class="wordmark" aria-hidden="true">Nearclip</p>
+    <div class="foot-bottom">
+      <span>© 2026 ivLis STUDIO · <span data-t="foot.license">MIT License</span></span>
+      <p class="legal" data-t="foot.legal">Icons: Lucide (ISC). Type: Pretendard (OFL). Remote connection embeds Tailscale (BSD-3-Clause); Tailscale is a trademark of Tailscale Inc. Mac, iPhone and iPad are trademarks of Apple Inc.; Windows is a trademark of Microsoft; Android is a trademark of Google LLC; Galaxy is a trademark of Samsung. Nearclip is not affiliated with any of them.</p>
+    </div>
   </div>
 </footer>
 
@@ -506,4 +572,3 @@
 <script src="assets/js/site.js"></script>
 </body>
 </html>
-
