@@ -91,10 +91,10 @@ window.SITE_I18N = {
     "pairs.title": "지금까지 안 되던 조합, 이제 돼요.",
     "pairs.lede": "Mac과 iPhone, 일부 Windows PC와 Android 폰끼리는 이미 클립보드를 나눠 써요. Nearclip은 그 밖의 모든 조합을 이어요. 모든 기기를 모든 기기와.",
     "pairs.1.t": "Mac → Windows PC", "pairs.1.d": "메모에 적어 둔 주소를 PC 지도 검색창에 그대로.",
-    "pairs.2.t": "Android → Mac", "pairs.2.d": "갤럭시로 온 인증번호, Mac에서 ⌘V 한 번이면 끝.",
+    "pairs.2.t": "Android → Mac", "pairs.2.d": "갤럭시로 문자가 오면 Mac이 “복사할까요?” — 복사하고 ⌘V면 끝.",
     "pairs.3.t": "iPhone → Windows PC", "pairs.3.d": "방금 찍은 사진을 PC 채팅창에 Ctrl+V로.",
     "pairs.1.alt": "Mac 메모에서 주소를 복사하자 Windows PC 지도 검색창에 붙여넣어지고 ‘MacBook Pro에서 복사됨’ 알림이 떠요.",
-    "pairs.2.alt": "Android 폰에 온 인증번호가 Mac Safari의 인증 칸에 들어가요.",
+    "pairs.2.alt": "Android 폰에 문자로 온 인증번호를 Mac이 복사할지 묻고, ⌘V로 Safari 인증 칸에 넣어요.",
     "pairs.3.alt": "iPhone에서 붙여넣기 버튼으로 보낸 사진이 Windows PC 채팅창에 들어가요.",
     "pairs.note": "Mac ↔ 갤럭시, Windows ↔ iPhone, iPad ↔ Windows… 어떤 조합이든, 어느 방향이든 돼요.",
 

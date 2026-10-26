@@ -30,7 +30,7 @@
 </p>
 
 <!-- 영상은 GitHub 첨부 파일이라 여기서 바로 재생됩니다. 원본: promo/ -->
-https://github.com/user-attachments/assets/a918b58d-f46a-4e37-bc45-99c3ffc6548b
+https://github.com/user-attachments/assets/bfdd5d06-0561-46fc-b8ed-24829a01242f
 
 <p align="center"><sub>39초 · 소리를 켜고 보세요 · <a href="https://ivlis-studio.github.io/nearclip/?lang=ko#film">웹사이트에서 보기</a></sub></p>
 

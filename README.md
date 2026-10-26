@@ -30,7 +30,7 @@
 </p>
 
 <!-- The film is a GitHub attachment, so it plays inline here. Source: promo/ -->
-https://github.com/user-attachments/assets/481e0b9a-8704-4dc0-aacd-5fb4c61d13f6
+https://github.com/user-attachments/assets/d8bc854c-e50d-4059-b01a-d28369d9fb0b
 
 <p align="center"><sub>39 seconds · turn the sound on · <a href="https://ivlis-studio.github.io/nearclip/#film">Watch on the website</a></sub></p>
 
