@@ -25,7 +25,7 @@ const ok = (cond, what) => { checks++; if (!cond) { failures++; console.log("  �
 const DL = "https://github.com/ivLis-Studio/nearclip/releases/download/v1.0.0/";
 const STORE = "https://apps.microsoft.com/detail/9PNQ3Z9S83QS";
 const RELEASE = { tag_name: "v1.0.0", published_at: "2026-10-24T12:00:00Z",
-  assets: ["Nearclip-macOS.zip", "Nearclip-Windows-x64.zip", "Nearclip-Windows-arm64.zip", "Nearclip-Android.apk"].map((name) => ({ name, browser_download_url: DL + name })) };
+  assets: ["Nearclip-macOS.zip", "Nearclip-Windows-x64.zip", "Nearclip-Windows-arm64.zip", "Nearclip-Android.apk", "Nearclip-iOS.ipa"].map((name) => ({ name, browser_download_url: DL + name })) };
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const REPO_URL = "https://github.com/ivLis-Studio/nearclip";
@@ -93,7 +93,7 @@ for (const lang of ["en", "ko"]) {
     ok(r.win.join() === [STORE, DL + "Nearclip-Windows-x64.zip", DL + "Nearclip-Windows-arm64.zip"].join(), tag + " Windows: the Store first, then the ZIPs from GitHub (" + r.win.join(", ") + ")");
     ok(/GitHub/.test(r.or), tag + " Windows says where the direct download comes from: " + r.or);
     ok(r.soon.every(Boolean), tag + " Mac, Android and iPhone lead with their store, coming soon and not clickable (" + r.soon.join(", ") + ")");
-    ok(r.direct.join() === [DL + "Nearclip-macOS.zip", DL + "Nearclip-Android.apk", "https://github.com/ivLis-Studio/nearclip#iphone-and-ipad"].join(), tag + " …with the direct download under it (" + r.direct.join(", ") + ")");
+    ok(r.direct.join() === [DL + "Nearclip-macOS.zip", DL + "Nearclip-Android.apk", DL + "Nearclip-iOS.ipa"].join(), tag + " …with the direct download under it (" + r.direct.join(", ") + ")");
     ok(/1\.0\.0/.test(r.version), tag + " release version shown: " + r.version);
     ok(r.star.length === 2 && r.star.every((x) => x === REPO_URL + " 1,234"), tag + " the Star buttons go to GitHub with the count (" + r.star.join(", ") + ")");
     ok(r.maker >= 2, tag + " ivlis.kr is linked from the maker block and the footer (" + r.maker + ")");

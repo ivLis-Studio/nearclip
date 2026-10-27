@@ -231,10 +231,9 @@ window.SITE_I18N = {
     "dl.ios.name": "iPhone &amp; iPad",
     "dl.ios.req": "iOS 17 이상",
     "dl.ios.store": "App Store",
-    "dl.ios.btn": "소스에서 빌드",
-    "dl.ios.1": "App Store 버전은 준비 중이에요. 그전에는 직접 빌드해서 쓸 수 있어요.",
-    "dl.ios.2": "<b>Xcode</b>에서 프로젝트를 열고 내 Apple ID를 팀으로 골라 iPhone에서 실행하세요.",
-    "dl.ios.3": "무료 Apple ID라면 7일마다 다시 설치해야 해요.",
+    "dl.ios.1": "App Store 버전은 준비 중이에요. 그전에는 IPA를 <b>AltStore</b>나 <b>SideStore</b>로 설치할 수 있어요.",
+    "dl.ios.2": "AltStore나 SideStore의 My Apps에서 <b>+</b>를 눌러 파일을 고르세요. 내 Apple ID로 서명돼 설치돼요.",
+    "dl.ios.3": "무료 Apple ID라면 7일마다 앱에서 새로고침해 주세요.",
     "dl.latest": "GitHub 최신 릴리스", "dl.releases": "릴리스 노트와 SHA-256", "dl.source": "소스 코드",
 
     "star.kicker": "무료 오픈 소스",
@@ -255,7 +254,7 @@ window.SITE_I18N = {
     "faq.5.q": "비밀번호는요?", "faq.5.a": "비밀번호 관리자가 비공개로 표시한 항목은 동기화하지 않아요. 컴퓨터에선 앱 단위로 제외할 수 있고, 모든 기기에서 동기화를 일시정지할 수 있어요.",
     "faq.6.q": "얼마나 큰 걸 보낼 수 있나요?", "faq.6.a": "텍스트는 4MB, 이미지는 32MB까지예요. 큰 이미지는 복사하자마자 다른 기기에 진행률이 떠요.",
     "faq.7.q": "기기끼리 서로 못 찾아요.", "faq.7.a": "게스트 Wi-Fi나 회사 Wi-Fi는 기기 간 통신을 막는 경우가 많아요. 기기 추가에서 ‘주소로 연결’을 쓰거나 원격 연결을 켜 보세요. Windows에선 Nearclip이 개인 네트워크에서 허용돼 있는지 확인하세요.",
-    "faq.8.q": "iPhone 앱은 어디 있나요?", "faq.8.a": "아직 App Store에는 없어요. Xcode로 몇 분이면 직접 빌드할 수 있고, README에 방법이 나와 있어요.",
+    "faq.8.q": "iPhone 앱은 어디 있나요?", "faq.8.a": "App Store 등록을 준비 중이에요. 그전에는 IPA를 받아 AltStore나 SideStore로 설치하거나, Xcode로 직접 빌드할 수 있어요. 방법은 README에 있어요.",
 
     "foot.tag": "여기서 복사하고,<br>저기서 붙여넣기.",
     "foot.download": "다운로드", "foot.releases": "릴리스", "foot.privacy": "개인정보 처리방침",

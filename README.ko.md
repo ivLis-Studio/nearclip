@@ -138,7 +138,16 @@ Android 8 이상에서 동작합니다.
 
 ### iPhone과 iPad
 
-아직 App Store에는 없습니다. 직접 빌드하는 데 몇 분이면 됩니다.
+아직 App Store에는 없습니다. 그 전까지는 IPA를 AltStore나 SideStore로 설치하거나, 직접 빌드하세요.
+
+**AltStore·SideStore로 설치**
+
+1. [릴리스](https://github.com/ivLis-Studio/nearclip/releases/latest)에서 **Nearclip-iOS.ipa**를 내려받으세요.
+2. [AltStore](https://altstore.io)나 [SideStore](https://sidestore.io)의 *My Apps*에서 **+**를 누르고 파일을 고르세요.
+   설치하면서 내 Apple ID로 서명됩니다.
+3. 무료 Apple ID라면 7일마다 앱에서 새로고침하세요.
+
+**직접 빌드**(몇 분이면 됩니다)
 
 1. Xcode와 [XcodeGen](https://github.com/yonaskolb/XcodeGen)(`brew install xcodegen`)을 설치하고, 내장 Tailscale
    라이브러리를 빌드하세요: `tailnet/build.sh apple`(Go 필요, [tailnet/README.md](tailnet/README.md) 참고).
@@ -215,6 +224,8 @@ cd apple
 xcodegen generate                 # Nearclip.xcodeproj(커밋되어 있음), 스킴 Nearclip(macOS)·NearclipiOS
 scripts/build-release.sh          # 유니버설 dist/Nearclip-macOS.zip, ad-hoc 서명
 SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=<notarytool 프로필> scripts/build-release.sh   # 공증까지
+scripts/build-ipa.sh              # AltStore·SideStore용 dist/Nearclip-iOS.ipa, ad-hoc 서명
+scripts/build-ipa.sh <NearclipiOS.xcarchive>   # …또는 App Store에 올린 아카이브 같은 기존 아카이브를 다시 포장
 ```
 
 **Android** — [android/README.md](android/README.md) 참고. `android/scripts/build-release.sh`가 R8 릴리스를 빌드하고 릴리스

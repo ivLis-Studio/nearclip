@@ -142,7 +142,16 @@ Requires Android 8 or later.
 
 ### iPhone and iPad
 
-Nearclip isn't on the App Store yet. Building it takes a few minutes:
+Nearclip isn't on the App Store yet. Until it is, install the IPA with AltStore or SideStore, or build it yourself.
+
+**With AltStore or SideStore**
+
+1. Download **Nearclip-iOS.ipa** from [Releases](https://github.com/ivLis-Studio/nearclip/releases/latest).
+2. In [AltStore](https://altstore.io) or [SideStore](https://sidestore.io), tap **+** on *My Apps* and pick the file.
+   It's signed with your own Apple ID as it installs.
+3. With a free Apple ID, refresh it there every 7 days.
+
+**From source** (a few minutes)
 
 1. Install Xcode and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`), then build the
    embedded Tailscale library: `tailnet/build.sh apple` (Go; see [tailnet/README.md](tailnet/README.md)).
@@ -221,6 +230,8 @@ cd apple
 xcodegen generate                 # Nearclip.xcodeproj (also committed); schemes Nearclip (macOS) and NearclipiOS
 scripts/build-release.sh          # universal dist/Nearclip-macOS.zip, signed ad hoc
 SIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=<notarytool profile> scripts/build-release.sh   # notarized
+scripts/build-ipa.sh              # dist/Nearclip-iOS.ipa for AltStore and SideStore, signed ad hoc
+scripts/build-ipa.sh <NearclipiOS.xcarchive>   # …or repackage an archive, such as the one uploaded to the App Store
 ```
 
 The **App Store** builds come from the same project: `NearclipiOS` (iPhone and iPad) and `NearclipAppStore`, the Mac app
