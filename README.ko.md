@@ -34,6 +34,10 @@ https://github.com/user-attachments/assets/bfdd5d06-0561-46fc-b8ed-24829a01242f
 
 <p align="center"><sub>39초 · 소리를 켜고 보세요 · <a href="https://ivlis-studio.github.io/nearclip/?lang=ko#film">웹사이트에서 보기</a></sub></p>
 
+## 개발 중: 1.2
+
+다음 빌드에는 iPhone 공유 메뉴, 기기별 송수신 설정, 인증번호 3분 만료, 로컬 기록 암호화, 기기 해제 시 키 교체, Mac·Android 설정 화면의 업데이트 확인을 추가했습니다. 키 교체 당시 오프라인이었던 기기는 다시 연결해야 합니다. 호환성과 플랫폼 제한은 [동작 및 검증 기록](docs/validation/2026-10-28.md)을 참고해주세요. 현재 공개 릴리스는 1.1.0입니다.
+
 ## 한 기기에서 복사하고, 다른 기기에서 붙여넣기
 
 Nearclip은 Mac, Windows PC, Android 폰, iPhone과 iPad의 클립보드와 검색 가능한 기록을 하나로 묶어 줍니다.

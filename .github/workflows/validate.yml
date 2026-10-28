@@ -2,14 +2,14 @@ name: Native validation
 on:
   push:
     branches: [main, 'ivAI/**']
-    paths: ['apple/**', 'android/**', 'windows/**', 'spec/**', 'tools/interop/**', '.github/workflows/validate.yml']
+    paths: ['apple/**', 'android/**', 'windows/**', 'spec/**', 'tools/interop/**', 'tools/acceptance/**', '.github/workflows/validate.yml']
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: native-validation-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   apple:
     runs-on: xcode-27
@@ -50,7 +50,7 @@ jobs:
         run: |
           xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
           SIMULATOR_ID=$(python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/simulators.json")); print(next(x["udid"] for runtime,devices in sorted(d["devices"].items(),reverse=True) if "iOS" in runtime for x in devices if x.get("isAvailable") and "iPhone" in x["name"]))')
-          xcodebuild -project apple/Nearclip.xcodeproj -scheme NearclipiOS -configuration Debug -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -derivedDataPath "$RUNNER_TEMP/ios-tests" CODE_SIGNING_ALLOWED=NO test
+          python3 tools/acceptance/ios_ci.py --sim "$SIMULATOR_ID"
       - uses: actions/upload-artifact@v6
         if: always()
         with:

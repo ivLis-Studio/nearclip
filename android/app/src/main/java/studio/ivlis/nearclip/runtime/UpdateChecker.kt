@@ -10,6 +10,11 @@ import java.net.URI
 object UpdateChecker {
     const val RELEASE_URL = "https://github.com/ivLis-Studio/nearclip/releases/latest"
     private val versionPattern = Regex("\\d+\\.\\d+\\.\\d+")
+    fun isPlayInstall(context: Context): Boolean = runCatching {
+        val installer = if (android.os.Build.VERSION.SDK_INT >= 30) context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
+            else @Suppress("DEPRECATION") context.packageManager.getInstallerPackageName(context.packageName)
+        installer == "com.android.vending"
+    }.getOrDefault(false)
     suspend fun check(context: Context, current: String, force: Boolean = false): String? = withContext(Dispatchers.IO) {
         val prefs = context.getSharedPreferences("nearclip.updates", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()

@@ -54,7 +54,7 @@ final class ShareViewController: UITableViewController {
             guard !seed.paused else { say(NSLocalizedString("Syncing paused", comment: "")); return }
             self.seed = seed
             let providers = (extensionContext?.inputItems as? [NSExtensionItem] ?? []).flatMap { $0.attachments ?? [] }
-            guard let provider = providers.first else { say(NSLocalizedString("Nothing to send", comment: "")); return }
+            guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) || $0.hasItemConformingToTypeIdentifier(UTType.url.identifier) || $0.hasItemConformingToTypeIdentifier(UTType.text.identifier) }) else { say(NSLocalizedString("Nothing to send", comment: "")); return }
             if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
                 guard seed.images else { say(NSLocalizedString("Turn on image sync in Nearclip first.", comment: "")); return }
                 let data = try await loadData(provider, type: UTType.image.identifier)
@@ -85,6 +85,7 @@ final class ShareViewController: UITableViewController {
             }
             guard image != nil || text?.isEmpty == false else { say(NSLocalizedString("This item is not supported", comment: "")); return }
             guard (text?.utf8.count ?? 0) <= 4 * 1024 * 1024 else { say(NSLocalizedString("Text is too large", comment: "")); return }
+            try Task.checkCancellation()
             let dir = FileManager.default.temporaryDirectory.appendingPathComponent("nearclip-share-" + UUID().uuidString)
             directory = dir
             let node = try NearclipNode.shareNode(seed: seed, directory: dir)
@@ -120,7 +121,7 @@ final class ShareViewController: UITableViewController {
             guard !Task.isCancelled else { return }
             guard node.snapshot().online.contains(peer.id) else { fail(); return }
             guard node.supportsTargeting(peer.id) else {
-                say(NSLocalizedString("Update Nearclip on the other device first.", comment: "")); node.stop(); return
+                say(NSLocalizedString("Update Nearclip on the other device first.", comment: "")); node.stop(); sending = false; tableView.isUserInteractionEnabled = true; return
             }
             say(NSLocalizedString("Sending…", comment: ""))
             if let image { node.sendImage(image, mime: mime) } else if let text { node.sendText(text) }

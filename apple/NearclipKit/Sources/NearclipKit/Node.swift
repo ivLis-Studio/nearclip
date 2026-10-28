@@ -163,7 +163,7 @@ public final class NearclipNode: @unchecked Sendable {
             var state = store.state
             state.members = memberList()
             return ShareSeed(state: try JSONEncoder().encode(state), groupId: state.groupId, groupKey: groupKey,
-                             deviceName: deviceName, members: memberList().filter { !$0.removed && $0.id != deviceId }, paused: paused, images: images, remote: tailnetStatus.isRunning ? tailnetStatus : nil)
+                             deviceName: deviceName, model: config.model, appVersion: config.appVersion, members: memberList().filter { !$0.removed && $0.id != deviceId }, paused: paused, images: images, remote: tailnetStatus.isRunning ? tailnetStatus : nil)
         }
     }
     func borrowShareRoute(_ status: TailnetStatus) { queue.sync { tailnetStatus = status } }

@@ -364,4 +364,5 @@
     <string name="update_available">Update available</string>
     <string name="update_failed">Could not check. Tap to retry.</string>
     <string name="update_check_detail">Checks GitHub for new releases.</string>
+    <string name="store_updates">Updates are managed by the store.</string>
 </resources>

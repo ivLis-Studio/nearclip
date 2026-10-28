@@ -23,7 +23,7 @@
   <Identity
     Name="ivLis-STUDIO.Nearclip"
     Publisher="CN=0C33D71C-3E83-4FF3-A9B9-CA2EA49A5C77"
-    Version="1.1.0.0" />
+    Version="1.2.0.0" />
 
   <Properties>
     <DisplayName>Nearclip</DisplayName>

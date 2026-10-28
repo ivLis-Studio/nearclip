@@ -10,18 +10,18 @@ struct DeviceSyncSettings: View {
         NavigationStack {
             Form {
                 Section {
-                    Toggle("Send to this device", isOn: $policy.send)
-                    Toggle("Receive from this device", isOn: $policy.receive)
+                    Toggle("Send to this device", isOn: $policy.send).accessibilityIdentifier("policy.send")
+                    Toggle("Receive from this device", isOn: $policy.receive).accessibilityIdentifier("policy.receive")
                 } header: { Text("Direction") }
                 Section {
-                    Toggle("Include images", isOn: $policy.images)
-                    Toggle("Include verification codes", isOn: $policy.codes)
+                    Toggle("Include images", isOn: $policy.images).accessibilityIdentifier("policy.images")
+                    Toggle("Include verification codes", isOn: $policy.codes).accessibilityIdentifier("policy.codes")
                 } header: { Text("Content") } footer: {
                     Text("Applies to live copies and history sync. Verification codes expire after 3 minutes.")
                 }
             }
             .navigationTitle(member.name)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("policy.done") } }
         }
         .onAppear { policy = model.node.policy(for: member.id) }
         .onChange(of: policy) { _, p in model.node.setPolicy(p, for: member.id); model.onPolicyChanged?() }

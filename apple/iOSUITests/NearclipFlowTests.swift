@@ -86,6 +86,23 @@ final class NearclipFlowTests: XCTestCase {
         XCTAssertTrue(app.collectionViews["devices.list"].waitForExistence(timeout: 5))
         sleep(1)
         shot("09-devices")
+        // Native per-device settings persist when reopened.
+        let peer = app.staticTexts["CI Windows PC"]
+        if ProcessInfo.processInfo.environment["NC_CI"] == "1" { XCTAssertTrue(peer.waitForExistence(timeout: 5)) }
+        if peer.exists {
+            peer.tap()
+            let send = app.switches["policy.send"]
+            XCTAssertTrue(send.waitForExistence(timeout: 5))
+            XCTAssertEqual(send.value as? String, "1")
+            send.tap()
+            XCTAssertEqual(send.value as? String, "0")
+            shot("09b-device-policy")
+            app.buttons["policy.done"].tap()
+            peer.tap()
+            XCTAssertEqual(app.switches["policy.send"].value as? String, "0")
+            app.switches["policy.send"].tap()
+            app.buttons["policy.done"].tap()
+        }
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["home.settings"].tap()
         sleep(1)
@@ -94,6 +111,34 @@ final class NearclipFlowTests: XCTestCase {
         app.buttons["home.addDevice"].tap()
         sleep(2)
         shot("11-add-device")
+    }
+
+    /// Exercises the real system share extension, hosted by Safari, against the same paired CLI peer.
+    func testShareFromSafari() throws {
+        let url = try XCTUnwrap(ProcessInfo.processInfo.environment["NC_SHARE_URL"])
+        addUIInterruptionMonitor(withDescription: "share network access") { alert in
+            for label in ["Allow", "OK"] where alert.buttons[label].exists { alert.buttons[label].tap(); return true }
+            return false
+        }
+        app.launchArguments = language(); app.launch()
+        XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+        safari.launchArguments = language(); safari.launch(); safari.open(URL(string: url)!)
+        let share = safari.buttons["Share"].firstMatch
+        XCTAssertTrue(share.waitForExistence(timeout: 20)); share.tap()
+        shot("60-safari-share")
+        let nearclip = safari.buttons["Nearclip"].firstMatch
+        if !nearclip.waitForExistence(timeout: 3) {
+            let more = safari.buttons["More"].firstMatch
+            XCTAssertTrue(more.waitForExistence(timeout: 5)); more.tap()
+        }
+        let activity = safari.descendants(matching: .any).matching(NSPredicate(format: "label == 'Nearclip'")).firstMatch
+        XCTAssertTrue(activity.waitForExistence(timeout: 8)); activity.tap()
+        let destination = safari.staticTexts["CI Windows PC"].firstMatch
+        XCTAssertTrue(destination.waitForExistence(timeout: 15)); shot("61-share-destination"); destination.tap()
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: destination)
+        XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 25), .completed)
+        shot("62-share-finished")
     }
 
     /// Cross-device acceptance on an onboarded app: joins the group of NC_PAIR_LINK first when it is set, expects the

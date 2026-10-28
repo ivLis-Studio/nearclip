@@ -1,0 +1,146 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Connecting…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 중…"
+          }
+        }
+      }
+    },
+    "Couldn’t connect. Open Nearclip on the other device and try again.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결하지 못했어요. 다른 기기에서 Nearclip을 열고 다시 시도해주세요."
+          }
+        }
+      }
+    },
+    "Couldn’t prepare this item. Try again in Nearclip.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목을 준비하지 못했어요. Nearclip에서 다시 시도해주세요."
+          }
+        }
+      }
+    },
+    "Image is too large": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 용량이 너무 커요"
+          }
+        }
+      }
+    },
+    "Nothing to send": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보낼 항목이 없어요"
+          }
+        }
+      }
+    },
+    "Open Nearclip and add a device first.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip을 열어 먼저 기기를 연결해주세요."
+          }
+        }
+      }
+    },
+    "Preparing…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "준비 중…"
+          }
+        }
+      }
+    },
+    "Send to…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보낼 기기 선택"
+          }
+        }
+      }
+    },
+    "Sending…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보내는 중…"
+          }
+        }
+      }
+    },
+    "Syncing paused": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화가 일시정지되어 있어요"
+          }
+        }
+      }
+    },
+    "Text is too large": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트 용량이 너무 커요"
+          }
+        }
+      }
+    },
+    "This item is not supported": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지원하지 않는 항목이에요"
+          }
+        }
+      }
+    },
+    "Turn on image sync in Nearclip first.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nearclip에서 이미지 동기화를 먼저 켜주세요."
+          }
+        }
+      }
+    },
+    "Update Nearclip on the other device first.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기의 Nearclip을 먼저 업데이트해주세요."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

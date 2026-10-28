@@ -318,8 +318,8 @@ deleting every clip. Pins are local and not synced.
 `{"t":"members","members":[<changed member records>]}` is sent whenever records change (pairing,
 rename, removal). Receivers merge (1.1) and forward when something changed. Removing a device sets
 `removed: true` and `updatedAt = now`; members then send `{"t":"bye","reason":"removed"}` on any open
-session with it and close. Removal is cooperative; for a full key rotation the user can "Reset group"
-on the remaining devices and pair them again.
+session with it and close. Current clients additionally rotate the group key as described in section 11.
+Offline and earlier clients require re-pairing after rotation.
 
 ### 6.5 Other
 

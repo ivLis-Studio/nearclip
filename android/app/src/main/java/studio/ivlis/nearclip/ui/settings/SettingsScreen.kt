@@ -484,6 +484,13 @@ private fun RemoteRows(st: TailnetStatus, signingIn: Boolean, actions: SettingsA
 @Composable
 private fun UpdateRow() {
     val context = LocalContext.current
+    if (remember { studio.ivlis.nearclip.runtime.UpdateChecker.isPlayInstall(context) }) {
+        SettingsGroup {
+            SettingsRow(title = "Google Play", summary = stringResource(R.string.store_updates), icon = R.drawable.ic_info,
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=" + context.packageName))) })
+        }
+        return
+    }
     var version by remember { mutableStateOf<String?>(null) }
     var failed by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }

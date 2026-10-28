@@ -6,6 +6,8 @@ public struct ShareSeed: Codable, Sendable {
     public var groupId: String
     public var groupKey: Data
     public var deviceName: String
+    public var model: String?
+    public var appVersion: String?
     public var members: [MemberRecord]
     public var paused: Bool
     public var images: Bool
@@ -27,7 +29,7 @@ public extension NearclipNode {
         try seed.state.write(to: directory.appendingPathComponent("state.json"), options: [.atomic])
         let secrets = MemorySecretStore()
         try secrets.save(seed.groupKey, account: "group-key-" + seed.groupId)
-        let node = try NearclipNode(config: .init(stateDirectory: directory, deviceName: seed.deviceName, platform: "ios",
+        let node = try NearclipNode(config: .init(stateDirectory: directory, deviceName: seed.deviceName, platform: "ios", model: seed.model, appVersion: seed.appVersion,
                                                port: 0, bonjour: true, secretStore: secrets))
         if let remote = seed.remote { node.borrowShareRoute(remote) }
         return node
