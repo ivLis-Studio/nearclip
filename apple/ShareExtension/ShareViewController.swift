@@ -83,7 +83,9 @@ final class ShareViewController: UITableViewController {
                 guard seed.images else { say(NSLocalizedString("Turn on image sync in Nearclip first.", comment: "")); return }
                 // A UIImage can be offered as a UIKit object without an encoded public.image representation.
                 // Prefer actual encoded types so ordinary large PNG/JPEG images do not need a bitmap decode.
-                let encoded = provider.registeredTypeIdentifiers.first { $0 == UTType.png.identifier || $0 == UTType.jpeg.identifier }
+                let supported = Set(CGImageSourceCopyTypeIdentifiers() as? [String] ?? [])
+                let concrete = provider.registeredTypeIdentifiers.filter { supported.contains($0) }
+                let encoded = concrete.first { $0 == UTType.png.identifier || $0 == UTType.jpeg.identifier } ?? concrete.first
                 if encoded == nil, provider.canLoadObject(ofClass: UIImage.self) {
                     let object = try await loadImage(provider)
                     guard object.size.width > 0, object.size.height > 0 else { say(NSLocalizedString("This item is not supported", comment: "")); return }
