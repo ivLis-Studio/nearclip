@@ -1,6 +1,7 @@
 package studio.ivlis.nearclip.ui.settings
 
 import android.content.Intent
+import androidx.core.net.toUri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
@@ -29,6 +30,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -236,6 +239,7 @@ fun SettingsScreen(
             }
             item("about") {
                 SectionHeader(stringResource(R.string.section_about))
+                UpdateRow()
                 SettingsGroup {
                     SettingsRow(
                         title = stringResource(R.string.app_name),
@@ -475,5 +479,33 @@ private fun RemoteRows(st: TailnetStatus, signingIn: Boolean, actions: SettingsA
             iconTint = MaterialTheme.colorScheme.error,
             onClick = actions.signOut,
         )
+    }
+}
+
+@Composable
+private fun UpdateRow() {
+    val context = LocalContext.current
+    if (remember { studio.ivlis.nearclip.runtime.UpdateChecker.isPlayInstall(context) }) {
+        SettingsGroup {
+            SettingsRow(title = "Google Play", summary = stringResource(R.string.store_updates), icon = R.drawable.ic_info,
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, ("https://play.google.com/store/apps/details?id=" + context.packageName).toUri())) })
+        }
+        return
+    }
+    var version by remember { mutableStateOf<String?>(null) }
+    var failed by remember { mutableStateOf(false) }
+    var retry by remember { mutableIntStateOf(0) }
+    LaunchedEffect(retry) {
+        runCatching { studio.ivlis.nearclip.runtime.UpdateChecker.check(context, BuildConfig.VERSION_NAME, force = retry > 0) }
+            .onSuccess { version = it; failed = false }.onFailure { failed = true }
+    }
+    SettingsGroup {
+        SettingsRow(title = stringResource(if (version != null) R.string.update_available else R.string.check_updates),
+            summary = version ?: if (failed) stringResource(R.string.update_failed) else stringResource(R.string.update_check_detail),
+            icon = R.drawable.ic_info,
+            onClick = {
+                if (version != null) context.startActivity(Intent(Intent.ACTION_VIEW, studio.ivlis.nearclip.runtime.UpdateChecker.RELEASE_URL.toUri()))
+                else retry++
+            })
     }
 }

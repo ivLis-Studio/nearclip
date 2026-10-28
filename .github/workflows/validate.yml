@@ -1,0 +1,126 @@
+name: Native validation
+on:
+  push:
+    branches: [main]
+    paths: ['apple/**', 'android/**', 'windows/**', 'spec/**', 'tools/interop/**', 'tools/acceptance/**', '.github/workflows/validate.yml']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-validation-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+jobs:
+  apple:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tailnet/go.mod
+          cache-dependency-path: tailnet/go.sum
+      - uses: actions/cache@v4
+        id: bridge
+        with:
+          path: apple/NearclipKit/Binaries/NCTailnet.xcframework
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
+      - if: steps.bridge.outputs.cache-hit != 'true'
+        run: tailnet/build.sh apple
+      - if: steps.bridge.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: apple/NearclipKit/Binaries/NCTailnet.xcframework
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
+      - run: swift test --package-path apple/NearclipKit
+      - run: command -v xcodegen || brew install xcodegen
+      - run: xcodegen generate --spec apple/project.yml
+      - name: Build the native Mac app
+        run: xcodebuild -project apple/Nearclip.xcodeproj -scheme Nearclip -configuration Debug -destination 'platform=macOS' -derivedDataPath "$RUNNER_TEMP/mac-build" CODE_SIGNING_ALLOWED=NO build
+      - name: Archive iPhone and iPad with the share extension
+        run: xcodebuild -project apple/Nearclip.xcodeproj -scheme NearclipiOS -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Nearclip.xcarchive" CODE_SIGNING_ALLOWED=NO archive
+      - name: Package the sideload IPA
+        run: apple/scripts/build-ipa.sh "$RUNNER_TEMP/Nearclip.xcarchive"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: iPhone-iPad-test-IPA
+          path: dist/Nearclip-iOS.ipa
+  ios-ui:
+    # Validate UI independently on an installed stable runtime compatible with the selected SDK.
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tailnet/go.mod
+          cache-dependency-path: tailnet/go.sum
+      - uses: actions/cache@v4
+        id: bridge
+        with:
+          path: apple/NearclipKit/Binaries/NCTailnet.xcframework
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
+      - if: steps.bridge.outputs.cache-hit != 'true'
+        run: tailnet/build.sh apple
+      - if: steps.bridge.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: apple/NearclipKit/Binaries/NCTailnet.xcframework
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
+      - run: swift build --package-path apple/NearclipKit
+      - run: command -v xcodegen || brew install xcodegen
+      - run: xcodegen generate --spec apple/project.yml
+      - name: Test iPhone UI in the simulator
+        timeout-minutes: 35
+        shell: bash
+        run: |
+          SIMULATOR_ID=$(python3 tools/acceptance/select_ios_simulator.py)
+          python3 tools/acceptance/ios_ci.py --sim "$SIMULATOR_ID"
+      - name: Export simulator screenshots
+        if: always()
+        shell: bash
+        run: |
+          for result in "$RUNNER_TEMP"/ios-tests/Logs/Test/*.xcresult; do
+            [ -d "$result" ] || continue
+            xcrun xcresulttool export attachments --path "$result" --output-path "$RUNNER_TEMP/ios-attachments" || true
+          done
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: Apple-test-results
+          path: |
+            ${{ runner.temp }}/ios-tests/Logs/Test/*.xcresult
+            ${{ runner.temp }}/ios-attachments/**
+            /tmp/nearclip-ios-shots/*.png
+            /tmp/nearclip-share-debug.log
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet run --project windows/tests/Nearclip.Core.Tests
+      - name: Get the unchanged native Tailscale bridge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          foreach ($arch in @('x64', 'arm64')) {
+            gh release download --repo ivLis-Studio/nearclip --pattern "Nearclip-Windows-$arch.zip" --dir "$env:RUNNER_TEMP/native"
+            Expand-Archive "$env:RUNNER_TEMP/native/Nearclip-Windows-$arch.zip" "$env:RUNNER_TEMP/native/unpacked-$arch"
+            New-Item -ItemType Directory -Force "windows/native/win-$arch"
+            Get-ChildItem "$env:RUNNER_TEMP/native/unpacked-$arch" -Recurse -Filter nctailnet.dll | Select-Object -First 1 | Copy-Item -Destination "windows/native/win-$arch/nctailnet.dll"
+          }
+      - run: dotnet build windows/src/Nearclip.App/Nearclip.App.csproj -c Release -p:Platform=x64
+      - name: Validate both Microsoft Store packages after the unpackaged build
+        shell: pwsh
+        run: |
+          [xml]$manifest = Get-Content windows/packaging/Package.appxmanifest -Raw
+          $version = ([version]$manifest.Package.Identity.Version).ToString(3)
+          & windows/scripts/package-msix.ps1 -Version $version -OutDir "$env:RUNNER_TEMP/store"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Microsoft-Store-MSIX
+          path: ${{ runner.temp }}/store/*.msixbundle

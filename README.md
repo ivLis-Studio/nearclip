@@ -34,6 +34,10 @@ https://github.com/user-attachments/assets/d8bc854c-e50d-4059-b01a-d28369d9fb0b
 
 <p align="center"><sub>39 seconds · turn the sound on · <a href="https://ivlis-studio.github.io/nearclip/#film">Watch on the website</a></sub></p>
 
+## New in 1.2
+
+Send from the iPhone and iPad system share sheet, choose what each device can send and receive, and keep verification codes for only three minutes. Local history is encrypted, removing a device rotates the group's encryption key, and Mac/Android settings can check for updates quietly. See the [1.2 release notes](docs/releases/1.2.0.md) and [behavior and validation](docs/validation/2026-10-28.md) for upgrade instructions and platform limits.
+
 ## Copy on one. Paste on any other.
 
 Nearclip keeps one clipboard — and one searchable history — across your Mac, Windows PC, Android phone, iPhone and iPad.

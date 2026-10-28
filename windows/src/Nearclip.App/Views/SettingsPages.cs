@@ -398,6 +398,21 @@ internal sealed class SettingsPages
         var more = new Button { Style = (Style)Application.Current.Resources["SubtleIconButton"], Content = new FontIcon { Glyph = "\uE712", FontSize = 14 } };
         AutomationProperties.SetName(more, Loc.S("More") + " " + m.Name);
         var menu = new MenuFlyout();
+        var sync = new MenuFlyoutItem { Text = Loc.S("SyncSettings_Title"), Icon = new FontIcon { Glyph = "\uE713" } };
+        sync.Click += async (_, _) => {
+            var policy = Model.Node.PolicyFor(m.Id);
+            var panel = new StackPanel { Spacing = 12 };
+            var send = new ToggleSwitch { Header = Loc.S("SyncPolicy_Send"), IsOn = policy.Send };
+            var receive = new ToggleSwitch { Header = Loc.S("SyncPolicy_Receive"), IsOn = policy.Receive };
+            var images = new ToggleSwitch { Header = Loc.S("SyncPolicy_Images"), IsOn = policy.Images };
+            var codes = new ToggleSwitch { Header = Loc.S("SyncPolicy_Codes"), IsOn = policy.Codes };
+            panel.Children.Add(send); panel.Children.Add(receive); panel.Children.Add(images); panel.Children.Add(codes);
+            var dialog = new ContentDialog { XamlRoot = _window.DialogRoot, Title = m.Name, Content = panel,
+                PrimaryButtonText = Loc.S("Save"), CloseButtonText = Loc.S("Cancel") };
+            if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+                Model.Node.SetPolicy(m.Id, new SyncPolicy(send.IsOn, receive.IsOn, images.IsOn, codes.IsOn));
+        };
+        menu.Items.Add(sync);
         var remove = new MenuFlyoutItem { Text = Loc.S("Remove_Ellipsis"), Icon = new FontIcon { Glyph = "\uE738" } };
         remove.Click += async (_, _) =>
         {

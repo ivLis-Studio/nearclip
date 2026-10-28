@@ -4,8 +4,13 @@ import Security
 /// Where the group key lives. Apps use the Keychain, the CLI a file.
 public protocol SecretStore: AnyObject {
     func load(_ account: String) -> Data?
+    func loadChecked(_ account: String) throws -> Data?
     func save(_ data: Data, account: String) throws
     func delete(_ account: String)
+}
+
+public extension SecretStore {
+    func loadChecked(_ account: String) throws -> Data? { load(account) }
 }
 
 public final class FileSecretStore: SecretStore {
@@ -49,8 +54,23 @@ public final class KeychainSecretStore: SecretStore {
         return out as? Data
     }
 
+    public func loadChecked(_ account: String) throws -> Data? {
+        var q = base(account)
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: CFTypeRef?
+        let status = SecItemCopyMatching(q as CFDictionary, &out)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = out as? Data else { throw NearclipError.io("keychain \(status)") }
+        return data
+    }
+
     public func save(_ data: Data, account: String) throws {
-        SecItemDelete(base(account) as CFDictionary)
+        // Updating in place preserves the previous key if the Keychain is temporarily unavailable.
+        let attributes: [String: Any] = [kSecValueData as String: data]
+        let updated = SecItemUpdate(base(account) as CFDictionary, attributes as CFDictionary)
+        if updated == errSecSuccess { return }
+        guard updated == errSecItemNotFound else { throw NearclipError.io("keychain \(updated)") }
         var q = base(account)
         q[kSecValueData as String] = data
         q[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
@@ -71,6 +91,7 @@ struct PersistedState: Codable {
     var lastSeen: [String: Int64]
     var tombstones: [String: Int64]
     var newestLocalTs: Int64?
+    var policies: [String: SyncPolicy]?
 }
 
 private struct PersistedHistory: Codable { var clips: [StoredClip] }
@@ -79,6 +100,9 @@ private struct PersistedHistory: Codable { var clips: [StoredClip] }
 final class NodeStore {
     let directory: URL
     let blobs: URL
+    private let vault: LocalVault
+    private let cache: URL
+    private let cacheLock = NSLock()
     var state: PersistedState
     var members: [String: MemberRecord]
     private(set) var history: [StoredClip] = []
@@ -90,13 +114,23 @@ final class NodeStore {
     private let owner: DispatchQueue
     static let inlineTextLimit = 256 * 1024
 
-    init(directory: URL, defaultName: String, owner: DispatchQueue) {
+    init(directory: URL, defaultName: String, owner: DispatchQueue, secrets: SecretStore) throws {
+        vault = try LocalVault(secrets: secrets)
+        cache = FileManager.default.temporaryDirectory.appendingPathComponent("nearclip-preview-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         self.directory = directory
         self.blobs = directory.appendingPathComponent("blobs", isDirectory: true)
         self.owner = owner
         try? FileManager.default.createDirectory(at: blobs, withIntermediateDirectories: true)
         let dec = JSONDecoder()
-        if let d = try? Data(contentsOf: directory.appendingPathComponent("state.json")),
+        for name in ["state.json", "history.json"] {
+            let u = directory.appendingPathComponent(name)
+            if FileManager.default.fileExists(atPath: u.path) { _ = try vault.read(u) }
+        }
+        for u in (try? FileManager.default.contentsOfDirectory(at: blobs, includingPropertiesForKeys: nil)) ?? [] {
+            if ["bin", "txt"].contains(u.pathExtension) { _ = try vault.read(u) }
+        }
+        if let d = try? vault.read(directory.appendingPathComponent("state.json")),
            let s = try? dec.decode(PersistedState.self, from: d) {
             state = s
         } else {
@@ -104,12 +138,12 @@ final class NodeStore {
                                    joinedAt: nowMs(), members: [], endpoints: [:], lastSeen: [:], tombstones: [:])
         }
         members = Dictionary(state.members.map { ($0.id, $0) }, uniquingKeysWith: { a, b in a.updatedAt >= b.updatedAt ? a : b })
-        if let d = try? Data(contentsOf: directory.appendingPathComponent("history.json")),
+        if let d = try? vault.read(directory.appendingPathComponent("history.json")),
            let h = try? dec.decode(PersistedHistory.self, from: d) {
             var loaded: [StoredClip] = []
             for var c in h.clips {
                 if c.textFile == true {
-                    guard let t = try? String(contentsOf: textURL(c.id), encoding: .utf8) else { continue }
+                    guard let bytes = try? vault.read(textURL(c.id)), let t = String(data: bytes, encoding: .utf8) else { continue }
                     c.clip.text = t
                 }
                 loaded.append(c)
@@ -121,14 +155,24 @@ final class NodeStore {
 
     func blobURL(_ id: String) -> URL { blobs.appendingPathComponent(id + ".bin") }
     func textURL(_ id: String) -> URL { blobs.appendingPathComponent(id + ".txt") }
-    func blobData(_ id: String) -> Data? { try? Data(contentsOf: blobURL(id), options: [.mappedIfSafe]) }
+    func blobData(_ id: String) -> Data? { try? vault.read(blobURL(id)) }
+    func previewURL(_ id: String) -> URL {
+        cacheLock.lock(); defer { cacheLock.unlock() }
+        let url = cache.appendingPathComponent(id + ".bin")
+        if !FileManager.default.fileExists(atPath: url.path), let data = blobData(id) {
+            try? data.write(to: url, options: [.atomic])
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        }
+        return url
+    }
+    deinit { try? FileManager.default.removeItem(at: cache) }
 
     func has(_ id: String) -> Bool { ids.contains(id) }
     func clip(_ id: String) -> StoredClip? { history.first { $0.id == id } }
 
     func add(_ clip: StoredClip, blob: Data?) {
         guard !ids.contains(clip.id) else { return }
-        if let blob { try? blob.write(to: blobURL(clip.id), options: [.atomic]) }
+        if let blob { try? vault.write(blob, to: blobURL(clip.id)) }
         let idx = history.firstIndex { $0.clip.ts < clip.clip.ts } ?? history.count
         history.insert(clip, at: idx)
         ids.insert(clip.id)
@@ -142,6 +186,9 @@ final class NodeStore {
         ids.remove(id)
         try? FileManager.default.removeItem(at: blobURL(id))
         try? FileManager.default.removeItem(at: textURL(id))
+        cacheLock.lock()
+        try? FileManager.default.removeItem(at: cache.appendingPathComponent(id + ".bin"))
+        cacheLock.unlock()
         saveSoon()
         return true
     }
@@ -196,13 +243,14 @@ final class NodeStore {
             clips.append(c)
         }
         let dir = directory
+        let vault = self.vault
         let work = {
             let enc = JSONEncoder()
             for (url, text) in sideTexts where !FileManager.default.fileExists(atPath: url.path) {
-                try? text.write(to: url, atomically: true, encoding: .utf8)
+                try? vault.write(Data(text.utf8), to: url)
             }
-            if let d = try? enc.encode(s) { try? d.write(to: dir.appendingPathComponent("state.json"), options: [.atomic]) }
-            if let d = try? enc.encode(PersistedHistory(clips: clips)) { try? d.write(to: dir.appendingPathComponent("history.json"), options: [.atomic]) }
+            if let d = try? enc.encode(s) { try? vault.write(d, to: dir.appendingPathComponent("state.json")) }
+            if let d = try? enc.encode(PersistedHistory(clips: clips)) { try? vault.write(d, to: dir.appendingPathComponent("history.json")) }
         }
         if sync { io.sync(execute: work) } else { io.async(execute: work) }
     }

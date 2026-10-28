@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="tagline_display">여기서 복사하고,\n저기서 붙여넣기.</string>
     <string name="send_clipboard">클립보드 보내기</string>
@@ -125,7 +125,7 @@
     <string name="leave_confirm">나가기</string>
     <string name="remove_device">제거…</string>
     <string name="remove_title">‘%s’ 기기를 제거할까요?</string>
-    <string name="remove_body">더 이상 내 기기와 동기화되지 않습니다.</string>
+    <string name="remove_body">이 기기와의 동기화를 해제하고 암호화 키를 교체합니다. 오프라인이거나 이전 버전을 사용하는 기기는 다시 연결해야 합니다.</string>
     <string name="rename_device">기기 이름 변경</string>
     <string name="device_name">기기 이름</string>
     <string name="add_device_subtitle">같은 Wi-Fi에 있는 휴대폰, 태블릿, 컴퓨터를 연결하세요.</string>
@@ -239,8 +239,6 @@
     <string name="remote_starting">준비 중…</string>
     <string name="remote_paused">일시정지됨</string>
     <string name="remote_paused_hint">동기화를 다시 시작하면 원격 연결도 다시 켜집니다.</string>
-
-    <!-- 인증번호 (runtime/CodeForwarding.kt, PROTOCOL §6.7) -->
     <string name="channel_codes">인증번호</string>
     <string name="channel_codes_description">다른 기기에 도착한 인증번호를 복사할지 묻습니다.</string>
     <string name="code_arrived">%1$s에서 인증번호가 도착했어요! 복사할까요?</string>
@@ -349,4 +347,14 @@
     <plurals name="days_ago">
         <item quantity="other">%d일 전</item>
     </plurals>
+    <string name="sync_settings">동기화 설정</string>
+    <string name="sync_policy_send">이 기기로 보내기</string>
+    <string name="sync_policy_receive">이 기기에서 받기</string>
+    <string name="sync_policy_images">이미지 포함</string>
+    <string name="sync_policy_codes">인증번호 포함</string>
+    <string name="check_updates">업데이트 확인</string>
+    <string name="update_available">새 버전이 있습니다</string>
+    <string name="update_failed">확인하지 못했습니다. 눌러서 다시 시도해주세요.</string>
+    <string name="update_check_detail">GitHub에서 새 버전을 확인합니다.</string>
+    <string name="store_updates">업데이트는 스토어에서 관리합니다.</string>
 </resources>

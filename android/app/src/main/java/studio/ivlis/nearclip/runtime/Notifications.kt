@@ -258,7 +258,7 @@ object Notifications {
      * The lock screen shows only that a code arrived. Codes expire quickly, and so does the notification.
      */
     @SuppressLint("MissingPermission")
-    fun code(context: Context, clipId: String, name: String, code: String) {
+    fun code(context: Context, clipId: String, name: String, code: String, expiresAt: Long) {
         val nm = NotificationManagerCompat.from(context)
         if (!nm.areNotificationsEnabled()) return
         val copy = PendingIntent.getBroadcast(
@@ -283,7 +283,7 @@ object Notifications {
             .setCategory(NotificationCompat.CATEGORY_STATUS)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
-            .setTimeoutAfter(Nearclip.CODE_OFFER_MS)
+            .setTimeoutAfter((expiresAt - System.currentTimeMillis()).coerceIn(1, Nearclip.CODE_OFFER_MS))
             .setContentIntent(openApp(context, 7))
             .addAction(R.drawable.ic_content_copy, context.getString(R.string.copy), copy)
             .build()

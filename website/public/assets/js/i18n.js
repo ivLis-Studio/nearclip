@@ -234,6 +234,7 @@ window.SITE_I18N = {
     "dl.ios.1": "App Store 버전은 준비 중이에요. 그전에는 IPA를 <b>AltStore</b>나 <b>SideStore</b>로 설치할 수 있어요.",
     "dl.ios.2": "AltStore나 SideStore의 My Apps에서 <b>+</b>를 눌러 파일을 고르세요. 내 Apple ID로 서명돼 설치돼요.",
     "dl.ios.3": "무료 Apple ID라면 7일마다 앱에서 새로고침해 주세요.",
+  'dl.ios.source': '새 버전 안내를 받으려면 <a href="altstore://source?url=https%3A%2F%2Fivlis-studio.github.io%2Fnearclip%2Faltstore.json">AltStore 소스</a> 또는 <a href="sidestore://source?url=https%3A%2F%2Fivlis-studio.github.io%2Fnearclip%2Faltstore.json">SideStore 소스</a>를 추가하세요. <a href="altstore.json">소스 주소</a>',
     "dl.latest": "GitHub 최신 릴리스", "dl.releases": "릴리스 노트와 SHA-256", "dl.source": "소스 코드",
 
     "star.kicker": "무료 오픈 소스",

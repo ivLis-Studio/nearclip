@@ -8,8 +8,20 @@ public sealed partial class NearclipNode
 {
     // ================================================================ clips (PROTOCOL.md §6.1)
 
+    public SyncPolicy PolicyFor(string id) => Q.Invoke(() => _store.State.Policies.GetValueOrDefault(id) ?? new SyncPolicy());
+    public void SetPolicy(string id, SyncPolicy policy) => Q.Invoke(() => { _store.State.Policies[id] = policy; _store.SaveNow(); });
+    bool CanSend(Clip c, PeerSession s) => s.PeerId is { } id && !c.IsExpired(Clock.NowMs()) &&
+        (c.Recipients is null || (s.SupportsPolicies && c.IsAddressedTo(id))) &&
+        (_store.State.Policies.GetValueOrDefault(id) ?? new SyncPolicy()).Permits(c, true);
+    bool CanReceive(Clip c) => !c.IsExpired(Clock.NowMs()) && c.IsAddressedTo(DeviceId) &&
+        (_store.State.Policies.GetValueOrDefault(c.Src) ?? new SyncPolicy()).Permits(c, false);
+
     StoredClip Produce(Clip c, byte[]? blob)
     {
+        var peers = _store.Members.Values.Where(m => !m.Removed && m.Id != DeviceId).ToArray();
+        var allowed = peers.Where(m => (_store.State.Policies.GetValueOrDefault(m.Id) ?? new SyncPolicy()).Permits(c, true)).Select(m => m.Id).ToArray();
+        if (c.Recipients is { } requested) c = c with { Recipients = requested.Where(allowed.Contains).ToArray() };
+        else if (allowed.Length != peers.Length) c = c with { Recipients = allowed };
         _newestLocalTs = c.Ts;
         _store.State.NewestLocalTs = c.Ts;
         var sc = new StoredClip(c, GroupId, false, Clock.NowMs(), DeviceName, Platform);
@@ -28,9 +40,9 @@ public sealed partial class NearclipNode
         return sc;
     }
 
-    static void SendClip(Clip c, byte[]? blob, bool live, PeerSession s)
+    void SendClip(Clip c, byte[]? blob, bool live, PeerSession s)
     {
-        if (!s.IsMember) return;
+        if (!s.IsMember || !CanSend(c, s)) return;
         if (c.IsImage)
         {
             if (blob is null) return;
@@ -48,7 +60,7 @@ public sealed partial class NearclipNode
     void HandleClip(Clip c, bool live, PeerSession s)
     {
         if (!c.IsText && !c.IsImage) return;
-        if (_store.Has(c.Id) || _store.State.Tombstones.ContainsKey(c.Id))
+        if (!CanReceive(c) || _store.Has(c.Id) || _store.State.Tombstones.ContainsKey(c.Id))
         {
             if (c.IsImage) s.SkipBlobs.Add(c.Id);
             return;
@@ -73,7 +85,7 @@ public sealed partial class NearclipNode
 
     internal void SessionChunk(PeerSession s, string clipId, uint index, ReadOnlyMemory<byte> data)
     {
-        if (s.SkipBlobs.Contains(clipId) || !s.PendingBlobs.TryGetValue(clipId, out var p)) return;
+        if (s.Retired || s.SkipBlobs.Contains(clipId) || !s.PendingBlobs.TryGetValue(clipId, out var p)) return;
         var size = p.Clip.Size ?? 0;
         if (index != p.Next || data.Length == 0 || data.Length > Wire.ChunkSize || p.Data.Length + data.Length > size)
         {
@@ -107,6 +119,7 @@ public sealed partial class NearclipNode
 
     void AcceptClip(Clip c, byte[]? blob, bool live, PeerSession? from)
     {
+        if (!CanReceive(c)) { if (from is not null) DropTransfer(c.Id, from, "cancelled"); return; }
         _transfers.Remove(c.Id);
         _store.Members.TryGetValue(c.Src, out var src);
         var sc = new StoredClip(c, GroupId, false, Clock.NowMs(), src?.Name, src?.Platform);
@@ -149,7 +162,8 @@ public sealed partial class NearclipNode
             if (_transfers.TryGetValue(id, out var pending) && pending.Total == 0) DropTransfer(id, s, "cancelled");
             return;
         }
-        if (Str(o, "kind") != "image" || !_syncImages) return;
+        var policy = _store.State.Policies.GetValueOrDefault(pid) ?? new SyncPolicy();
+        if (!policy.Receive || !policy.Images || Str(o, "kind") != "image" || !_syncImages) return;
         if (_transfers.ContainsKey(id) || _store.Has(id) || _store.State.Tombstones.ContainsKey(id)) return;
         var t = new Transfer(pid, 0);
         t.Sessions.Add(s);
@@ -202,6 +216,9 @@ public sealed partial class NearclipNode
 
     void Prune()
     {
+        var now = Clock.NowMs();
+        var expired = _store.History.Where(c => c.Clip.IsExpired(now)).Select(c => new IdTs(c.Id, now)).ToList();
+        if (expired.Count > 0) ApplyDeletes(expired, null);
         var removed = _store.Prune(Clock.NowMs());
         if (removed.Count > 0) Emit(new NodeEvent.ClipsDeleted(removed));
     }
@@ -213,7 +230,7 @@ public sealed partial class NearclipNode
         var now = Clock.NowMs();
         var gid = GroupId;
         var clips = _store.History
-            .Where(c => c.GroupId == gid && !c.LocalOnly && c.Clip.Ts >= now - 7 * Wire.DayMs)
+            .Where(c => c.GroupId == gid && !c.LocalOnly && c.Clip.Ts >= now - 7 * Wire.DayMs && CanSend(c.Clip, s))
             .Take(200)
             .Select(c => new IdTs(c.Id, c.Clip.Ts))
             .ToList();
@@ -270,6 +287,32 @@ public sealed partial class NearclipNode
         foreach (var other in _online.Values.ToList())
             if (other != from) other.SendJson(WireJson.Delete(fresh));
         Emit(new NodeEvent.ClipsDeleted(fresh.Select(f => f.Id).ToList()));
+    }
+
+    void RotateAfterRemoval() {
+        var message = WireJson.Object(w => {
+            w.WriteString("t", "rekey"); w.WriteString("previous", GroupTag); w.WriteString("groupId", GroupId);
+            w.WriteString("key", B64u.Encode(NcCrypto.Random(32)));
+            w.WritePropertyName("members"); WireJson.WriteMembers(w, MemberList());
+        });
+        using var doc = JsonDocument.Parse(message);
+        ApplyRekey(doc.RootElement, null);
+    }
+    void ApplyRekey(JsonElement o, PeerSession? source) {
+        if (Str(o, "previous") != GroupTag || Str(o, "groupId") != GroupId || B64u.Decode(Str(o, "key")) is not { Length: 32 } key) return;
+        if (source is not null && (source.PeerId is not { } pid || !_online.TryGetValue(pid, out var registered) || registered != source)) return;
+        var members = ReadMembers(o, "members");
+        if (!members.Any(m => m.Id == DeviceId && !m.Removed)) return;
+        _o.SecretStore.Save(key, "group-key-" + GroupId);
+        var removed = members.Where(m => m.Removed).Select(m => m.Id).ToHashSet();
+        var message = System.Text.Encoding.UTF8.GetBytes(o.GetRawText());
+        foreach (var (id, s) in _online.ToList()) if (!removed.Contains(id) && s != source && s.SupportsRekey) s.SendJson(message);
+        SetGroupKey(key);
+        MergeMembers(members, source);
+        _store.SaveNow();
+        foreach (var s in _sessions.ToList()) { s.Retired = true; s.Bye("rekey"); }
+        RefreshAdvertisement();
+        _backoff.Clear();
     }
 
     // ================================================================ members (§1.1, §6.4)
@@ -518,6 +561,7 @@ public sealed partial class NearclipNode
     void CompleteJoin(PairAcceptInfo accept, PeerSession s)
     {
         _joining = false;
+        if (!Guid.TryParseExact(accept.GroupId, "D", out _)) { Emit(new NodeEvent.PairFailed("protocol", null)); s.Close(); return; }
         var inviter = accept.Device.Id;
         foreach (var o in _sessions.Where(x => x.Mode == PeerSession.SessionMode.Member).ToList())
         {

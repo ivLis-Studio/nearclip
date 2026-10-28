@@ -67,9 +67,10 @@ public static class WireJson
 
     public static byte[] Bye(string reason) => Object(w => { w.WriteString("t", "bye"); w.WriteString("reason", reason); });
 
-    public static byte[] Welcome(MemberRecord device, IEnumerable<MemberRecord> members, IEnumerable<Endpoint> addrs) => Object(w =>
+    public static byte[] Welcome(MemberRecord device, IEnumerable<MemberRecord> members, IEnumerable<Endpoint> addrs, bool extended = false) => Object(w =>
     {
         w.WriteString("t", "welcome");
+        if (extended) { w.WriteStartArray("features"); w.WriteStringValue("policy1"); w.WriteStringValue("rekey1"); w.WriteEndArray(); }
         w.WritePropertyName("device"); WriteMember(w, device);
         w.WritePropertyName("members"); WriteMembers(w, members);
         w.WriteStartArray("addrs");
@@ -155,7 +156,7 @@ public static class WireJson
         w.WriteEndObject();
     }
 
-    static void WriteMembers(Utf8JsonWriter w, IEnumerable<MemberRecord> members)
+    public static void WriteMembers(Utf8JsonWriter w, IEnumerable<MemberRecord> members)
     {
         w.WriteStartArray();
         foreach (var m in members) WriteMember(w, m);
@@ -176,6 +177,7 @@ public static class WireJson
         if (c.W is { } width) w.WriteNumber("w", width);
         if (c.H is { } height) w.WriteNumber("h", height);
         if (c.IsCode) w.WriteBoolean("otp", true);
+        if (c.Recipients is { } to) { w.WriteStartArray("recipients"); foreach (var id in to) w.WriteStringValue(id); w.WriteEndArray(); }
         w.WriteEndObject();
     }
 
@@ -228,10 +230,22 @@ public static class WireJson
         if (e.ValueKind != JsonValueKind.Object) return null;
         var id = Ids.Norm(Str(e, "id"));
         var kind = Str(e, "kind");
-        if (id.Length == 0 || kind is null) return null;
+        var src = Ids.Norm(Str(e, "src"));
+        if (!Guid.TryParseExact(id, "D", out _) || !Guid.TryParseExact(src, "D", out _) || kind is null) return null;
+        string[]? recipients = null;
+        if (Prop(e, "recipients") is { } to) {
+            if (to.ValueKind != JsonValueKind.Array || to.GetArrayLength() > 256) return null;
+            var list = new List<string>();
+            foreach (var item in to.EnumerateArray()) {
+                if (item.ValueKind != JsonValueKind.String || !Guid.TryParseExact(item.GetString(), "D", out _)) return null;
+                list.Add(Ids.Norm(item.GetString()));
+            }
+            recipients = list.ToArray();
+        }
         return new Clip(id, Long(e, "ts") ?? 0, Ids.Norm(Str(e, "src")), kind, Str(e, "text"), Str(e, "mime"), Long(e, "size"),
             Str(e, "sha")?.ToLowerInvariant(), (int?)Long(e, "w"), (int?)Long(e, "h"),
-            kind == "text" && Bool(e, "otp") == true ? true : null);
+            kind == "text" && Bool(e, "otp") == true ? true : null,
+            recipients);
     }
 
     public static List<IdTs> ReadIdTs(JsonElement o, string key) =>

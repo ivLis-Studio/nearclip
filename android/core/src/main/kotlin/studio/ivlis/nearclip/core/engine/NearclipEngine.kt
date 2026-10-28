@@ -270,12 +270,12 @@ class NearclipEngine(
             id = newId(), ts = 0, src = deviceId, kind = ClipKind.IMAGE, mime = normalizedMime, size = bytes.size.toLong(),
             sha = Hex.encode(Crypto.sha256(bytes)), w = width?.takeIf { it > 0 }, h = height?.takeIf { it > 0 }, groupId = "",
         ).let { d -> if (announcedId != null && !blobFile(d.copy(id = announcedId)).exists()) d.copy(id = announcedId) else d }
-        val file = blobFile(draft)
-        file.writeBytes(bytes)
+        val fileName = Persistence.blobFileName(draft)
+        store.writeFile(fileName, bytes)
         return call {
             val wasAnnounced = announcedId != null && announced.remove(announcedId) != null
             if (paused) {
-                file.delete()
+                store.delete(fileName)
                 if (wasAnnounced) sendCancel(announcedId!!)
                 return@call SendResult(null, 0, paused = true)
             }
@@ -288,7 +288,8 @@ class NearclipEngine(
             var c = draft
             if (index.containsKey(c.id) || st.tombstones.containsKey(c.id)) {
                 c = c.copy(id = newId())
-                if (!file.renameTo(blobFile(c))) file.copyTo(blobFile(c), overwrite = true).also { file.delete() }
+                store.writeFile(Persistence.blobFileName(c), bytes)
+                store.delete(fileName)
             }
             produce(
                 c.copy(
@@ -308,7 +309,10 @@ class NearclipEngine(
         post {
             if (!running || paused) return@post
             announced[id] = clock()
-            for (s in online.values) s.sendJson(Msg.incoming(id))
+            for (s in online.values) {
+                val p = st.policies[s.peerId] ?: studio.ivlis.nearclip.core.model.SyncPolicy()
+                if (p.send && p.images) s.sendJson(Msg.incoming(id))
+            }
         }
         return id
     }
@@ -362,10 +366,10 @@ class NearclipEngine(
         val r = cur.copy(removed = true, updatedAt = max(clock(), cur.updatedAt + 1))
         st.members[pid] = r
         for (s in sessions.toList()) if (s.peerId == pid) s.bye("removed")
-        for ((opid, o) in online) if (opid != pid) o.sendJson(Msg.members(listOf(r)))
+        for ((opid, o) in online) if (opid != pid && !o.supportsRekey) o.sendJson(Msg.members(listOf(r)))
         st.endpoints.remove(pid)
         backoff.remove(pid)
-        markPersist()
+        rotateAfterRemoval()
         emit(EngineEvent.MembersChanged(memberList()))
     }
 
@@ -703,6 +707,8 @@ class NearclipEngine(
     private fun prune() {
         val now = clock()
         lastPrune = now
+        val expired = history.filter { it.isExpired(now) }.map { Tombstone(it.id, now) }
+        if (expired.isNotEmpty()) applyDeletes(expired, null)
         val drop = LinkedHashSet<String>()
         if (retentionDays > 0) {
             val cutoff = now - retentionDays * DAY
@@ -941,7 +947,7 @@ class NearclipEngine(
                 s.close()
             }
         }
-        if (now - lastPrune > HOUR) prune()
+        prune()
         if (!running || paused) return
         for (m in st.members.values.toList()) {
             if (m.id == deviceId || m.removed || busy(m.id)) continue
@@ -1029,14 +1035,14 @@ class NearclipEngine(
     }
 
     private fun attach(s: MemberSession) {
-        if (!running || paused || s.groupId != group.id) {
+        if (!running || paused || s.retired || s.groupId != group.id) {
             s.close()
             return
         }
         sessions.add(s)
         // Removal is decided after both welcomes are merged (PROTOCOL §4.3): a re-added device carries a newer
         // record of itself than a member that was offline while it was re-added.
-        s.sendJson(Msg.welcome(ownRecord, memberList(), ownEndpoints()))
+        s.sendJson(Msg.welcome(ownRecord, memberList(), ownEndpoints(), extended = true))
         s.start()
     }
 
@@ -1116,7 +1122,7 @@ class NearclipEngine(
     // =====================================================================================
 
     internal fun onSessionMessage(s: MemberSession, obj: JsonObject): BlobAssembly? = call {
-        if (s.closed) return@call null
+        if (s.closed || s.retired) return@call null
         if (s.groupId != group.id) {
             s.close()
             return@call null
@@ -1141,6 +1147,7 @@ class NearclipEngine(
                 null
             } else {
                 when (t) {
+                    "rekey" -> { applyRekey(obj, s); null }
                     "clip" -> handleClip(s, obj)
                     "inv" -> { handleInventory(s, obj); null }
                     "want" -> { handleWant(s, obj); null }
@@ -1158,17 +1165,14 @@ class NearclipEngine(
         try {
             call {
                 val id = asm.clip.id
-                if (index.containsKey(id) || st.tombstones.containsKey(id) || s.groupId != group.id) {
+                if (s.retired || index.containsKey(id) || st.tombstones.containsKey(id) || s.groupId != group.id) {
                     asm.file.delete()
                     dropTransfer(id, s, "cancelled")
                     return@call
                 }
-                val target = blobFile(asm.clip)
-                target.delete()
-                if (!asm.file.renameTo(target)) {
-                    asm.file.copyTo(target, overwrite = true)
-                    asm.file.delete()
-                }
+                if (!canReceive(asm.clip)) { asm.file.delete(); dropTransfer(id, s, "cancelled"); return@call }
+                store.writeFile(Persistence.blobFileName(asm.clip), asm.file.readBytes())
+                asm.file.delete()
                 acceptClip(asm.clip, asm.live, s)
             }
         } catch (_: RejectedExecutionException) {
@@ -1212,6 +1216,8 @@ class NearclipEngine(
             s.close()
             return
         }
+        s.supportsPolicies = obj.arr("features")?.any { (it as? JsonPrimitive)?.content == "policy1" } == true
+        s.supportsRekey = obj.arr("features")?.any { (it as? JsonPrimitive)?.content == "rekey1" } == true
         s.welcomed = true
         val addrs = obj.arr("addrs")?.objects()?.mapNotNull { Endpoint.fromJson(it) }.orEmpty()
         val eps = ArrayList<Endpoint>()
@@ -1271,9 +1277,50 @@ class NearclipEngine(
         return true
     }
 
+    private fun rotateAfterRemoval() {
+        val message = kotlinx.serialization.json.buildJsonObject {
+            put("t", JsonPrimitive("rekey")); put("previous", JsonPrimitive(group.tag)); put("groupId", JsonPrimitive(group.id))
+            put("key", JsonPrimitive(B64u.encode(Crypto.random(32))))
+            put("members", kotlinx.serialization.json.JsonArray(memberList().map { it.toJson() }))
+        }
+        applyRekey(message, null)
+    }
+    private fun applyRekey(obj: JsonObject, source: MemberSession?) {
+        if (obj.str("previous") != group.tag || obj.str("groupId") != group.id) return
+        if (source != null && online[source.peerId] !== source) return
+        val key = runCatching { B64u.decode(obj.str("key") ?: "") }.getOrNull()?.takeIf { it.size == 32 } ?: return
+        val members = parseMembers(obj)
+        if (members.none { it.id == deviceId && !it.removed }) return
+        val removed = members.filter { it.removed }.map { it.id }.toSet()
+        // Persist before announcing the key. Never retain the old group key for offline recovery.
+        st.groupKey = key
+        markPersist(); writeNow()
+        for ((id, s) in online) if (id !in removed && s !== source && s.supportsRekey) s.sendJson(obj)
+        group = Group(group.id, key, group.createdAt)
+        mergeMembers(members, source)
+        for (s in sessions.toList()) { s.retired = true; s.bye("rekey") }
+        backoff.clear()
+        publish()
+    }
+
     // ---- clips ----
 
-    private fun produce(c: Clip): SendResult {
+    fun policyFor(id: String): studio.ivlis.nearclip.core.model.SyncPolicy = call { st.policies[id] ?: studio.ivlis.nearclip.core.model.SyncPolicy() }
+    fun setPolicy(id: String, policy: studio.ivlis.nearclip.core.model.SyncPolicy) = call { st.policies[id] = policy; markPersist(); writeNow() }
+    private fun canSend(c: Clip, s: MemberSession) = !c.isExpired(clock()) &&
+        (c.recipients == null || (s.supportsPolicies && c.isAddressedTo(s.peerId))) &&
+        (st.policies[s.peerId] ?: studio.ivlis.nearclip.core.model.SyncPolicy()).permits(c, true)
+    private fun canReceive(c: Clip) = !c.isExpired(clock()) && c.isAddressedTo(deviceId) &&
+        (st.policies[c.src] ?: studio.ivlis.nearclip.core.model.SyncPolicy()).permits(c, false)
+
+    private fun produce(original: Clip): SendResult {
+        val peers = st.members.values.filter { !it.removed && it.id != deviceId }
+        val allowed = peers.filter { (st.policies[it.id] ?: studio.ivlis.nearclip.core.model.SyncPolicy()).permits(original, true) }.map { it.id }
+        val c = when {
+            original.recipients != null -> original.copy(recipients = original.recipients.filter { it in allowed })
+            allowed.size != peers.size -> original.copy(recipients = allowed)
+            else -> original
+        }
         st.newestLocalTs = c.ts
         markPersist()
         addToHistory(c)
@@ -1291,7 +1338,7 @@ class NearclipEngine(
     }
 
     private fun sendClip(s: MemberSession, c: Clip, live: Boolean) {
-        if (c.localOnly) return
+        if (c.localOnly || !canSend(c, s)) return
         if (c.isImage) {
             val f = blobFile(c)
             if (!f.isFile) return
@@ -1305,7 +1352,7 @@ class NearclipEngine(
     private fun handleClip(s: MemberSession, obj: JsonObject): BlobAssembly? {
         val live = obj.bool("live") ?: false
         val c = Clip.fromWire(obj.obj("clip"), group.id, clock()) ?: return null
-        if (index.containsKey(c.id) || st.tombstones.containsKey(c.id)) return null
+        if (!canReceive(c) || index.containsKey(c.id) || st.tombstones.containsKey(c.id)) return null
         if (c.isText) {
             acceptClip(c, live, s)
             return null
@@ -1323,6 +1370,7 @@ class NearclipEngine(
     }
 
     private fun acceptClip(c: Clip, live: Boolean, from: MemberSession?) {
+        if (!canReceive(c)) return
         transfers.remove(c.id)
         val src = st.members[c.src]
         val stored = c.copy(
@@ -1352,7 +1400,8 @@ class NearclipEngine(
             if (transfers[id]?.total == 0L) dropTransfer(id, s, "cancelled")
             return
         }
-        if (obj.str("kind") != ClipKind.IMAGE || !syncImages) return
+        val policy = st.policies[s.peerId] ?: studio.ivlis.nearclip.core.model.SyncPolicy()
+        if (!policy.receive || !policy.images || obj.str("kind") != ClipKind.IMAGE || !syncImages) return
         if (transfers.containsKey(id) || index.containsKey(id) || st.tombstones.containsKey(id)) return
         transfers[id] = Transfer(s.peerId, 0, 0, hashSetOf(s.sid), clock())
         emitTransfer(id, IncomingTransfer.State.PREPARING)
@@ -1402,7 +1451,7 @@ class NearclipEngine(
     private fun sendInventory(s: MemberSession) {
         val now = clock()
         val clips = history.asSequence()
-            .filter { it.groupId == group.id && !it.localOnly && it.ts >= now - 7 * DAY }
+            .filter { it.groupId == group.id && !it.localOnly && it.ts >= now - 7 * DAY && canSend(it, s) }
             .take(200)
             .map { Tombstone(it.id, it.ts) }
             .toList()
@@ -1661,7 +1710,7 @@ class NearclipEngine(
         val r = rec.copy(id = pid, addedAt = now, updatedAt = max(now, (existing?.updatedAt ?: 0) + 1), removed = false)
         st.members[pid] = r
         markPersist()
-        for ((opid, o) in online) if (opid != pid) o.sendJson(Msg.members(listOf(r)))
+        for ((opid, o) in online) if (opid != pid && !o.supportsRekey) o.sendJson(Msg.members(listOf(r)))
         emit(EngineEvent.MembersChanged(memberList()))
         emit(EngineEvent.Paired(group.id, pid, r.name, r.platform, joined = false))
         return Msg.pairAccept(group.id, group.key, ownRecord, memberList())

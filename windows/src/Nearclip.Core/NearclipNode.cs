@@ -98,7 +98,7 @@ public sealed partial class NearclipNode : IDisposable
         Directory.CreateDirectory(options.StateDirectory);
         Q.OnError = e => Emit(new NodeEvent.Log("engine error: " + e));
         _events.OnError = e => Console.Error.WriteLine("event handler error: " + e);
-        _store = new NodeStore(options.StateDirectory, options.DeviceName, Q);
+        _store = new NodeStore(options.StateDirectory, options.DeviceName, Q, options.SecretStore);
         DeviceId = _store.State.DeviceId;
         DeviceName = _store.State.DeviceName;
         var key = options.SecretStore.Load("group-key-" + _store.State.GroupId);
@@ -215,7 +215,7 @@ public sealed partial class NearclipNode : IDisposable
             if (!_running || _paused || !_syncImages) return;
             _announced[id] = DateTime.UtcNow;
             foreach (var s in _online.Values.ToList())
-                if (s.IsMember) s.SendJson(WireJson.Incoming(id));
+                if (s.IsMember && (_store.State.Policies.GetValueOrDefault(s.PeerId ?? "") ?? new SyncPolicy()) is { Send: true, Images: true }) s.SendJson(WireJson.Incoming(id));
         });
         return id;
     }
@@ -312,8 +312,8 @@ public sealed partial class NearclipNode : IDisposable
         r = r with { Removed = true, UpdatedAt = Math.Max(Clock.NowMs(), r.UpdatedAt + 1) };
         _store.Members[id] = r;
         if (_online.TryGetValue(id, out var s)) s.Bye("removed");
-        foreach (var (pid, o) in _online.ToList()) if (pid != id) o.SendJson(Members([r]));
-        _store.SaveSoon();
+        foreach (var (pid, o) in _online.ToList()) if (pid != id && !o.SupportsRekey) o.SendJson(Members([r]));
+        RotateAfterRemoval();
         Emit(new NodeEvent.MembersChanged(MemberList()));
     });
 
@@ -902,6 +902,7 @@ public sealed partial class NearclipNode : IDisposable
             Emit(new NodeEvent.TicketExpired());
         }
         ExpireTransfers(now);
+        Prune();
         if (_tick++ % 5 != 0 || _paused) return;
         RedialDisconnected(now);
     }
@@ -926,6 +927,7 @@ public sealed partial class NearclipNode : IDisposable
 
     internal void SessionEstablished(PeerSession s)
     {
+        if (s.Retired) { s.Close(); return; }
         if (s.PeerId is null)
         {
             s.Close();
@@ -934,11 +936,12 @@ public sealed partial class NearclipNode : IDisposable
         // Removal is decided only after the peer's welcome has been merged (PROTOCOL.md §4.3, see SessionWelcome):
         // a device that was removed and re-added while this device was offline carries a newer record of itself
         // than our tombstone, so answering "bye removed" here would wrongly remove it again.
-        s.SendJson(Welcome(OwnRecord, MemberList(), OwnEndpoints()));
+        s.SendJson(Welcome(OwnRecord, MemberList(), OwnEndpoints(), extended: true));
     }
 
     internal void SessionWelcome(PeerSession s, MemberRecord device, List<MemberRecord> members, List<Endpoint> addrs)
     {
+        if (s.Retired) { s.Close(); return; }
         if (s.PeerId is not { } pid) return;
         if (s.ExpectedPeerId is { } expected && expected != pid) _dialing.Remove(expected);
         _dialing.Remove(pid);
@@ -988,8 +991,12 @@ public sealed partial class NearclipNode : IDisposable
 
     internal void SessionMessage(PeerSession s, string type, JsonElement o)
     {
+        if (s.Retired) return;
         switch (type)
         {
+            case "rekey":
+                ApplyRekey(o, s);
+                break;
             case "clip":
                 if (Prop(o, "clip") is { } ce && ReadClip(ce) is { } clip) HandleClip(clip, Bool(o, "live") ?? false, s);
                 break;
@@ -1016,6 +1023,7 @@ public sealed partial class NearclipNode : IDisposable
 
     internal void SessionBye(PeerSession s, string reason)
     {
+        if (s.Retired) return;
         if (reason == "removed" && s.Mode == PeerSession.SessionMode.Member) Leave("removed", announce: false);
     }
 

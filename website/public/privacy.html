@@ -61,7 +61,7 @@
 <section class="policy" id="en" lang="en" aria-labelledby="en-title">
   <div class="wrap">
     <h1 id="en-title">Privacy Policy</h1>
-    <p class="meta">Effective October 26, 2026 · Nearclip for Mac, Windows, Android, iPhone and iPad, by ivLis STUDIO</p>
+    <p class="meta">Effective October 28, 2026 · Nearclip for Mac, Windows, Android, iPhone and iPad, by ivLis STUDIO</p>
     <ul class="glance">
       <li>No server<span>There is no Nearclip cloud. Clips go from your device to your device.</span></li>
       <li>No account<span>Nothing to sign up for. Your devices pair with each other directly.</span></li>
@@ -78,6 +78,10 @@
 
     <h2>What travels on your network</h2>
     <p>To find each other, your devices announce Nearclip on the local network (Bonjour / mDNS) with the device name, platform and random identifiers, so other devices on the same network can see that a Nearclip device is there. Clips, history and device lists are only ever sent to devices in your group, over connections that are end-to-end encrypted with fresh keys for each connection.</p>
+
+    <h2>History protection and updates in 1.2 and later</h2>
+    <p>Local history is encrypted with a separate device key. Verification codes expire after three minutes, including pinned codes. Clipboard cleanup only clears Nearclip’s original code when it is still present; background limits may delay cleanup. Removing a device rotates the group key; offline devices may need to be paired again.</p>
+    <p>Opening update information in the Mac or Android app may request release metadata from GitHub. GitHub receives the normal network request, including your IP address; no clipboard content or device list is included. Results are cached for up to a day unless you explicitly retry. Store builds use their store’s update mechanism.</p>
 
     <h2>Remote connection (optional, off by default)</h2>
     <p>If you turn on Remote connection, Nearclip's built-in Tailscale node signs in to your own Tailscale account and connects your devices through Tailscale's network. Tailscale's coordination service then sees your account, the device names Nearclip registers (like <code>nearclip-macbook-pro-…</code>) and network addresses, and Tailscale's relays may carry the encrypted connection when no direct path is possible. Tailscale never receives readable clips: Nearclip's own end-to-end encryption runs inside. Tailscale's handling of that information is described in <a href="https://tailscale.com/privacy-policy">Tailscale's privacy policy</a>. Signing out in Nearclip takes the device offline; you can remove it from your Tailscale admin console.</p>
@@ -107,7 +111,7 @@
 <section class="policy alt" id="ko" lang="ko" aria-labelledby="ko-title">
   <div class="wrap">
     <h1 id="ko-title">개인정보 처리방침</h1>
-    <p class="meta">시행일 2026년 10월 26일 · ivLis STUDIO의 Mac, Windows, Android, iPhone·iPad용 Nearclip</p>
+    <p class="meta">시행일 2026년 10월 28일 · ivLis STUDIO의 Mac, Windows, Android, iPhone·iPad용 Nearclip</p>
     <ul class="glance">
       <li>서버 없음<span>Nearclip 클라우드는 없어요. 클립은 내 기기에서 내 기기로 가요.</span></li>
       <li>계정 없음<span>가입할 것이 없어요. 기기끼리 직접 연결해요.</span></li>
@@ -124,6 +128,10 @@
 
     <h2>네트워크로 오가는 것</h2>
     <p>기기끼리 서로를 찾기 위해 로컬 네트워크에 Nearclip을 알려요(Bonjour/mDNS). 이때 기기 이름, 플랫폼, 무작위 식별자가 포함되어, 같은 네트워크의 다른 기기도 Nearclip 기기가 있다는 걸 알 수 있어요. 클립, 기록, 기기 목록은 그룹에 속한 기기에만 보내지며, 연결할 때마다 새 키로 종단 간 암호화돼요.</p>
+
+    <h2>1.2 이상 버전의 기록 보호와 업데이트 확인</h2>
+    <p>로컬 기록은 기기별 별도 키로 암호화됩니다. 인증번호는 고정 여부와 관계없이 3분 후 만료됩니다. 클립보드는 Nearclip이 복사한 번호가 여전히 남아 있을 때만 정리하며, 백그라운드 제한으로 정리가 늦어질 수 있습니다. 기기를 해제하면 그룹 키를 교체하므로 오프라인 기기는 다시 연결해야 할 수 있습니다.</p>
+    <p>Mac 또는 Android 앱에서 업데이트 정보를 열면 GitHub에 릴리스 정보를 요청할 수 있습니다. GitHub는 IP 주소를 포함한 일반적인 네트워크 요청을 받지만, 클립보드 내용이나 기기 목록은 전달되지 않습니다. 명시적으로 다시 확인하지 않으면 결과를 최대 하루 동안 재사용합니다. 스토어 설치본의 업데이트는 해당 스토어에서 관리합니다.</p>
 
     <h2>원격 연결 (선택, 기본값 꺼짐)</h2>
     <p>원격 연결을 켜면 Nearclip에 내장된 Tailscale 노드가 내 Tailscale 계정으로 로그인해 Tailscale 네트워크를 통해 기기를 연결해요. 이때 Tailscale의 조정 서비스는 계정, Nearclip이 등록하는 기기 이름(<code>nearclip-macbook-pro-…</code> 같은 형식), 네트워크 주소를 보게 되고, 직접 연결이 안 되면 Tailscale 중계 서버가 암호화된 연결을 실어 나를 수 있어요. 그 안에서는 Nearclip의 종단 간 암호화가 따로 돌기 때문에 Tailscale은 읽을 수 있는 클립을 받지 않아요. Tailscale의 정보 처리는 <a href="https://tailscale.com/privacy-policy">Tailscale 개인정보 처리방침</a>을 따라요. Nearclip에서 로그아웃하면 기기가 오프라인이 되고, Tailscale 관리 콘솔에서 기기를 삭제할 수 있어요.</p>

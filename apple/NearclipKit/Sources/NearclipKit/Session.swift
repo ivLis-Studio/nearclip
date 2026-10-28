@@ -25,6 +25,9 @@ final class PeerSession: Hashable {
     let created = Date()
     private(set) var phase: Phase
 
+    var retired = false
+    var supportsPolicies = false
+    var supportsRekey = false
     var peerId: String?
     var peerName: String?
     var peerPlatform: String?

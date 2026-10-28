@@ -148,7 +148,7 @@ fun NearclipRoot(runtime: Nearclip, routeRequests: Flow<String>) {
     // Codes expire within minutes; so does the offer.
     LaunchedEffect(codeOffer?.id) {
         val shown = codeOffer ?: return@LaunchedEffect
-        delay(90_000)
+        delay((shown.expiresAt - System.currentTimeMillis()).coerceIn(0, 90_000))
         if (codeOffer?.id == shown.id) codeOffer = null
     }
 

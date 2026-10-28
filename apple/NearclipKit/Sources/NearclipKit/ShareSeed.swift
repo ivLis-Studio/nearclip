@@ -1,0 +1,37 @@
+import Foundation
+
+/// A readonly snapshot exported to the iOS extension's shared Keychain. No clipboard history is included.
+public struct ShareSeed: Codable, Sendable {
+    public var state: Data
+    public var groupId: String
+    public var groupKey: Data
+    public var deviceName: String
+    public var model: String?
+    public var appVersion: String?
+    public var members: [MemberRecord]
+    public var paused: Bool
+    public var images: Bool
+    public var remote: TailnetStatus?
+}
+
+public final class MemorySecretStore: SecretStore {
+    private var values: [String: Data] = [:]
+    public init() {}
+    public func load(_ account: String) -> Data? { values[account] }
+    public func save(_ data: Data, account: String) throws { values[account] = data }
+    public func delete(_ account: String) { values[account] = nil }
+}
+
+public extension NearclipNode {
+    /// The extension owns a separate temporary engine; it never opens the main app's live history files.
+    static func shareNode(seed: ShareSeed, directory: URL) throws -> NearclipNode {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try seed.state.write(to: directory.appendingPathComponent("state.json"), options: [.atomic])
+        let secrets = MemorySecretStore()
+        try secrets.save(seed.groupKey, account: "group-key-" + seed.groupId)
+        let node = try NearclipNode(config: .init(stateDirectory: directory, deviceName: seed.deviceName, platform: "ios", model: seed.model, appVersion: seed.appVersion,
+                                               port: 0, bonjour: true, secretStore: secrets))
+        if let remote = seed.remote { node.borrowShareRoute(remote) }
+        return node
+    }
+}

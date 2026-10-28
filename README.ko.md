@@ -34,6 +34,10 @@ https://github.com/user-attachments/assets/bfdd5d06-0561-46fc-b8ed-24829a01242f
 
 <p align="center"><sub>39초 · 소리를 켜고 보세요 · <a href="https://ivlis-studio.github.io/nearclip/?lang=ko#film">웹사이트에서 보기</a></sub></p>
 
+## 1.2의 새로운 기능
+
+iPhone·iPad의 시스템 공유 메뉴에서 바로 보내고, 기기마다 주고받을 항목을 정할 수 있습니다. 인증번호는 3분 뒤 만료되고, 로컬 기록은 암호화됩니다. 기기를 해제하면 그룹의 암호화 키를 교체하며, Mac·Android 설정에서 조용히 업데이트를 확인합니다. 업데이트 안내는 [1.2 릴리스 노트](docs/releases/1.2.0.md), 호환성과 플랫폼 제한은 [동작 및 검증 기록](docs/validation/2026-10-28.md)을 참고해주세요.
+
 ## 한 기기에서 복사하고, 다른 기기에서 붙여넣기
 
 Nearclip은 Mac, Windows PC, Android 폰, iPhone과 iPad의 클립보드와 검색 가능한 기록을 하나로 묶어 줍니다.

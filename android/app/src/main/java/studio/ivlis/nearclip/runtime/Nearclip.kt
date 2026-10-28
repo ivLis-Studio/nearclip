@@ -69,7 +69,7 @@ sealed interface UiMessage {
     /** A large image that was shown arriving did not make it (PROTOCOL §6.6). */
     data class TransferFailed(val name: String) : UiMessage
     /** A verification code arrived from another device (PROTOCOL §6.7): "Copy it?". */
-    data class CodeArrived(val id: String, val name: String, val code: String) : UiMessage
+    data class CodeArrived(val id: String, val name: String, val code: String, val expiresAt: Long = System.currentTimeMillis() + 180_000) : UiMessage
 }
 
 sealed interface PairingUi {
@@ -304,19 +304,20 @@ class Nearclip private constructor(val app: Application) {
      * can still be used.
      */
     private fun offerCode(clip: Clip, live: Boolean) {
-        if (settings.value.paused || clip.src == engine.state.value.deviceId) return
+        if (settings.value.paused || clip.isExpired(System.currentTimeMillis()) || clip.src == engine.state.value.deviceId) return
         if (!live && System.currentTimeMillis() - clip.ts > CODE_OFFER_MS) return
         val code = clip.text ?: return
         if (!offeredCodes.add(clip.id) || holds(clip)) return
         val name = sourceName(clip)
-        if (uiVisible) _messages.tryEmit(UiMessage.CodeArrived(clip.id, name, code))
-        else Notifications.code(app, clip.id, name, code)
+        if (uiVisible) _messages.tryEmit(UiMessage.CodeArrived(clip.id, name, code, clip.ts + CODE_OFFER_MS))
+        else Notifications.code(app, clip.id, name, code, clip.ts + CODE_OFFER_MS)
     }
 
     /** "Copy" on a code offer: to this phone's clipboard only. */
     fun copyCode(id: String): Boolean {
         Notifications.cancelCode(app)
         val clip = engine.state.value.history.firstOrNull { it.id == id } ?: return false
+        if (clip.isExpired(System.currentTimeMillis())) return false
         return holds(clip) || applyToClipboard(clip, announce = false)
     }
 
@@ -420,8 +421,9 @@ class Nearclip private constructor(val app: Application) {
 
     /** Writes a clip to the system clipboard (marked as ours, so it is never sent back). */
     fun applyToClipboard(clip: Clip, announce: Boolean): Boolean {
+        if (clip.isExpired(System.currentTimeMillis())) return false
         val ok = when {
-            clip.isText -> clip.text?.let { clipboard.writeText(it, clip.id) } ?: false
+            clip.isText -> clip.text?.let { clipboard.writeText(it, clip.id, clip.isCode) } ?: false
             clip.isImage -> clipboard.writeImage(engine.blobFile(clip), clip.id)
             else -> false
         }
@@ -430,6 +432,10 @@ class Nearclip private constructor(val app: Application) {
         val stamp = clipboard.stamp()
         stamp?.let { settings.lastClipboardStamp = it }
         remember(ContentKey.of(clip), stamp)
+        if (clip.isCode) scope.launch {
+            delay((clip.ts + CODE_OFFER_MS - System.currentTimeMillis()).coerceAtLeast(0))
+            clipboard.clearCode(clip.id, clip.text ?: "", stamp)
+        }
         if (announce && uiVisible) _messages.tryEmit(UiMessage.CopiedFrom(sourceName(clip)))
         return true
     }

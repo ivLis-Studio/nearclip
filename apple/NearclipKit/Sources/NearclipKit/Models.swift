@@ -55,11 +55,12 @@ public struct Clip: Codable, Hashable, Identifiable, Sendable {
     public var w: Int?
     public var h: Int?
     public var otp: Bool?
+    public var recipients: [String]?
 
     public init(id: String, ts: Int64, src: String, kind: String, text: String? = nil, mime: String? = nil,
-                size: Int? = nil, sha: String? = nil, w: Int? = nil, h: Int? = nil, otp: Bool? = nil) {
+                size: Int? = nil, sha: String? = nil, w: Int? = nil, h: Int? = nil, otp: Bool? = nil, recipients: [String]? = nil) {
         self.id = id; self.ts = ts; self.src = src; self.kind = kind; self.text = text; self.mime = mime
-        self.size = size; self.sha = sha; self.w = w; self.h = h; self.otp = otp
+        self.size = size; self.sha = sha; self.w = w; self.h = h; self.otp = otp; self.recipients = recipients
     }
 
     public var isImage: Bool { kind == "image" }

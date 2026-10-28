@@ -1,6 +1,10 @@
 package studio.ivlis.nearclip.core.model
 
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonPrimitive
+import studio.ivlis.nearclip.core.proto.arr
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import studio.ivlis.nearclip.core.crypto.Crypto
@@ -113,16 +117,20 @@ data class Clip(
     val localOnly: Boolean = false,
     /** A verification code a phone found in a message (PROTOCOL §6.7): offered, not copied, by the devices receiving it. */
     val otp: Boolean = false,
+    val recipients: List<String>? = null,
 ) {
     val isImage: Boolean get() = kind == ClipKind.IMAGE
     val isText: Boolean get() = kind == ClipKind.TEXT
     val isCode: Boolean get() = otp && isText
+    fun isAddressedTo(device: String) = recipients == null || device in recipients || src == device
+    fun isExpired(now: Long) = isCode && (ts <= now - 180_000 || ts > now + 60_000)
 
     fun wireJson(): JsonObject = buildJsonObject {
         put("id", id)
         put("ts", ts)
         put("src", src)
         put("kind", kind)
+        recipients?.let { put("recipients", JsonArray(it.map(::JsonPrimitive))) }
         when (kind) {
             ClipKind.TEXT -> {
                 put("text", text ?: "")
@@ -149,11 +157,16 @@ data class Clip(
             val id = normalizeId(obj.str("id")) ?: return null
             val ts = obj.long("ts") ?: return null
             val src = normalizeId(obj.str("src")) ?: return null
+            val rawRecipients = obj["recipients"]
+            if (rawRecipients != null && rawRecipients !is kotlinx.serialization.json.JsonNull) {
+                val array = rawRecipients as? JsonArray ?: return null
+                if (array.size > 256 || array.any { it !is JsonPrimitive || normalizeId(it.content) == null }) return null
+            }
             return when (obj.str("kind")) {
                 ClipKind.TEXT -> {
                     val text = obj.str("text") ?: return null
                     if (text.toByteArray(Charsets.UTF_8).size > MAX_TEXT_BYTES) return null
-                    Clip(id, ts, src, ClipKind.TEXT, text = text, groupId = groupId, receivedAt = now, otp = obj.bool("otp") == true)
+                    Clip(id, ts, src, ClipKind.TEXT, text = text, groupId = groupId, receivedAt = now, otp = obj.bool("otp") == true, recipients = obj.arr("recipients")?.mapNotNull { normalizeId(it.jsonPrimitive.content) })
                 }
                 ClipKind.IMAGE -> {
                     val mime = obj.str("mime")?.lowercase() ?: return null
@@ -165,7 +178,7 @@ data class Clip(
                     Clip(
                         id, ts, src, ClipKind.IMAGE, mime = mime, size = size, sha = sha,
                         w = obj.int("w")?.takeIf { it > 0 }, h = obj.int("h")?.takeIf { it > 0 },
-                        groupId = groupId, receivedAt = now,
+                        groupId = groupId, receivedAt = now, recipients = obj.arr("recipients")?.mapNotNull { normalizeId(it.jsonPrimitive.content) },
                     )
                 }
                 else -> null

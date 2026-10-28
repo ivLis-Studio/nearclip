@@ -112,7 +112,7 @@ public final class NearclipNode: @unchecked Sendable {
     public init(config: Config) throws {
         self.config = config
         try FileManager.default.createDirectory(at: config.stateDirectory, withIntermediateDirectories: true)
-        let store = NodeStore(directory: config.stateDirectory, defaultName: config.deviceName, owner: queue)
+        let store = try NodeStore(directory: config.stateDirectory, defaultName: config.deviceName, owner: queue, secrets: config.secretStore)
         self.store = store
         deviceId = store.state.deviceId
         deviceName = store.state.deviceName
@@ -158,23 +158,53 @@ public final class NearclipNode: @unchecked Sendable {
 
     public func snapshot() -> NodeSnapshot { queue.sync { snapshotInternal() } }
 
+    public func shareSeed(paused: Bool, images: Bool) throws -> ShareSeed {
+        try queue.sync {
+            var state = store.state
+            state.members = memberList()
+            return ShareSeed(state: try JSONEncoder().encode(state), groupId: state.groupId, groupKey: groupKey,
+                             deviceName: deviceName, model: config.model, appVersion: config.appVersion, members: memberList().filter { !$0.removed && $0.id != deviceId }, paused: paused, images: images, remote: tailnetStatus.isRunning ? tailnetStatus : nil)
+        }
+    }
+    func borrowShareRoute(_ status: TailnetStatus) { queue.sync { tailnetStatus = status } }
+    public func supportsTargeting(_ id: String) -> Bool { queue.sync { online[id]?.supportsPolicies == true } }
+    public func outgoingIdle(to id: String) -> Bool { queue.sync { online[id].map { !$0.conn.isClosed && $0.conn.pendingSends == 0 } ?? false } }
+
+    public func policy(for id: String) -> SyncPolicy { queue.sync { store.state.policies?[id] ?? SyncPolicy() } }
+    public func setPolicy(_ policy: SyncPolicy, for id: String) {
+        queue.sync {
+            if store.state.policies == nil { store.state.policies = [:] }
+            store.state.policies?[id] = policy
+            store.saveNow()
+        }
+    }
+    private func canSend(_ c: Clip, to s: PeerSession) -> Bool {
+        guard let id = s.peerId, !c.isExpired() else { return false }
+        if c.recipients != nil, !c.isAddressed(to: id) || !s.supportsPolicies { return false }
+        return (store.state.policies?[id] ?? SyncPolicy()).permits(c, sending: true)
+    }
+    private func canReceive(_ c: Clip) -> Bool {
+        c.hasValidIdentity && !c.isExpired() && c.isAddressed(to: deviceId) &&
+        (store.state.policies?[c.src] ?? SyncPolicy()).permits(c, sending: false)
+    }
+
     public func blobData(for id: String) -> Data? { store.blobData(id) }
-    public func blobURL(for id: String) -> URL { store.blobURL(id) }
+    public func blobURL(for id: String) -> URL { store.previewURL(id) }
 
     /// `otp`: a verification code found in a message (PROTOCOL.md §6.7).
     @discardableResult
-    public func sendText(_ text: String, otp: Bool = false) -> StoredClip? {
+    public func sendText(_ text: String, otp: Bool = false, recipients: [String]? = nil) -> StoredClip? {
         queue.sync {
             guard !text.isEmpty else { return nil }
             guard text.utf8.count <= Wire.maxText else { emit(.tooLarge(kind: "text")); return nil }
             let c = Clip(id: newNearclipId(), ts: max(nowMs(), newestLocalTs + 1), src: deviceId, kind: "text", text: text,
-                         otp: otp ? true : nil)
+                         otp: otp ? true : nil, recipients: recipients)
             return produce(c, blob: nil)
         }
     }
 
     @discardableResult
-    public func sendImage(_ data: Data, mime: String, width: Int? = nil, height: Int? = nil, id: String? = nil) -> StoredClip? {
+    public func sendImage(_ data: Data, mime: String, width: Int? = nil, height: Int? = nil, id: String? = nil, recipients: [String]? = nil) -> StoredClip? {
         queue.sync {
             let announcedId = id?.lowercased()
             if let a = announcedId { announced[a] = nil }
@@ -187,7 +217,7 @@ public final class NearclipNode: @unchecked Sendable {
             var cid = newNearclipId()
             if let a = announcedId, UUID(uuidString: a) != nil, !store.has(a), store.state.tombstones[a] == nil { cid = a }
             let c = Clip(id: cid, ts: max(nowMs(), newestLocalTs + 1), src: deviceId, kind: "image",
-                         mime: mime, size: data.count, sha: Hex.encode(NCCrypto.sha256(data)), w: width, h: height)
+                         mime: mime, size: data.count, sha: Hex.encode(NCCrypto.sha256(data)), w: width, h: height, recipients: recipients)
             return produce(c, blob: data)
         }
     }
@@ -199,7 +229,10 @@ public final class NearclipNode: @unchecked Sendable {
         queue.async {
             guard self.running, !self.paused else { return }
             self.announced[id] = Date()
-            for s in self.online.values where s.isMember { s.sendJSON(IncomingMsg(id: id, kind: "image")) }
+            for s in self.online.values where s.isMember {
+                let p = self.store.state.policies?[s.peerId ?? ""] ?? SyncPolicy()
+                if p.send && p.images { s.sendJSON(IncomingMsg(id: id, kind: "image")) }
+            }
         }
         return id
     }
@@ -270,8 +303,8 @@ public final class NearclipNode: @unchecked Sendable {
             r.updatedAt = max(nowMs(), r.updatedAt + 1)
             self.store.members[id] = r
             if let s = self.online[id] { s.bye("removed") }
-            for (pid, s) in self.online where pid != id { s.sendJSON(MembersMsg(members: [r])) }
-            self.store.saveSoon()
+            for (pid, s) in self.online where pid != id && !s.supportsRekey { s.sendJSON(MembersMsg(members: [r])) }
+            self.rotateAfterRemoval()
             self.emit(.membersChanged(self.memberList()))
         }
     }
@@ -681,6 +714,7 @@ public final class NearclipNode: @unchecked Sendable {
             emit(.ticketExpired)
         }
         expireTransfers(now: now)
+        prune()
         guard !paused else { return }
         for (id, rec) in store.members where id != deviceId && !rec.removed && online[id] == nil && dialing[id] == nil {
             let b = backoff[id] ?? (next: .distantPast, delay: 10)
@@ -838,6 +872,7 @@ public final class NearclipNode: @unchecked Sendable {
     // MARK: - Session callbacks
 
     func sessionEstablished(_ s: PeerSession) {
+        guard !s.retired else { s.close(); return }
         guard s.peerId != nil else { s.close(); return }
         // Removal is decided after both welcomes were merged (PROTOCOL §4.3): a re-added device carries a
         // newer record of itself than a member that was offline when it was re-added.
@@ -845,6 +880,7 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     func sessionWelcome(_ s: PeerSession, _ msg: WelcomeMsg) {
+        guard !s.retired else { s.close(); return }
         guard let pid = s.peerId else { return }
         if let expected = s.expectedPeerId, expected != pid { dialing[expected] = nil }
         dialing[pid] = nil
@@ -856,6 +892,8 @@ public final class NearclipNode: @unchecked Sendable {
             eps.insert(Endpoint(h: host, p: p), at: 0)
         }
         rememberEndpoints(pid, eps)
+        s.supportsPolicies = msg.features?.contains("policy1") == true
+        s.supportsRekey = msg.features?.contains("rekey1") == true
         var device = msg.device
         device.id = pid
         mergeMembers((msg.members ?? []) + [device], from: s)
@@ -887,8 +925,11 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     func sessionMessage(_ s: PeerSession, type: String, json: Data) {
+        guard !s.retired else { return }
         let dec = Wire.decoder
         switch type {
+        case "rekey":
+            if let m = try? dec.decode(RekeyMsg.self, from: json) { applyRekey(m, from: s) }
         case "clip":
             if let m = try? dec.decode(ClipMsg.self, from: json) { handleClip(m, from: s) }
         case "inv":
@@ -909,6 +950,7 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     func sessionBye(_ s: PeerSession, reason: String) {
+        guard !s.retired else { return }
         if reason == "removed" && s.mode == .member { leave(reason: "removed", announce: false) }
     }
 
@@ -933,9 +975,38 @@ public final class NearclipNode: @unchecked Sendable {
         if joinSession === s { joinSession = nil }
     }
 
+    private func rotateAfterRemoval() {
+        let m = RekeyMsg(previous: groupTag, groupId: store.state.groupId, key: Base64URL.encode(NCCrypto.random(32)), members: memberList())
+        applyRekey(m, from: nil)
+    }
+
+    private func applyRekey(_ m: RekeyMsg, from source: PeerSession?) {
+        guard m.previous == groupTag, m.groupId == store.state.groupId,
+              let key = Base64URL.decode(m.key), key.count == 32,
+              m.members.contains(where: { $0.id == deviceId && !$0.removed }),
+              source == nil || (source?.peerId.flatMap { online[$0] } === source) else { return }
+        do { try config.secretStore.save(key, account: "group-key-" + store.state.groupId) }
+        catch { log("could not save rotated group key"); return }
+        let removed = Set(m.members.filter(\.removed).map(\.id))
+        for (id, s) in online where !removed.contains(id) && s !== source && s.supportsRekey { s.sendJSON(m) }
+        // Existing session traffic has independent ephemeral keys. Flush its handover before closing.
+        groupKey = key; groupTag = NCCrypto.groupTag(key); authKey = NCCrypto.authKey(key)
+        mergeMembers(m.members, from: source)
+        store.saveNow()
+        for s in sessions { s.retired = true; s.bye("rekey") }
+        refreshAdvertisement()
+        backoff = [:]
+    }
+
     // MARK: - Clips
 
-    private func produce(_ c: Clip, blob: Data?) -> StoredClip {
+    private func produce(_ original: Clip, blob: Data?) -> StoredClip {
+        var c = original
+        let peers = store.members.values.filter { !$0.removed && $0.id != deviceId }
+        let allowed = peers.filter { (store.state.policies?[$0.id] ?? SyncPolicy()).permits(c, sending: true) }.map(\.id)
+        if let requested = original.recipients {
+            c.recipients = requested.map { $0.lowercased() }.filter { allowed.contains($0) }
+        } else if allowed.count != peers.count { c.recipients = allowed }
         newestLocalTs = c.ts
         store.state.newestLocalTs = c.ts
         let sc = StoredClip(clip: c, groupId: store.state.groupId, pinned: false, receivedAt: nowMs(),
@@ -948,7 +1019,7 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     private func sendClip(_ c: Clip, blob: Data?, live: Bool, to s: PeerSession) {
-        guard s.isMember else { return }
+        guard s.isMember, canSend(c, to: s) else { return }
         if c.isImage {
             guard let blob else { return }
             s.sendJSON(ClipMsg(live: live, clip: c))
@@ -987,7 +1058,7 @@ public final class NearclipNode: @unchecked Sendable {
         if !c.isText { c.otp = nil }
         let live = m.live ?? false
         guard c.kind == "text" || c.kind == "image" else { return }
-        if store.has(c.id) || store.state.tombstones[c.id] != nil {
+        if !canReceive(c) || store.has(c.id) || store.state.tombstones[c.id] != nil {
             if c.isImage { s.skipBlobs.insert(c.id) }
             return
         }
@@ -1009,6 +1080,7 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     func sessionChunk(_ s: PeerSession, clipId: String, index: UInt32, data: Data) {
+        guard !s.retired else { return }
         if s.skipBlobs.contains(clipId) { return }
         guard var p = s.pendingBlobs.removeValue(forKey: clipId) else { return }
         let size = p.clip.size ?? 0
@@ -1038,6 +1110,10 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     private func acceptClip(_ c: Clip, blob: Data?, live: Bool, from s: PeerSession?) {
+        guard canReceive(c) else {
+            if let s { dropTransfer(c.id, session: s, reason: "cancelled") }
+            return
+        }
         transfers[c.id] = nil
         let src = store.members[c.src]
         let sc = StoredClip(clip: c, groupId: store.state.groupId, pinned: false, receivedAt: nowMs(),
@@ -1064,7 +1140,8 @@ public final class NearclipNode: @unchecked Sendable {
             if let t = transfers[id], t.total == 0 { dropTransfer(id, session: s, reason: "cancelled") }
             return
         }
-        guard m.kind == "image", transfers[id] == nil, !store.has(id), store.state.tombstones[id] == nil else { return }
+        let policy = store.state.policies?[pid] ?? SyncPolicy()
+        guard policy.receive, policy.images, m.kind == "image", transfers[id] == nil, !store.has(id), store.state.tombstones[id] == nil else { return }
         transfers[id] = Transfer(from: pid, total: 0, received: 0, sessions: [ObjectIdentifier(s)], updated: Date())
         emitTransfer(id, .preparing)
     }
@@ -1113,6 +1190,8 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     private func prune() {
+        let expired = store.history.filter { $0.clip.isExpired() }.map { IdTs(id: $0.id, ts: nowMs()) }
+        if !expired.isEmpty { applyDeletes(expired, from: nil) }
         let removed = store.prune()
         if !removed.isEmpty { emit(.clipsDeleted(removed)) }
     }
@@ -1121,7 +1200,7 @@ public final class NearclipNode: @unchecked Sendable {
         let now = nowMs()
         let gid = store.state.groupId
         let clips = store.history.lazy
-            .filter { $0.groupId == gid && $0.clip.ts >= now - 7 * 86_400_000 }
+            .filter { $0.groupId == gid && $0.clip.ts >= now - 7 * 86_400_000 && self.canSend($0.clip, to: s) }
             .prefix(200)
             .map { IdTs(id: $0.id, ts: $0.clip.ts) }
         let dels = store.state.tombstones.filter { $0.value >= now - 30 * 86_400_000 }.map { IdTs(id: $0.key, ts: $0.value) }
@@ -1363,7 +1442,8 @@ public final class NearclipNode: @unchecked Sendable {
 
     private func completeJoin(_ accept: PairAcceptMsg, via s: PeerSession?) {
         joining = false
-        guard let key = Base64URL.decode(accept.group.key), key.count == 32 else {
+        guard accept.group.id.count == 36, UUID(uuidString: accept.group.id) != nil,
+              let key = Base64URL.decode(accept.group.key), key.count == 32 else {
             emit(.pairFailed(reason: "protocol"))
             return
         }

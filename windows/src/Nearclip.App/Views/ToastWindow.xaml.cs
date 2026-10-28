@@ -124,6 +124,7 @@ public sealed partial class ToastWindow : Window
     /// after a minute, as codes expire; hovering keeps it.</summary>
     internal void ShowCode(StoredClip sc)
     {
+        if (sc.Clip.IsExpired(Clock.NowMs())) return;
         var model = AppHost.Current.Model;
         _code = sc;
         SetCodeLayout(true);
@@ -135,13 +136,14 @@ public sealed partial class ToastWindow : Window
         NotNowButton.Content = Loc.S("Toast_NotNow");
         _kind = Kind.Code;
         _transferId = null;
-        Present(TitleText.Text + " " + CodeText.Text, TimeSpan.FromSeconds(60), MeasureHeight());
+        Present(TitleText.Text + " " + CodeText.Text, TimeSpan.FromMilliseconds(Math.Clamp(sc.Clip.Ts + 180_000 - Clock.NowMs(), 1, 60_000)), MeasureHeight());
     }
 
     /// <summary>Copy on a code offer: the code goes to this PC's clipboard, and the toast says so.</summary>
     async void CopyCode()
     {
         if (_code is not { } sc) return;
+        if (sc.Clip.IsExpired(Clock.NowMs())) { NotNow_Click(this, new RoutedEventArgs()); return; }
         _code = null;
         _kind = Kind.None;
         await AppHost.Current.Model.CopyCodeAsync(sc);
@@ -265,6 +267,7 @@ public sealed partial class ToastWindow : Window
 
     void HideIfIdle()
     {
+        if (_code is { } code && code.Clip.IsExpired(Clock.NowMs())) _hover = false;
         if (_hover) { _timer.Restart(TimeSpan.FromSeconds(1)); return; }
         _kind = Kind.None;
         _code = null;

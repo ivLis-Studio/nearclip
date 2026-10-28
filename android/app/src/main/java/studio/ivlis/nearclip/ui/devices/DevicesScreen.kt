@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -44,6 +45,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -79,7 +81,26 @@ fun DevicesScreen(
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var renaming by rememberSaveable { mutableStateOf(false) }
     var removeId by rememberSaveable { mutableStateOf<String?>(null) }
+    var policyId by rememberSaveable { mutableStateOf<String?>(null) }
     var leaving by rememberSaveable { mutableStateOf(false) }
+    val rt = studio.ivlis.nearclip.runtime.Nearclip.get(LocalContext.current)
+    policyId?.let { id ->
+        var policy by remember(id) { mutableStateOf(rt.engine.policyFor(id)) }
+        AlertDialog(onDismissRequest = { policyId = null }, title = { Text(stringResource(R.string.sync_settings)) },
+            text = { Column {
+                @Composable fun option(label: String, value: Boolean, change: (Boolean) -> Unit) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = value, role = Role.Switch, onValueChange = change), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, Modifier.weight(1f)); androidx.compose.material3.Switch(checked = value, onCheckedChange = null)
+                    }
+                }
+                option(stringResource(R.string.sync_policy_send), policy.send) { policy = policy.copy(send = it) }
+                option(stringResource(R.string.sync_policy_receive), policy.receive) { policy = policy.copy(receive = it) }
+                option(stringResource(R.string.sync_policy_images), policy.images) { policy = policy.copy(images = it) }
+                option(stringResource(R.string.sync_policy_codes), policy.codes) { policy = policy.copy(codes = it) }
+            } },
+            confirmButton = { TextButton(onClick = { rt.engine.setPolicy(id, policy); policyId = null }) { Text(stringResource(R.string.save)) } },
+            dismissButton = { TextButton(onClick = { policyId = null }) { Text(stringResource(R.string.cancel)) } })
+    }
     val now = rememberNow(15_000)
     val others = snapshot.otherMembers.sortedWith(compareBy({ it.id !in snapshot.online }, { it.name.lowercase() }))
 
@@ -102,7 +123,7 @@ fun DevicesScreen(
                 item("others") {
                     SettingsGroup {
                         for (m in others) {
-                            DeviceRow(m, m.id in snapshot.online, snapshot.routes[m.id], snapshot.lastSeen[m.id], now, onRemove = { removeId = m.id })
+                            DeviceRow(m, m.id in snapshot.online, snapshot.routes[m.id], snapshot.lastSeen[m.id], now, onRemove = { removeId = m.id }, onPolicy = { policyId = m.id })
                         }
                     }
                 }
@@ -230,7 +251,7 @@ private fun ThisDeviceCard(name: String, onRename: () -> Unit) {
 }
 
 @Composable
-private fun DeviceRow(m: MemberRecord, online: Boolean, route: PeerRoute?, lastSeen: Long?, now: Long, onRemove: () -> Unit) {
+private fun DeviceRow(m: MemberRecord, online: Boolean, route: PeerRoute?, lastSeen: Long?, now: Long, onRemove: () -> Unit, onPolicy: () -> Unit) {
     val context = LocalContext.current
     var menu by remember { mutableStateOf(false) }
     val status = when {
@@ -247,6 +268,7 @@ private fun DeviceRow(m: MemberRecord, online: Boolean, route: PeerRoute?, lastS
             Box {
                 IconButton(onClick = { menu = true }) { Sym(R.drawable.ic_more_vert, stringResource(R.string.more_actions)) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.sync_settings)) }, onClick = { menu = false; onPolicy() })
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.remove_device), color = MaterialTheme.colorScheme.error) },
                         leadingIcon = { Sym(R.drawable.ic_link_off, null, tint = MaterialTheme.colorScheme.error) },

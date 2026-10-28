@@ -1,0 +1,36 @@
+{
+  "name": "Nearclip by ivLis Studio",
+  "identifier": "studio.ivlis.nearclip.source",
+  "sourceURL": "https://ivlis-studio.github.io/nearclip/altstore.json",
+  "website": "https://ivlis-studio.github.io/nearclip/",
+  "tintColor": "4C5BF5",
+  "apps": [
+    {
+      "name": "Nearclip",
+      "bundleIdentifier": "studio.ivlis.nearclip",
+      "developerName": "ivLis Studio",
+      "localizedDescription": "One clipboard for Mac, Windows, Android, iPhone and iPad. Native apps, direct device-to-device sync and end-to-end encryption.",
+      "iconURL": "https://ivlis-studio.github.io/nearclip/assets/media/icon-512.png",
+      "category": "utilities",
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSCameraUsageDescription": "Nearclip uses the camera to scan the pairing code shown on your other device.",
+          "NSLocalNetworkUsageDescription": "Nearclip finds and connects to your other devices on this Wi-Fi."
+        }
+      },
+      "versions": [
+        {
+          "version": "1.1.0",
+          "buildVersion": "2",
+          "date": "2026-10-26T14:32:08Z",
+          "downloadURL": "https://github.com/ivLis-Studio/nearclip/releases/download/v1.1.0/Nearclip-iOS.ipa",
+          "size": 8256958,
+          "sha256": "84ffcd9fbba869f7cb911516c1d26a8c096fd82bd2acdab8644c3f530732c110",
+          "minOSVersion": "17.0"
+        }
+      ]
+    }
+  ],
+  "news": []
+}

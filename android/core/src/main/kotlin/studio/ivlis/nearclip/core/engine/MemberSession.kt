@@ -81,7 +81,10 @@ internal class MemberSession(
     @Volatile var lastReceived: Long = System.currentTimeMillis()
 
     // Engine-thread state.
+    @Volatile var retired = false
     var welcomed = false
+    var supportsPolicies = false
+    var supportsRekey = false
     var registered = false
     val requested = HashSet<String>()
 
