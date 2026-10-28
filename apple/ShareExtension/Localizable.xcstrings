@@ -140,6 +140,16 @@
           }
         }
       }
+    },
+    "Cancel": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

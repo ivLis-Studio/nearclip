@@ -84,7 +84,7 @@ public sealed partial class NearclipNode
 
     internal void SessionChunk(PeerSession s, string clipId, uint index, ReadOnlyMemory<byte> data)
     {
-        if (s.SkipBlobs.Contains(clipId) || !s.PendingBlobs.TryGetValue(clipId, out var p)) return;
+        if (s.Retired || s.SkipBlobs.Contains(clipId) || !s.PendingBlobs.TryGetValue(clipId, out var p)) return;
         var size = p.Clip.Size ?? 0;
         if (index != p.Next || data.Length == 0 || data.Length > Wire.ChunkSize || p.Data.Length + data.Length > size)
         {
@@ -309,7 +309,7 @@ public sealed partial class NearclipNode
         SetGroupKey(key);
         MergeMembers(members, source);
         _store.SaveNow();
-        foreach (var s in _sessions.ToList()) s.Bye("rekey");
+        foreach (var s in _sessions.ToList()) { s.Retired = true; s.Bye("rekey"); }
         RefreshAdvertisement();
         _backoff.Clear();
     }
@@ -560,6 +560,7 @@ public sealed partial class NearclipNode
     void CompleteJoin(PairAcceptInfo accept, PeerSession s)
     {
         _joining = false;
+        if (!Guid.TryParseExact(accept.GroupId, "D", out _)) { Emit(new NodeEvent.PairFailed("protocol", null)); s.Close(); return; }
         var inviter = accept.Device.Id;
         foreach (var o in _sessions.Where(x => x.Mode == PeerSession.SessionMode.Member).ToList())
         {

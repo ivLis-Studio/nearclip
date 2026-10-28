@@ -40,6 +40,11 @@ class SourceTests(unittest.TestCase):
     def test_rejects_mismatched_size(self):
         release,ipa=fixture();release['assets'][0]['size']+=1
         with self.assertRaises(AssertionError):generate(release,ipa)
+    def test_rejects_wrong_digest_and_prerelease(self):
+        release,ipa=fixture();release['assets'][0]['digest']='sha256:'+'0'*64
+        with self.assertRaises(AssertionError):generate(release,ipa)
+        release,ipa=fixture();release['prerelease']=True
+        with self.assertRaises(AssertionError):generate(release,ipa)
     def test_no_extension_is_supported(self):
         release,ipa=fixture(extension=False);self.assertEqual(generate(release,ipa)['apps'][0]['versions'][0]['minOSVersion'],'17.0')
 

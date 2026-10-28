@@ -124,8 +124,12 @@ final class NearclipFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
         let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
         safari.launchArguments = language(); safari.launch(); safari.open(URL(string: url)!)
+        tapIfExists(safari.buttons["Continue"], timeout: 2)
+        tapIfExists(safari.buttons["Start Browsing"], timeout: 2)
+        shot("60a-safari-open")
         let share = safari.buttons["Share"].firstMatch
-        XCTAssertTrue(share.waitForExistence(timeout: 20)); share.tap()
+        if !share.waitForExistence(timeout: 10) { tapIfExists(safari.buttons["More"].firstMatch) }
+        XCTAssertTrue(share.waitForExistence(timeout: 10)); share.tap()
         shot("60-safari-share")
         let nearclip = safari.buttons["Nearclip"].firstMatch
         if !nearclip.waitForExistence(timeout: 3) {

@@ -1,6 +1,7 @@
 package studio.ivlis.nearclip.ui.settings
 
 import android.content.Intent
+import androidx.core.net.toUri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
@@ -487,7 +488,7 @@ private fun UpdateRow() {
     if (remember { studio.ivlis.nearclip.runtime.UpdateChecker.isPlayInstall(context) }) {
         SettingsGroup {
             SettingsRow(title = "Google Play", summary = stringResource(R.string.store_updates), icon = R.drawable.ic_info,
-                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=" + context.packageName))) })
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, ("https://play.google.com/store/apps/details?id=" + context.packageName).toUri())) })
         }
         return
     }
@@ -503,7 +504,7 @@ private fun UpdateRow() {
             summary = version ?: if (failed) stringResource(R.string.update_failed) else stringResource(R.string.update_check_detail),
             icon = R.drawable.ic_info,
             onClick = {
-                if (version != null) context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(studio.ivlis.nearclip.runtime.UpdateChecker.RELEASE_URL)))
+                if (version != null) context.startActivity(Intent(Intent.ACTION_VIEW, studio.ivlis.nearclip.runtime.UpdateChecker.RELEASE_URL.toUri()))
                 else retry++
             })
     }

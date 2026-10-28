@@ -184,7 +184,7 @@ public final class NearclipNode: @unchecked Sendable {
         return (store.state.policies?[id] ?? SyncPolicy()).permits(c, sending: true)
     }
     private func canReceive(_ c: Clip) -> Bool {
-        !c.isExpired() && (c.recipients == nil || c.recipients!.contains(deviceId)) &&
+        c.hasValidIdentity && !c.isExpired() && (c.recipients == nil || c.recipients!.contains(deviceId)) &&
         (store.state.policies?[c.src] ?? SyncPolicy()).permits(c, sending: false)
     }
 
@@ -872,6 +872,7 @@ public final class NearclipNode: @unchecked Sendable {
     // MARK: - Session callbacks
 
     func sessionEstablished(_ s: PeerSession) {
+        guard !s.retired else { s.close(); return }
         guard s.peerId != nil else { s.close(); return }
         // Removal is decided after both welcomes were merged (PROTOCOL §4.3): a re-added device carries a
         // newer record of itself than a member that was offline when it was re-added.
@@ -879,6 +880,7 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     func sessionWelcome(_ s: PeerSession, _ msg: WelcomeMsg) {
+        guard !s.retired else { s.close(); return }
         guard let pid = s.peerId else { return }
         if let expected = s.expectedPeerId, expected != pid { dialing[expected] = nil }
         dialing[pid] = nil
@@ -923,6 +925,7 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     func sessionMessage(_ s: PeerSession, type: String, json: Data) {
+        guard !s.retired else { return }
         let dec = Wire.decoder
         switch type {
         case "rekey":
@@ -947,6 +950,7 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     func sessionBye(_ s: PeerSession, reason: String) {
+        guard !s.retired else { return }
         if reason == "removed" && s.mode == .member { leave(reason: "removed", announce: false) }
     }
 
@@ -989,7 +993,7 @@ public final class NearclipNode: @unchecked Sendable {
         groupKey = key; groupTag = NCCrypto.groupTag(key); authKey = NCCrypto.authKey(key)
         mergeMembers(m.members, from: source)
         store.saveNow()
-        for s in sessions { s.bye("rekey") }
+        for s in sessions { s.retired = true; s.bye("rekey") }
         refreshAdvertisement()
         backoff = [:]
     }
@@ -1075,6 +1079,7 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     func sessionChunk(_ s: PeerSession, clipId: String, index: UInt32, data: Data) {
+        guard !s.retired else { return }
         if s.skipBlobs.contains(clipId) { return }
         guard var p = s.pendingBlobs.removeValue(forKey: clipId) else { return }
         let size = p.clip.size ?? 0
@@ -1436,7 +1441,8 @@ public final class NearclipNode: @unchecked Sendable {
 
     private func completeJoin(_ accept: PairAcceptMsg, via s: PeerSession?) {
         joining = false
-        guard let key = Base64URL.decode(accept.group.key), key.count == 32 else {
+        guard accept.group.id.count == 36, UUID(uuidString: accept.group.id) != nil,
+              let key = Base64URL.decode(accept.group.key), key.count == 32 else {
             emit(.pairFailed(reason: "protocol"))
             return
         }

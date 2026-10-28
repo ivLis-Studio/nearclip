@@ -927,6 +927,7 @@ public sealed partial class NearclipNode : IDisposable
 
     internal void SessionEstablished(PeerSession s)
     {
+        if (s.Retired) { s.Close(); return; }
         if (s.PeerId is null)
         {
             s.Close();
@@ -940,6 +941,7 @@ public sealed partial class NearclipNode : IDisposable
 
     internal void SessionWelcome(PeerSession s, MemberRecord device, List<MemberRecord> members, List<Endpoint> addrs)
     {
+        if (s.Retired) { s.Close(); return; }
         if (s.PeerId is not { } pid) return;
         if (s.ExpectedPeerId is { } expected && expected != pid) _dialing.Remove(expected);
         _dialing.Remove(pid);
@@ -989,6 +991,7 @@ public sealed partial class NearclipNode : IDisposable
 
     internal void SessionMessage(PeerSession s, string type, JsonElement o)
     {
+        if (s.Retired) return;
         switch (type)
         {
             case "rekey":
@@ -1020,6 +1023,7 @@ public sealed partial class NearclipNode : IDisposable
 
     internal void SessionBye(PeerSession s, string reason)
     {
+        if (s.Retired) return;
         if (reason == "removed" && s.Mode == PeerSession.SessionMode.Member) Leave("removed", announce: false);
     }
 

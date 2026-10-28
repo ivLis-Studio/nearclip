@@ -24,14 +24,14 @@ jobs:
         id: bridge
         with:
           path: apple/NearclipKit/Binaries/NCTailnet.xcframework
-          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/**') }}
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
       - if: steps.bridge.outputs.cache-hit != 'true'
         run: tailnet/build.sh apple
       - if: steps.bridge.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: apple/NearclipKit/Binaries/NCTailnet.xcframework
-          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/**') }}
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
       - run: swift test --package-path apple/NearclipKit
       - run: command -v xcodegen || brew install xcodegen
       - run: xcodegen generate --spec apple/project.yml
@@ -49,13 +49,24 @@ jobs:
         shell: bash
         run: |
           xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
-          SIMULATOR_ID=$(python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/simulators.json")); print(next(x["udid"] for runtime,devices in sorted(d["devices"].items(),reverse=True) if "iOS" in runtime for x in devices if x.get("isAvailable") and "iPhone" in x["name"]))')
+          SIMULATOR_ID=$(python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/simulators.json")); print(next(x["udid"] for name in ["iPhone 17 Pro", "iPhone 17", "iPhone 16 Pro"] for runtime,devices in sorted(d["devices"].items()) if "iOS" in runtime for x in devices if x.get("isAvailable") and x["name"] == name))')
           python3 tools/acceptance/ios_ci.py --sim "$SIMULATOR_ID"
+      - name: Export simulator screenshots
+        if: always()
+        shell: bash
+        run: |
+          for result in "$RUNNER_TEMP"/ios-tests/Logs/Test/*.xcresult; do
+            [ -d "$result" ] || continue
+            xcrun xcresulttool export attachments --path "$result" --output-path "$RUNNER_TEMP/ios-attachments" || true
+          done
       - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: Apple-test-results
-          path: ${{ runner.temp }}/ios-tests/Logs/Test/*.xcresult
+          path: |
+            ${{ runner.temp }}/ios-tests/Logs/Test/*.xcresult
+            ${{ runner.temp }}/ios-attachments/**
+            /tmp/nearclip-ios-shots/*.png
   windows:
     runs-on: windows-latest
     timeout-minutes: 25

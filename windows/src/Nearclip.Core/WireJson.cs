@@ -230,11 +230,22 @@ public static class WireJson
         if (e.ValueKind != JsonValueKind.Object) return null;
         var id = Ids.Norm(Str(e, "id"));
         var kind = Str(e, "kind");
-        if (id.Length == 0 || kind is null) return null;
+        var src = Ids.Norm(Str(e, "src"));
+        if (!Guid.TryParseExact(id, "D", out _) || !Guid.TryParseExact(src, "D", out _) || kind is null) return null;
+        string[]? recipients = null;
+        if (Prop(e, "recipients") is { } to) {
+            if (to.ValueKind != JsonValueKind.Array || to.GetArrayLength() > 256) return null;
+            var list = new List<string>();
+            foreach (var item in to.EnumerateArray()) {
+                if (item.ValueKind != JsonValueKind.String || !Guid.TryParseExact(item.GetString(), "D", out _)) return null;
+                list.Add(Ids.Norm(item.GetString()));
+            }
+            recipients = list.ToArray();
+        }
         return new Clip(id, Long(e, "ts") ?? 0, Ids.Norm(Str(e, "src")), kind, Str(e, "text"), Str(e, "mime"), Long(e, "size"),
             Str(e, "sha")?.ToLowerInvariant(), (int?)Long(e, "w"), (int?)Long(e, "h"),
             kind == "text" && Bool(e, "otp") == true ? true : null,
-            Prop(e, "recipients") is null ? null : Arr(e, "recipients").Select(x => Ids.Norm(x.GetString())).ToArray());
+            recipients);
     }
 
     public static List<IdTs> ReadIdTs(JsonElement o, string key) =>

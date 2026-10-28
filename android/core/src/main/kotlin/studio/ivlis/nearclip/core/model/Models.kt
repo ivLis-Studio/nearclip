@@ -156,6 +156,11 @@ data class Clip(
             val id = normalizeId(obj.str("id")) ?: return null
             val ts = obj.long("ts") ?: return null
             val src = normalizeId(obj.str("src")) ?: return null
+            val rawRecipients = obj["recipients"]
+            if (rawRecipients != null && rawRecipients !is kotlinx.serialization.json.JsonNull) {
+                val array = rawRecipients as? JsonArray ?: return null
+                if (array.size > 256 || array.any { it !is JsonPrimitive || normalizeId(it.content) == null }) return null
+            }
             return when (obj.str("kind")) {
                 ClipKind.TEXT -> {
                     val text = obj.str("text") ?: return null

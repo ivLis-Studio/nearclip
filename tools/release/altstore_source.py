@@ -30,8 +30,11 @@ def entitlements(binary):
     return {}
 
 def generate(release, ipa):
+    assert not release.get('draft') and not release.get('prerelease'), 'source requires a stable public release'
     asset = next(a for a in release['assets'] if a['name'] == 'Nearclip-iOS.ipa')
     assert len(ipa) == asset['size'], 'IPA size differs from release asset'
+    if asset.get('digest'):
+        assert asset['digest'] == 'sha256:' + hashlib.sha256(ipa).hexdigest(), 'IPA digest differs from release asset'
     with zipfile.ZipFile(io.BytesIO(ipa)) as z:
         info = plistlib.loads(z.read('Payload/Nearclip.app/Info.plist'))
         permissions = set()
@@ -44,6 +47,7 @@ def generate(release, ipa):
             for key,value in bundle.items():
                 if key.startswith('NS') and key.endswith('UsageDescription'): privacy.setdefault(key,value)
         permissions.difference_update({'application-identifier','com.apple.developer.team-identifier'})
+    assert info['CFBundleIdentifier'] == 'studio.ivlis.nearclip', 'wrong app bundle'
     version = info['CFBundleShortVersionString']
     assert release['tag_name'].removeprefix('v') == version, 'release and app version differ'
     url = f'https://github.com/{REPO}/releases/download/{release["tag_name"]}/Nearclip-iOS.ipa'

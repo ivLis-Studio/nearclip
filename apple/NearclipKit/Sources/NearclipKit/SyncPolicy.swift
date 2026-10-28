@@ -15,6 +15,10 @@ public struct SyncPolicy: Codable, Equatable, Sendable {
 }
 
 public extension Clip {
+    var hasValidIdentity: Bool {
+        func valid(_ id: String) -> Bool { id.count == 36 && UUID(uuidString: id) != nil }
+        return valid(id) && valid(src) && (recipients.map { $0.count <= 256 && $0.allSatisfy(valid) } ?? true)
+    }
     static let codeLifetime: Int64 = 180_000
     func isExpired(at now: Int64 = nowMs()) -> Bool {
         isCode && (ts <= now - Self.codeLifetime || ts > now + 60_000)

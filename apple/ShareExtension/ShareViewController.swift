@@ -22,8 +22,18 @@ final class ShareViewController: UITableViewController {
         status.numberOfLines = 0; status.textAlignment = .center
         status.font = .preferredFont(forTextStyle: .headline)
         status.text = NSLocalizedString("Preparing…", comment: "")
-        status.frame = CGRect(x: 16, y: 0, width: view.bounds.width - 32, height: 100)
-        tableView.tableHeaderView = status
+        let header = UIView(frame: CGRect(x: 0, y: 0, width: view.bounds.width, height: 132))
+        header.autoresizingMask = .flexibleWidth
+        let cancel = UIButton(type: .system)
+        cancel.setTitle(NSLocalizedString("Cancel", comment: ""), for: .normal)
+        cancel.frame = CGRect(x: 16, y: 8, width: 80, height: 36)
+        cancel.addAction(UIAction { [weak self] _ in self?.cancel() }, for: .touchUpInside)
+        cancel.accessibilityIdentifier = "share.cancel"
+        status.frame = CGRect(x: 16, y: 48, width: view.bounds.width - 32, height: 76)
+        status.autoresizingMask = .flexibleWidth
+        status.accessibilityIdentifier = "share.status"
+        header.addSubview(cancel); header.addSubview(status)
+        tableView.tableHeaderView = header
         navigationItem.title = "Nearclip"
         navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .cancel, primaryAction: UIAction { [weak self] _ in self?.cancel() })
         operation = Task { await prepare() }
@@ -106,7 +116,7 @@ final class ShareViewController: UITableViewController {
     }
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         guard !sending, let node else { return }
-        sending = true; tableView.isUserInteractionEnabled = false
+        sending = true
         let peer = peers[indexPath.row]
         for member in seed?.members ?? [] {
             var policy = node.policy(for: member.id)
@@ -121,7 +131,7 @@ final class ShareViewController: UITableViewController {
             guard !Task.isCancelled else { return }
             guard node.snapshot().online.contains(peer.id) else { fail(); return }
             guard node.supportsTargeting(peer.id) else {
-                say(NSLocalizedString("Update Nearclip on the other device first.", comment: "")); node.stop(); sending = false; tableView.isUserInteractionEnabled = true; return
+                say(NSLocalizedString("Update Nearclip on the other device first.", comment: "")); node.stop(); sending = false; return
             }
             say(NSLocalizedString("Sending…", comment: ""))
             if let image { node.sendImage(image, mime: mime) } else if let text { node.sendText(text) }
@@ -134,7 +144,7 @@ final class ShareViewController: UITableViewController {
     }
     private func fail() {
         say(NSLocalizedString("Couldn’t connect. Open Nearclip on the other device and try again.", comment: ""))
-        node?.stop(); sending = false; tableView.isUserInteractionEnabled = true
+        node?.stop(); sending = false
     }
     private func cleanup() {
         node?.stop(); node = nil

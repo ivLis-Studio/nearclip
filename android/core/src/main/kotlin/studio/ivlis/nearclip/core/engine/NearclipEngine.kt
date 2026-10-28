@@ -1035,7 +1035,7 @@ class NearclipEngine(
     }
 
     private fun attach(s: MemberSession) {
-        if (!running || paused || s.groupId != group.id) {
+        if (!running || paused || s.retired || s.groupId != group.id) {
             s.close()
             return
         }
@@ -1122,7 +1122,7 @@ class NearclipEngine(
     // =====================================================================================
 
     internal fun onSessionMessage(s: MemberSession, obj: JsonObject): BlobAssembly? = call {
-        if (s.closed) return@call null
+        if (s.closed || s.retired) return@call null
         if (s.groupId != group.id) {
             s.close()
             return@call null
@@ -1165,7 +1165,7 @@ class NearclipEngine(
         try {
             call {
                 val id = asm.clip.id
-                if (index.containsKey(id) || st.tombstones.containsKey(id) || s.groupId != group.id) {
+                if (s.retired || index.containsKey(id) || st.tombstones.containsKey(id) || s.groupId != group.id) {
                     asm.file.delete()
                     dropTransfer(id, s, "cancelled")
                     return@call
@@ -1298,7 +1298,7 @@ class NearclipEngine(
         for ((id, s) in online) if (id !in removed && s !== source && s.supportsRekey) s.sendJson(obj)
         group = Group(group.id, key, group.createdAt)
         mergeMembers(members, source)
-        for (s in sessions.toList()) s.bye("rekey")
+        for (s in sessions.toList()) { s.retired = true; s.bye("rekey") }
         backoff.clear()
         publish()
     }

@@ -53,6 +53,7 @@ internal sealed class PeerSession
     public SessionMode Mode { get; private set; }
     public SessionPhase Phase { get; private set; }
     public DateTime Created { get; } = DateTime.UtcNow;
+    public bool Retired { get; set; }
     public bool SupportsPolicies { get; set; }
     public bool SupportsRekey { get; set; }
     public string? PeerId { get; private set; }

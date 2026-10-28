@@ -72,6 +72,14 @@ public sealed class PrivacyTests
         Assert.False(new Clip(Ids.New(), 0, Ids.New(), "text", Text:"ordinary").IsExpired(now));
     }
 
+    [Theory]
+    [InlineData("../escape")]
+    [InlineData("not-a-device-id")]
+    public void IncomingClipCannotUseAPathAsAnIdentifier(string id) {
+        using var doc=System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(new { id,src=Ids.New(),ts=Clock.NowMs(),kind="text",text="x" }));
+        Assert.Null(WireJson.ReadClip(doc.RootElement));
+    }
+
     static void Pair(TestPeer a, TestPeer b) {
         _ = a.Port; b.Node.Join(a.Node.CreateTicket().Invite);
         b.Wait<NodeEvent.PeerUp>("paired", e => e.Member.Id == a.Id);

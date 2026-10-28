@@ -1,6 +1,7 @@
 package studio.ivlis.nearclip.runtime
 
 import android.content.Context
+import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -30,7 +31,7 @@ object UpdateChecker {
             val available = version.split('.').map { it.toInt() }.zip(current.split('.').map { it.toInt() })
                 .firstOrNull { it.first != it.second }?.let { it.first > it.second } == true
             val newer = version.takeIf { available }
-            prefs.edit().putLong("at", now).putString("newer", newer).apply()
+            prefs.edit { putLong("at", now); putString("newer", newer) }
             newer
         } finally { connection.disconnect() }
     }

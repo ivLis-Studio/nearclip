@@ -24,6 +24,13 @@ final class PrivacyTests: XCTestCase {
         XCTAssertThrowsError(try vault.read(file))
         XCTAssertEqual(try Data(contentsOf: file), encrypted)
     }
+    func testClipIdentifiersCannotEscapeStorage() {
+        let invalid = Clip(id: "../escape", ts: nowMs(), src: newNearclipId(), kind: "text", text: "x")
+        XCTAssertFalse(invalid.hasValidIdentity)
+        var valid = Clip(id: newNearclipId(), ts: nowMs(), src: newNearclipId(), kind: "text", text: "x")
+        valid.recipients = ["invalid"]
+        XCTAssertFalse(valid.hasValidIdentity)
+    }
     func testExpiryAndPolicies() {
         let now: Int64 = 1_800_000_000_000
         let code = Clip(id: newNearclipId(), ts: now, src: newNearclipId(), kind: "text", text: "1234", otp: true)
