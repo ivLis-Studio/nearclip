@@ -19,7 +19,7 @@ object UpdateChecker {
     suspend fun check(context: Context, current: String, force: Boolean = false): String? = withContext(Dispatchers.IO) {
         val prefs = context.getSharedPreferences("nearclip.updates", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
-        if (!force && now - prefs.getLong("at", 0) < 86_400_000L) return@withContext prefs.getString("newer", null)
+        if (!force && prefs.getString("current", null) == current && now - prefs.getLong("at", 0) < 86_400_000L) return@withContext prefs.getString("newer", null)
         val connection = URI("https://api.github.com/repos/ivLis-Studio/nearclip/releases/latest").toURL().openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 10_000; connection.readTimeout = 10_000
@@ -31,7 +31,7 @@ object UpdateChecker {
             val available = version.split('.').map { it.toInt() }.zip(current.split('.').map { it.toInt() })
                 .firstOrNull { it.first != it.second }?.let { it.first > it.second } == true
             val newer = version.takeIf { available }
-            prefs.edit { putLong("at", now); putString("newer", newer) }
+            prefs.edit { putLong("at", now); putString("newer", newer); putString("current", current) }
             newer
         } finally { connection.disconnect() }
     }

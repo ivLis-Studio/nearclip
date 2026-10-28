@@ -14,7 +14,8 @@ base=['xcodebuild','-project',str(ROOT/'apple/Nearclip.xcodeproj'),'-scheme','Ne
     'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-']
 subprocess.run(base+['build-for-testing'],check=True)
 subprocess.run(['xcrun','simctl','boot',args.sim],check=False)
-subprocess.run(['open','-a','Simulator','--args','-CurrentDeviceUDID',args.sim],check=True)
+developer=Path(subprocess.check_output(['xcode-select','-p'],text=True).strip())
+subprocess.run(['open','-a',str(developer/'Applications/Simulator.app'),'--args','-CurrentDeviceUDID',args.sim],check=True)
 subprocess.run(['xcrun','simctl','bootstatus',args.sim,'-b'],check=True)
 # Issue the short-lived pairing ticket only after compilation and simulator boot have completed.
 peer=Peer('swift',shlex.quote(str(cli)),'CI Windows PC')

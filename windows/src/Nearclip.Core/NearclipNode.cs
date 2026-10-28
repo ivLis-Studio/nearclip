@@ -312,7 +312,7 @@ public sealed partial class NearclipNode : IDisposable
         r = r with { Removed = true, UpdatedAt = Math.Max(Clock.NowMs(), r.UpdatedAt + 1) };
         _store.Members[id] = r;
         if (_online.TryGetValue(id, out var s)) s.Bye("removed");
-        foreach (var (pid, o) in _online.ToList()) if (pid != id) o.SendJson(Members([r]));
+        foreach (var (pid, o) in _online.ToList()) if (pid != id && !o.SupportsRekey) o.SendJson(Members([r]));
         RotateAfterRemoval();
         Emit(new NodeEvent.MembersChanged(MemberList()));
     });

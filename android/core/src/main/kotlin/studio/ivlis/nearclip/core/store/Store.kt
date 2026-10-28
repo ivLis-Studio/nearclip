@@ -45,7 +45,10 @@ interface Store {
 class FileStore(
     val root: File,
     override val keyProtector: KeyProtector = KeyProtector.Plain,
+    cleanTemps: Boolean = true,
+    migrateBlobs: Boolean = true,
 ) : Store {
+    private companion object { val keyLock = Any() }
     private val blobs = File(root, "blobs")
     private val tmp = File(root, "tmp")
     private val keyFile = File(root, "history-key")
@@ -53,16 +56,21 @@ class FileStore(
     private val localKey: javax.crypto.spec.SecretKeySpec
 
     init {
-        if (!blobs.isDirectory && !blobs.mkdirs()) throw IOException("cannot create $blobs")
-        if (!tmp.isDirectory && !tmp.mkdirs()) throw IOException("cannot create $tmp")
-        tmp.listFiles()?.forEach { it.deleteRecursively() }
-        val key = if (keyFile.isFile) keyProtector.unprotect(keyFile.readText()) else {
-            val bytes = studio.ivlis.nearclip.core.crypto.Crypto.random(32)
-            keyFile.writeText(keyProtector.protect(bytes)); restrict(keyFile); bytes
+        if (!blobs.isDirectory && !blobs.mkdirs() && !blobs.isDirectory) throw IOException("cannot create $blobs")
+        if (!tmp.isDirectory && !tmp.mkdirs() && !tmp.isDirectory) throw IOException("cannot create $tmp")
+        if (cleanTemps) tmp.listFiles()?.forEach { it.deleteRecursively() }
+        val key = synchronized(keyLock) {
+            if (keyFile.isFile) keyProtector.unprotect(keyFile.readText()) else {
+                val bytes = studio.ivlis.nearclip.core.crypto.Crypto.random(32)
+                val part = File(root, "history-key.part")
+                part.writeText(keyProtector.protect(bytes)); restrict(part)
+                Files.move(part.toPath(), keyFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                bytes
+            }
         }
         require(key.size == 32) { "invalid local history key" }
         localKey = javax.crypto.spec.SecretKeySpec(key, "AES")
-        blobs.listFiles()?.filter { it.isFile && it.extension in setOf("png", "jpg", "txt", "bin") }?.forEach { readEncrypted(it) }
+        if (migrateBlobs) blobs.listFiles()?.filter { it.isFile && it.extension in setOf("png", "jpg", "txt", "bin") }?.forEach { readEncrypted(it) }
     }
 
     override fun read(name: String): String? {
@@ -93,7 +101,7 @@ class FileStore(
         val c = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
         c.init(javax.crypto.Cipher.ENCRYPT_MODE, localKey)
         c.updateAAD(target.name.toByteArray(Charsets.UTF_8))
-        val part = File(target.parentFile, target.name + ".part")
+        val part = File(target.parentFile, target.name + "." + java.util.UUID.randomUUID() + ".part")
         part.outputStream().use { out -> out.write(magic + c.iv + c.doFinal(plain)); out.fd.sync() }
         restrict(part)
         try { Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) }
@@ -110,7 +118,11 @@ class FileStore(
     override fun file(name: String): File {
         val view = File(tmp, name)
         val raw = File(blobs, name)
-        if (!view.exists() && raw.isFile) { view.writeBytes(readEncrypted(raw)); restrict(view) }
+        if (!view.exists() && raw.isFile) {
+            val part = File(tmp, name + "." + java.util.UUID.randomUUID() + ".part")
+            part.writeBytes(readEncrypted(raw)); restrict(part)
+            Files.move(part.toPath(), view.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
         return view
     }
 

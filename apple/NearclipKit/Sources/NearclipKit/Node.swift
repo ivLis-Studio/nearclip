@@ -303,7 +303,7 @@ public final class NearclipNode: @unchecked Sendable {
             r.updatedAt = max(nowMs(), r.updatedAt + 1)
             self.store.members[id] = r
             if let s = self.online[id] { s.bye("removed") }
-            for (pid, s) in self.online where pid != id { s.sendJSON(MembersMsg(members: [r])) }
+            for (pid, s) in self.online where pid != id && !s.supportsRekey { s.sendJSON(MembersMsg(members: [r])) }
             self.rotateAfterRemoval()
             self.emit(.membersChanged(self.memberList()))
         }

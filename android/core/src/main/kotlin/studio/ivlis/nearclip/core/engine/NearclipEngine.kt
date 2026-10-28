@@ -366,7 +366,7 @@ class NearclipEngine(
         val r = cur.copy(removed = true, updatedAt = max(clock(), cur.updatedAt + 1))
         st.members[pid] = r
         for (s in sessions.toList()) if (s.peerId == pid) s.bye("removed")
-        for ((opid, o) in online) if (opid != pid) o.sendJson(Msg.members(listOf(r)))
+        for ((opid, o) in online) if (opid != pid && !o.supportsRekey) o.sendJson(Msg.members(listOf(r)))
         st.endpoints.remove(pid)
         backoff.remove(pid)
         rotateAfterRemoval()
@@ -1706,7 +1706,7 @@ class NearclipEngine(
         val r = rec.copy(id = pid, addedAt = now, updatedAt = max(now, (existing?.updatedAt ?: 0) + 1), removed = false)
         st.members[pid] = r
         markPersist()
-        for ((opid, o) in online) if (opid != pid) o.sendJson(Msg.members(listOf(r)))
+        for ((opid, o) in online) if (opid != pid && !o.supportsRekey) o.sendJson(Msg.members(listOf(r)))
         emit(EngineEvent.MembersChanged(memberList()))
         emit(EngineEvent.Paired(group.id, pid, r.name, r.platform, joined = false))
         return Msg.pairAccept(group.id, group.key, ownRecord, memberList())
