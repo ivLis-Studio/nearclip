@@ -54,6 +54,17 @@ final class ShareViewController: UITableViewController {
             }
         }
     }
+    private func loadImage(_ provider: NSItemProvider) async throws -> UIImage {
+        try await withCheckedThrowingContinuation { continuation in
+            provider.loadObject(ofClass: UIImage.self) { object, error in
+                if let image = object as? UIImage { continuation.resume(returning: image) }
+                else { continuation.resume(throwing: error ?? NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError)) }
+            }
+        }
+    }
+    private func isImage(_ provider: NSItemProvider) -> Bool {
+        provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) || provider.canLoadObject(ofClass: UIImage.self)
+    }
     private func say(_ text: String) { status.text = text }
     private func prepare() async {
         do {
@@ -64,34 +75,50 @@ final class ShareViewController: UITableViewController {
             guard !seed.paused else { say(NSLocalizedString("Syncing paused", comment: "")); return }
             self.seed = seed
             let providers = (extensionContext?.inputItems as? [NSExtensionItem] ?? []).flatMap { $0.attachments ?? [] }
-            guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) || $0.hasItemConformingToTypeIdentifier(UTType.url.identifier) || $0.hasItemConformingToTypeIdentifier(UTType.text.identifier) }) else { say(NSLocalizedString("Nothing to send", comment: "")); return }
-            if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            guard let provider = providers.first(where: isImage) ?? providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.url.identifier) || $0.hasItemConformingToTypeIdentifier(UTType.text.identifier) }) else { say(NSLocalizedString("Nothing to send", comment: "")); return }
+            #if DEBUG
+            NSLog("Nearclip share provider types: %@", provider.registeredTypeIdentifiers.joined(separator: ", "))
+            #endif
+            if isImage(provider) {
                 guard seed.images else { say(NSLocalizedString("Turn on image sync in Nearclip first.", comment: "")); return }
-                let data = try await loadData(provider, type: UTType.image.identifier)
-                guard data.count <= 32 * 1024 * 1024,
-                      let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary) else {
-                    say(NSLocalizedString("Image is too large", comment: "")); return
-                }
-                let type = CGImageSourceGetType(source) as String?
-                if type == UTType.jpeg.identifier { image = data; mime = "image/jpeg" }
-                else if type == UTType.png.identifier { image = data }
-                else {
-                    // Bound decoding memory inside the share extension (for HEIC and other formats).
-                    let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
-                        kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: 4096]
-                    guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-                        say(NSLocalizedString("This item is not supported", comment: "")); return
+                // A UIImage can be offered as a UIKit object without an encoded public.image representation.
+                // Prefer actual encoded types so ordinary large PNG/JPEG images do not need a bitmap decode.
+                let encoded = provider.registeredTypeIdentifiers.first { $0 == UTType.png.identifier || $0 == UTType.jpeg.identifier }
+                if encoded == nil, provider.canLoadObject(ofClass: UIImage.self) {
+                    let object = try await loadImage(provider)
+                    guard object.size.width > 0, object.size.height > 0 else { say(NSLocalizedString("This item is not supported", comment: "")); return }
+                    let factor = min(object.scale, 4096 / max(object.size.width, object.size.height))
+                    let size = CGSize(width: max(1, floor(object.size.width * factor)), height: max(1, floor(object.size.height * factor)))
+                    let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.preferredRange = .standard
+                    image = UIGraphicsImageRenderer(size: size, format: format).pngData { _ in object.draw(in: CGRect(origin: .zero, size: size)) }
+                } else {
+                    let data = try await loadData(provider, type: encoded ?? UTType.image.identifier)
+                    guard data.count <= 32 * 1024 * 1024,
+                          let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary) else {
+                        say(NSLocalizedString("Image is too large", comment: "")); return
                     }
-                    image = UIImage(cgImage: cg).jpegData(compressionQuality: 0.9); mime = "image/jpeg"
+                    let type = CGImageSourceGetType(source) as String?
+                    if type == UTType.jpeg.identifier { image = data; mime = "image/jpeg" }
+                    else if type == UTType.png.identifier { image = data }
+                    else {
+                        // Bound decoding memory inside the share extension (for HEIC and other formats).
+                        let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                            kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: 4096]
+                        guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+                            say(NSLocalizedString("This item is not supported", comment: "")); return
+                        }
+                        image = UIImage(cgImage: cg).jpegData(compressionQuality: 0.9); mime = "image/jpeg"
+                    }
                 }
                 guard let image, image.count <= 32 * 1024 * 1024 else { say(NSLocalizedString("Image is too large", comment: "")); return }
             } else if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
                 let item = try await loadItem(provider, type: UTType.url.identifier)
                 if let url = item as? URL { text = url.absoluteString }
                 else if let url = item as? String { text = url }
+                else if let data = item as? Data { text = String(data: data, encoding: .utf8) }
             } else if provider.hasItemConformingToTypeIdentifier(UTType.text.identifier) {
                 let item = try await loadItem(provider, type: UTType.text.identifier)
-                text = (item as? String) ?? (item as? Data).flatMap { String(data: $0, encoding: .utf8) }
+                text = (item as? String) ?? (item as? NSAttributedString)?.string ?? (item as? Data).flatMap { String(data: $0, encoding: .utf8) }
             }
             guard image != nil || text?.isEmpty == false else { say(NSLocalizedString("This item is not supported", comment: "")); return }
             guard (text?.utf8.count ?? 0) <= 4 * 1024 * 1024 else { say(NSLocalizedString("Text is too large", comment: "")); return }

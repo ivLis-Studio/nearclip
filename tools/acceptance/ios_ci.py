@@ -47,4 +47,11 @@ try:
     peer.expect('text shared through UIKit',lambda e:e.get('ev')=='clip' and e.get('text')==share_text,timeout=15)
     peer.expect('image shared through UIKit',lambda e:e.get('ev')=='clip' and e.get('kind')=='image',timeout=15)
     print('PASS simulator UI, persisted per-device controls, URL/text/image share extension and real peer delivery',flush=True)
-finally:peer.quit()
+finally:
+    peer.quit()
+    # Extension logs contain only provider type metadata added in Debug, not clipboard payloads.
+    with open('/tmp/nearclip-share-debug.log','w') as output:
+        try:
+            subprocess.run(['xcrun','simctl','spawn',args.sim,'log','show','--style','compact','--last','15m',
+                            '--predicate','process == "NearclipShare"'],stdout=output,stderr=subprocess.STDOUT,timeout=30)
+        except subprocess.TimeoutExpired:pass

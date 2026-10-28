@@ -92,6 +92,7 @@ jobs:
             ${{ runner.temp }}/ios-tests/Logs/Test/*.xcresult
             ${{ runner.temp }}/ios-attachments/**
             /tmp/nearclip-ios-shots/*.png
+            /tmp/nearclip-share-debug.log
   windows:
     runs-on: windows-latest
     timeout-minutes: 25
