@@ -1,14 +1,14 @@
 name: Native validation
 on:
   push:
-    branches: [main, 'ivAI/**']
+    branches: [main]
     paths: ['apple/**', 'android/**', 'windows/**', 'spec/**', 'tools/interop/**', 'tools/acceptance/**', '.github/workflows/validate.yml']
   pull_request:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: native-validation-${{ github.head_ref || github.ref_name }}
+  group: native-validation-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 jobs:
   apple:
