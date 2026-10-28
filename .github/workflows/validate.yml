@@ -46,7 +46,7 @@ jobs:
           name: iPhone-iPad-test-IPA
           path: dist/Nearclip-iOS.ipa
   ios-ui:
-    # The Xcode 27 build image omits Simulator.app. Exercise UI on the complete macOS 26 image.
+    # Validate UI independently, using the runtime matching this image's selected Xcode SDK.
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -66,10 +66,10 @@ jobs:
       - run: command -v xcodegen || brew install xcodegen
       - run: xcodegen generate --spec apple/project.yml
       - name: Test iPhone UI in the simulator
+        timeout-minutes: 15
         shell: bash
         run: |
-          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
-          SIMULATOR_ID=$(python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/simulators.json")); print(next(x["udid"] for name in ["iPhone 17 Pro", "iPhone 17", "iPhone 16 Pro"] for runtime,devices in sorted(d["devices"].items()) if "iOS" in runtime for x in devices if x.get("isAvailable") and x["name"] == name))')
+          SIMULATOR_ID=$(python3 tools/acceptance/select_ios_simulator.py)
           python3 tools/acceptance/ios_ci.py --sim "$SIMULATOR_ID"
       - name: Export simulator screenshots
         if: always()

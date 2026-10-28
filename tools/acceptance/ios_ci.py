@@ -15,12 +15,12 @@ base=['xcodebuild','-project',str(ROOT/'apple/Nearclip.xcodeproj'),'-scheme','Ne
 subprocess.run(base+['build-for-testing'],check=True)
 subprocess.run(['xcrun','simctl','boot',args.sim],check=False)
 developer=Path(os.environ.get('DEVELOPER_DIR') or subprocess.check_output(['xcode-select','-p'],text=True).strip())
-simulator=developer/'Applications/Simulator.app'
+simulator=next((path for path in [developer/'Applications/Simulator.app',developer/'Applications/Device Hub.app',developer/'Applications/DeviceHub.app'] if path.exists()), developer/'Applications/Simulator.app')
 if simulator.exists():
     subprocess.run(['open','-a',str(simulator),'--args','-CurrentDeviceUDID',args.sim],check=True)
 else:
     print('Using headless CoreSimulator; this toolchain has no Simulator.app',flush=True)
-subprocess.run(['xcrun','simctl','bootstatus',args.sim,'-b'],check=True)
+subprocess.run(['xcrun','simctl','bootstatus',args.sim,'-b'],check=True,timeout=240)
 # Issue the short-lived pairing ticket only after compilation and simulator boot have completed.
 peer=Peer('swift',shlex.quote(str(cli)),'CI Windows PC')
 try:
@@ -39,7 +39,7 @@ try:
         '-parallel-testing-enabled','NO','-maximum-concurrent-test-simulator-destinations','1',
         '-test-timeouts-enabled','YES','-maximum-test-execution-time-allowance','300',
         'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-']
-    subprocess.run(command,env=env,check=True)
+    subprocess.run(command,env=env,check=True,timeout=600)
     peer.expect('text sent from the simulator',lambda e:e.get('ev')=='clip' and e.get('text')==message,timeout=15)
     peer.expect('URL shared from Safari',lambda e:e.get('ev')=='clip' and e.get('text','').startswith(share_url),timeout=15)
     server.shutdown()
