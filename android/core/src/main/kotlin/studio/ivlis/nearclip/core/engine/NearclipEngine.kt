@@ -1314,9 +1314,13 @@ class NearclipEngine(
         (st.policies[c.src] ?: studio.ivlis.nearclip.core.model.SyncPolicy()).permits(c, false)
 
     private fun produce(original: Clip): SendResult {
-        val c = if (st.policies.values.any { !it.permits(original, true) }) original.copy(recipients = st.members.values
-            .filter { !it.removed && it.id != deviceId && (st.policies[it.id] ?: studio.ivlis.nearclip.core.model.SyncPolicy()).permits(original, true) }
-            .map { it.id }) else original
+        val peers = st.members.values.filter { !it.removed && it.id != deviceId }
+        val allowed = peers.filter { (st.policies[it.id] ?: studio.ivlis.nearclip.core.model.SyncPolicy()).permits(original, true) }.map { it.id }
+        val c = when {
+            original.recipients != null -> original.copy(recipients = original.recipients.filter { it in allowed })
+            allowed.size != peers.size -> original.copy(recipients = allowed)
+            else -> original
+        }
         st.newestLocalTs = c.ts
         markPersist()
         addToHistory(c)

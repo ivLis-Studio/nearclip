@@ -135,4 +135,11 @@ public sealed class PrivacyTests
         Assert.DoesNotContain(c.Node.Snapshot().History,x=>x.Id==clip.Id);
         Assert.Equal(old, Key(c));
     }
+    [Fact]
+    public void InactivePoliciesDoNotRestrictNewClips() {
+        using var peer = new TestPeer("Active policies");
+        peer.Node.SetPolicy(Ids.New(), new SyncPolicy(Send:false));
+        Assert.Null(peer.Node.SendText("ordinary history")!.Clip.Recipients);
+    }
+
 }

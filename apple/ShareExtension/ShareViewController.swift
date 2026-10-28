@@ -191,7 +191,7 @@ final class ShareViewController: UITableViewController {
                 say(NSLocalizedString("Update Nearclip on the other device first.", comment: "")); node.stop(); sending = false; return
             }
             say(NSLocalizedString("Sending…", comment: ""))
-            if let image { node.sendImage(image, mime: mime) } else if let text { node.sendText(text) }
+            if let image { node.sendImage(image, mime: mime, recipients: [peer.id]) } else if let text { node.sendText(text, recipients: [peer.id]) }
             while !Task.isCancelled, Date() < deadline, !node.outgoingIdle(to: peer.id) { try? await Task.sleep(for: .milliseconds(100)) }
             guard !Task.isCancelled else { return }
             guard node.outgoingIdle(to: peer.id) else { fail(); return }

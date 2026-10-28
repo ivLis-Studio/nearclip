@@ -18,9 +18,10 @@ public sealed partial class NearclipNode
 
     StoredClip Produce(Clip c, byte[]? blob)
     {
-        if (_store.State.Policies.Values.Any(p => !p.Permits(c, true)))
-            c = c with { Recipients = _store.Members.Values.Where(m => !m.Removed && m.Id != DeviceId &&
-                (_store.State.Policies.GetValueOrDefault(m.Id) ?? new SyncPolicy()).Permits(c, true)).Select(m => m.Id).ToArray() };
+        var peers = _store.Members.Values.Where(m => !m.Removed && m.Id != DeviceId).ToArray();
+        var allowed = peers.Where(m => (_store.State.Policies.GetValueOrDefault(m.Id) ?? new SyncPolicy()).Permits(c, true)).Select(m => m.Id).ToArray();
+        if (c.Recipients is { } requested) c = c with { Recipients = requested.Where(allowed.Contains).ToArray() };
+        else if (allowed.Length != peers.Length) c = c with { Recipients = allowed };
         _newestLocalTs = c.Ts;
         _store.State.NewestLocalTs = c.Ts;
         var sc = new StoredClip(c, GroupId, false, Clock.NowMs(), DeviceName, Platform);

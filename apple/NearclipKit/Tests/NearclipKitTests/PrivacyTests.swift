@@ -62,4 +62,37 @@ final class PrivacyTests: XCTestCase {
         XCTAssertEqual(main.snapshot().history.count, 1)
         share.stop(); main.stop()
     }
+    func testInactivePoliciesDoNotRestrictNewClips() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let node = try Peer.makeNode("Active policies", dir)
+        defer { node.stop(); try? FileManager.default.removeItem(at: dir) }
+        node.setPolicy(SyncPolicy(send: false), for: newNearclipId())
+        XCTAssertNil(try XCTUnwrap(node.sendText("ordinary history")).clip.recipients)
+    }
+    func testExplicitRecipientDoesNotWidenAfterNewPairing() throws {
+        let a = try Peer("Source"), b = try Peer("Selected"), c = try Peer("New device")
+        defer { for p in [a,b,c] { p.node.stop(); try? FileManager.default.removeItem(at: p.dir) } }
+        for p in [a,b,c] { p.node.start() }
+        _ = a.port
+        func pair(_ peer: Peer) {
+            var invite = a.node.createTicket().invite; invite.hosts = ["127.0.0.1"]
+            peer.node.join(invite: invite)
+            peer.wait("connected source") { if case .peerUp(let m, _) = $0, m.id == a.node.deviceId { return true }; return nil }
+            a.wait("connected recipient") { if case .peerUp(let m, _) = $0, m.id == peer.node.deviceId { return true }; return nil }
+        }
+        pair(b)
+        let selected = try XCTUnwrap(a.node.sendText("selected device only", recipients: [b.node.deviceId]))
+        XCTAssertEqual(selected.clip.recipients, [b.node.deviceId])
+        b.wait("selected item") { if case .clipAdded(let item, _, _, false) = $0, item.id == selected.id { return true }; return nil }
+        let publicItem = try XCTUnwrap(a.node.sendText("ordinary history"))
+        pair(c)
+        c.wait("public catch-up") { if case .clipAdded(let item, _, _, false) = $0, item.id == publicItem.id { return true }; return nil }
+        a.node.setPolicy(SyncPolicy(send: false), for: b.node.deviceId)
+        let denied = try XCTUnwrap(a.node.sendText("must not fall back to another recipient", recipients: [b.node.deviceId]))
+        XCTAssertEqual(denied.clip.recipients, [])
+        let barrier = try XCTUnwrap(a.node.sendText("after scoped sends"))
+        c.wait("ordered barrier") { if case .clipAdded(let item, _, _, false) = $0, item.id == barrier.id { return true }; return nil }
+        XCTAssertFalse(c.node.snapshot().history.contains { $0.id == selected.id || $0.id == denied.id })
+    }
+
 }

@@ -193,18 +193,18 @@ public final class NearclipNode: @unchecked Sendable {
 
     /// `otp`: a verification code found in a message (PROTOCOL.md §6.7).
     @discardableResult
-    public func sendText(_ text: String, otp: Bool = false) -> StoredClip? {
+    public func sendText(_ text: String, otp: Bool = false, recipients: [String]? = nil) -> StoredClip? {
         queue.sync {
             guard !text.isEmpty else { return nil }
             guard text.utf8.count <= Wire.maxText else { emit(.tooLarge(kind: "text")); return nil }
             let c = Clip(id: newNearclipId(), ts: max(nowMs(), newestLocalTs + 1), src: deviceId, kind: "text", text: text,
-                         otp: otp ? true : nil)
+                         otp: otp ? true : nil, recipients: recipients)
             return produce(c, blob: nil)
         }
     }
 
     @discardableResult
-    public func sendImage(_ data: Data, mime: String, width: Int? = nil, height: Int? = nil, id: String? = nil) -> StoredClip? {
+    public func sendImage(_ data: Data, mime: String, width: Int? = nil, height: Int? = nil, id: String? = nil, recipients: [String]? = nil) -> StoredClip? {
         queue.sync {
             let announcedId = id?.lowercased()
             if let a = announcedId { announced[a] = nil }
@@ -217,7 +217,7 @@ public final class NearclipNode: @unchecked Sendable {
             var cid = newNearclipId()
             if let a = announcedId, UUID(uuidString: a) != nil, !store.has(a), store.state.tombstones[a] == nil { cid = a }
             let c = Clip(id: cid, ts: max(nowMs(), newestLocalTs + 1), src: deviceId, kind: "image",
-                         mime: mime, size: data.count, sha: Hex.encode(NCCrypto.sha256(data)), w: width, h: height)
+                         mime: mime, size: data.count, sha: Hex.encode(NCCrypto.sha256(data)), w: width, h: height, recipients: recipients)
             return produce(c, blob: data)
         }
     }
@@ -1002,10 +1002,11 @@ public final class NearclipNode: @unchecked Sendable {
 
     private func produce(_ original: Clip, blob: Data?) -> StoredClip {
         var c = original
-        if store.state.policies?.values.contains(where: { !$0.permits(c, sending: true) }) == true {
-            c.recipients = store.members.values.filter { !$0.removed && $0.id != deviceId &&
-                (store.state.policies?[$0.id] ?? SyncPolicy()).permits(c, sending: true) }.map(\.id)
-        }
+        let peers = store.members.values.filter { !$0.removed && $0.id != deviceId }
+        let allowed = peers.filter { (store.state.policies?[$0.id] ?? SyncPolicy()).permits(c, sending: true) }.map(\.id)
+        if let requested = original.recipients {
+            c.recipients = requested.map { $0.lowercased() }.filter { allowed.contains($0) }
+        } else if allowed.count != peers.count { c.recipients = allowed }
         newestLocalTs = c.ts
         store.state.newestLocalTs = c.ts
         let sc = StoredClip(clip: c, groupId: store.state.groupId, pinned: false, receivedAt: nowMs(),

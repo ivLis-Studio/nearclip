@@ -65,4 +65,15 @@ class PrivacyTest {
         assertTrue(restricted.isAddressedTo(code.src));assertTrue(restricted.isAddressedTo(restricted.recipients!![0]));assertFalse(restricted.isAddressedTo(newId()))
         assertEquals(restricted.recipients,Clip.fromWire(restricted.wireJson(),"g",now)?.recipients)
     }
+    @Test fun inactivePoliciesDoNotRestrictNewClips() {
+        val dir=Files.createTempDirectory("nearclip-active-policy-").toFile()
+        val engine=studio.ivlis.nearclip.core.engine.NearclipEngine(FileStore(dir),
+            studio.ivlis.nearclip.core.engine.EngineConfig(platform=Platform.CLI,defaultName="Active policies",port=0))
+        try {
+            engine.start()
+            engine.setPolicy(newId(),SyncPolicy(send=false))
+            assertNull(assertNotNull(engine.sendText("ordinary history").clip).recipients)
+        } finally { engine.shutdown();dir.deleteRecursively() }
+    }
+
 }
