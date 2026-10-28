@@ -109,7 +109,16 @@ final class ShareViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         let peer = peers[indexPath.row]
-        cell.textLabel?.text = peer.name; cell.detailTextLabel?.text = peer.platform
+        cell.textLabel?.text = peer.name
+        let platform: String
+        switch peer.platform {
+        case "mac": platform = "Mac"
+        case "win": platform = "Windows PC"
+        case "android": platform = "Android"
+        case "ios": platform = peer.model?.hasPrefix("iPad") == true ? "iPad" : "iPhone"
+        default: platform = NSLocalizedString("Paired device", comment: "")
+        }
+        cell.detailTextLabel?.text = platform
         cell.imageView?.image = UIImage(systemName: peer.platform == "win" || peer.platform == "mac" ? "desktopcomputer" : "iphone")
         cell.accessoryType = .disclosureIndicator
         return cell

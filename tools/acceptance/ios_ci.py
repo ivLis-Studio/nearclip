@@ -22,7 +22,7 @@ else:
     print('Using headless CoreSimulator; this toolchain has no Simulator.app',flush=True)
 subprocess.run(['xcrun','simctl','bootstatus',args.sim,'-b'],check=True,timeout=240)
 # Issue the short-lived pairing ticket only after compilation and simulator boot have completed.
-peer=Peer('swift',shlex.quote(str(cli)),'CI Windows PC')
+peer=Peer('swift',shlex.quote(str(cli))+' --platform win','CI Windows PC')
 try:
     peer.send(cmd='send_text',text='History from the paired computer')
     peer.send(cmd='ticket');link=local_uri(peer.expect('ticket',lambda e:e.get('ev')=='ticket')['uri'])

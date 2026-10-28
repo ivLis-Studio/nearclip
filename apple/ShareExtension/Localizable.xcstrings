@@ -150,6 +150,16 @@
           }
         }
       }
+    },
+    "Paired device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결된 기기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

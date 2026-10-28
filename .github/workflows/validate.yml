@@ -62,6 +62,11 @@ jobs:
           key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
       - if: steps.bridge.outputs.cache-hit != 'true'
         run: tailnet/build.sh apple
+      - if: steps.bridge.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: apple/NearclipKit/Binaries/NCTailnet.xcframework
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
       - run: swift build --package-path apple/NearclipKit
       - run: command -v xcodegen || brew install xcodegen
       - run: xcodegen generate --spec apple/project.yml
