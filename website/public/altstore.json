@@ -13,7 +13,9 @@
       "iconURL": "https://ivlis-studio.github.io/nearclip/assets/media/icon-512.png",
       "category": "utilities",
       "appPermissions": {
-        "entitlements": [],
+        "entitlements": [
+          "keychain-access-groups"
+        ],
         "privacy": {
           "NSCameraUsageDescription": "Nearclip uses the camera to scan the pairing code shown on your other device.",
           "NSLocalNetworkUsageDescription": "Nearclip finds and connects to your other devices on this Wi-Fi."
@@ -21,12 +23,12 @@
       },
       "versions": [
         {
-          "version": "1.1.0",
-          "buildVersion": "2",
-          "date": "2026-10-26T14:32:08Z",
-          "downloadURL": "https://github.com/ivLis-Studio/nearclip/releases/download/v1.1.0/Nearclip-iOS.ipa",
-          "size": 8256958,
-          "sha256": "84ffcd9fbba869f7cb911516c1d26a8c096fd82bd2acdab8644c3f530732c110",
+          "version": "1.2.0",
+          "buildVersion": "3",
+          "date": "2026-10-28T16:43:02Z",
+          "downloadURL": "https://github.com/ivLis-Studio/nearclip/releases/download/v1.2.0/Nearclip-iOS.ipa",
+          "size": 16216020,
+          "sha256": "340b63700ffbba1076d67dc8c3aa1fab4212f4c972aeeba887ca2bf2ff5a1852",
           "minOSVersion": "17.0"
         }
       ]
