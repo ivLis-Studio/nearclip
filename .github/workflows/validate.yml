@@ -107,8 +107,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release download --repo ivLis-Studio/nearclip --pattern Nearclip-Windows-x64.zip --dir "$env:RUNNER_TEMP/native"
-          Expand-Archive "$env:RUNNER_TEMP/native/Nearclip-Windows-x64.zip" "$env:RUNNER_TEMP/native/unpacked"
-          New-Item -ItemType Directory -Force windows/native/win-x64
-          Get-ChildItem "$env:RUNNER_TEMP/native/unpacked" -Recurse -Filter nctailnet.dll | Select-Object -First 1 | Copy-Item -Destination windows/native/win-x64/nctailnet.dll
+          foreach ($arch in @('x64', 'arm64')) {
+            gh release download --repo ivLis-Studio/nearclip --pattern "Nearclip-Windows-$arch.zip" --dir "$env:RUNNER_TEMP/native"
+            Expand-Archive "$env:RUNNER_TEMP/native/Nearclip-Windows-$arch.zip" "$env:RUNNER_TEMP/native/unpacked-$arch"
+            New-Item -ItemType Directory -Force "windows/native/win-$arch"
+            Get-ChildItem "$env:RUNNER_TEMP/native/unpacked-$arch" -Recurse -Filter nctailnet.dll | Select-Object -First 1 | Copy-Item -Destination "windows/native/win-$arch/nctailnet.dll"
+          }
       - run: dotnet build windows/src/Nearclip.App/Nearclip.App.csproj -c Release -p:Platform=x64
+      - name: Validate both Microsoft Store packages after the unpackaged build
+        shell: pwsh
+        run: |
+          [xml]$manifest = Get-Content windows/packaging/Package.appxmanifest -Raw
+          $version = ([version]$manifest.Package.Identity.Version).ToString(3)
+          & windows/scripts/package-msix.ps1 -Version $version -OutDir "$env:RUNNER_TEMP/store"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Microsoft-Store-MSIX
+          path: ${{ runner.temp }}/store/*.msixbundle

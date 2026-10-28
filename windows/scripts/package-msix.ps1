@@ -82,10 +82,15 @@ foreach ($a in $Arch) {
     if (-not (Test-Path -LiteralPath (Join-Path $Root "native\win-$a\nctailnet.dll"))) { throw "native\win-$a\nctailnet.dll is missing (tailnet/build.sh windows)" }
     Write-Host "> win-$a"
     $appx = Join-Path $Work "appx-$a\"
+    # An unpackaged publish uses the same intermediate directory but omits the Store logos from its PRI.
+    # Reusing that index produces an otherwise valid MSIX whose manifest images fail Store validation.
+    & dotnet clean $Project -c Release "-p:Platform=$platform" -r "win-$a" -p:NearclipStore=true -v:minimal | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "clean win-$a failed with exit code $LASTEXITCODE" }
     & dotnet publish $Project -c Release "-p:Platform=$platform" -r "win-$a" -p:NearclipStore=true "-p:Version=$Version" "-p:AppxPackageDir=$appx" -v:minimal | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish win-$a failed with exit code $LASTEXITCODE" }
     $msix = @(Get-ChildItem -LiteralPath $appx -Recurse -Filter *.msix | Sort-Object LastWriteTime -Descending)
     if ($msix.Count -eq 0) { throw "the Store build for win-$a made no .msix in $appx" }
+    & (Join-Path $PSScriptRoot "validate-msix-resources.ps1") -PackagePath $msix[0].FullName -MakePri (Find-Tool "makepri.exe") -ExpectedIdentity $identity.Name
     $target = Join-Path $Packages "Nearclip-$Version-$a.msix"
     Copy-Item -LiteralPath $msix[0].FullName -Destination $target
     Copy-Item -LiteralPath $target -Destination $OutDir
