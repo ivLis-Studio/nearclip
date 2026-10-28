@@ -14,8 +14,13 @@ struct UpdateView: View {
             if !message.isEmpty { Text(verbatim: message).font(.caption).foregroundStyle(.secondary) }
         }
         .task {
-            let last = UserDefaults.standard.double(forKey: "updateCheckAt")
-            if Date().timeIntervalSince1970 - last > 86_400 { await check() }
+            let defaults = UserDefaults.standard
+            if let cached = defaults.string(forKey: "updateAvailableVersion"),
+               cached.compare(MacSystem.appVersion, options: .numeric) == .orderedDescending { newer = cached }
+            let last = defaults.double(forKey: "updateCheckAt")
+            if defaults.string(forKey: "updateCheckAppVersion") != MacSystem.appVersion || Date().timeIntervalSince1970 - last > 86_400 {
+                await check()
+            } else if newer == nil { message = String(localized: "You’re up to date") }
         }
     }
     private func check() async {
@@ -33,6 +38,8 @@ struct UpdateView: View {
             newer = version.compare(MacSystem.appVersion, options: .numeric) == .orderedDescending ? version : nil
             message = newer == nil ? String(localized: "You’re up to date") : ""
             UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "updateCheckAt")
+            UserDefaults.standard.set(MacSystem.appVersion, forKey: "updateCheckAppVersion")
+            UserDefaults.standard.set(newer, forKey: "updateAvailableVersion")
         } catch { message = String(localized: "Couldn’t check for updates. Try again later.") }
     }
 }

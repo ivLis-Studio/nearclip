@@ -140,27 +140,45 @@ final class NearclipFlowTests: XCTestCase {
         }
         XCTAssertTrue(share.waitForExistence(timeout: 10)); share.tap()
         shot("60-safari-share")
-        print("Share hierarchy: \(safari.debugDescription)")
+        sendSharedItem(in: safari, kind: "safari")
+    }
+
+    /// Exercises URL, plain text and image providers through UIKit's actual extension host.
+    func testShareFromNativeHost() throws {
+        app.launchArguments = language(); app.launch()
+        XCTAssertTrue(app.buttons["home.devices"].waitForExistence(timeout: 10))
+        let host = XCUIApplication(bundleIdentifier: "studio.ivlis.nearclip.share-harness")
+        host.launchArguments = language()
+        host.launchEnvironment = ["NC_SHARE_URL": try XCTUnwrap(ProcessInfo.processInfo.environment["NC_SHARE_URL"]),
+                                  "NC_SHARE_TEXT": try XCTUnwrap(ProcessInfo.processInfo.environment["NC_SHARE_TEXT"])]
+        host.launch()
+        for kind in ["url", "text", "image"] {
+            let button = host.buttons["host.share." + kind]
+            XCTAssertTrue(button.waitForExistence(timeout: 10)); button.tap()
+            sendSharedItem(in: host, kind: kind)
+        }
+    }
+
+    private func sendSharedItem(in host: XCUIApplication, kind: String) {
+        print("Share hierarchy: \(host.debugDescription)")
         func visible(_ label: String) -> XCUIElement? {
-            safari.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label))
+            host.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label))
                 .allElementsBoundByIndex.first { $0.exists && $0.isHittable }
         }
-        if visible("Nearclip") == nil {
-            // App activities are horizontally scrollable; the accessibility tree also includes offscreen More buttons.
-            for _ in 0..<4 {
-                if let nearclip = visible("Nearclip") { nearclip.tap(); break }
-                if let more = visible("More") { more.tap(); break }
-                let apps = safari.collectionViews.firstMatch
-                if apps.exists { apps.swipeLeft() } else { safari.swipeUp() }
-            }
-            if let nearclip = visible("Nearclip") { nearclip.tap() }
-        } else { visible("Nearclip")?.tap() }
-        print("Extension hierarchy: \(safari.debugDescription)")
-        let destination = safari.staticTexts["CI Windows PC"].firstMatch
-        XCTAssertTrue(destination.waitForExistence(timeout: 15)); shot("61-share-destination"); destination.tap()
+        var opened = false
+        for _ in 0..<5 {
+            if let nearclip = visible("Nearclip") { nearclip.tap(); opened = true; break }
+            if let more = visible("More") { more.tap(); continue }
+            let apps = host.collectionViews.firstMatch
+            if apps.exists { apps.swipeLeft() } else { host.swipeUp() }
+        }
+        XCTAssertTrue(opened, "Nearclip activity missing for " + kind)
+        print("Extension hierarchy: \(host.debugDescription)")
+        let destination = host.staticTexts["CI Windows PC"].firstMatch
+        XCTAssertTrue(destination.waitForExistence(timeout: 15)); shot("61-" + kind + "-destination"); destination.tap()
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: destination)
         XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 25), .completed)
-        shot("62-share-finished")
+        shot("62-" + kind + "-finished")
     }
 
     /// Cross-device acceptance on an onboarded app: joins the group of NC_PAIR_LINK first when it is set, expects the

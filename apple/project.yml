@@ -158,6 +158,18 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_ENTITLEMENTS: iOS/Nearclip.entitlements
+  NearclipShareHarness:
+    type: application
+    platform: iOS
+    sources:
+      - path: ShareHarness
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: studio.ivlis.nearclip.share-harness
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
   NearclipiOSUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -172,6 +184,12 @@ targets:
         TEST_TARGET_NAME: NearclipiOS
         TARGETED_DEVICE_FAMILY: "1,2"
 schemes:
+  NearclipShareHarness:
+    build:
+      targets:
+        NearclipShareHarness: all
+    run:
+      config: Debug
   Nearclip:
     build:
       targets:
