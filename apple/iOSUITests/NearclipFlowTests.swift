@@ -87,7 +87,7 @@ final class NearclipFlowTests: XCTestCase {
         sleep(1)
         shot("09-devices")
         // Native per-device settings persist when reopened.
-        let peer = app.staticTexts["CI Windows PC"]
+        let peer = app.collectionViews["devices.list"].staticTexts["CI Windows PC"].firstMatch
         if ProcessInfo.processInfo.environment["NC_CI"] == "1" { XCTAssertTrue(peer.waitForExistence(timeout: 5)) }
         if peer.exists {
             peer.tap()
@@ -99,10 +99,17 @@ final class NearclipFlowTests: XCTestCase {
             XCTAssertEqual(XCTWaiter().wait(for: [disabled], timeout: 5), .completed)
             shot("09b-device-policy")
             app.buttons["policy.done"].tap()
+            let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.buttons["policy.done"])
+            XCTAssertEqual(XCTWaiter().wait(for: [dismissed], timeout: 10), .completed)
             peer.tap()
             XCTAssertEqual(app.switches["policy.send"].value as? String, "0")
-            app.switches["policy.send"].coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            let restored = app.switches["policy.send"]
+            restored.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == '1'"), object: restored)
+            XCTAssertEqual(XCTWaiter().wait(for: [enabled], timeout: 5), .completed)
             app.buttons["policy.done"].tap()
+            let restoredDismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.buttons["policy.done"])
+            XCTAssertEqual(XCTWaiter().wait(for: [restoredDismissed], timeout: 10), .completed)
         }
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["home.settings"].tap()
@@ -165,6 +172,7 @@ final class NearclipFlowTests: XCTestCase {
             host.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label))
                 .allElementsBoundByIndex.first { $0.exists && $0.isHittable }
         }
+        XCTAssertTrue(host.collectionViews["activityCollectionView"].waitForExistence(timeout: 15))
         var opened = false
         for _ in 0..<5 {
             if let nearclip = visible("Nearclip") { nearclip.tap(); opened = true; break }
@@ -173,9 +181,10 @@ final class NearclipFlowTests: XCTestCase {
             if apps.exists { apps.swipeLeft() } else { host.swipeUp() }
         }
         XCTAssertTrue(opened, "Nearclip activity missing for " + kind)
-        print("Extension hierarchy: \(host.debugDescription)")
         let destination = host.staticTexts["CI Windows PC"].firstMatch
-        XCTAssertTrue(destination.waitForExistence(timeout: 15)); shot("61-" + kind + "-destination"); destination.tap()
+        let hasDestination = destination.waitForExistence(timeout: 20)
+        if !hasDestination { print("Extension hierarchy after launch: \(host.debugDescription)") }
+        XCTAssertTrue(hasDestination); shot("61-" + kind + "-destination"); destination.tap()
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: destination)
         XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 25), .completed)
         shot("62-" + kind + "-finished")
