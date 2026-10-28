@@ -55,12 +55,31 @@ final class ShareViewController: UITableViewController {
         }
     }
     private func loadImage(_ provider: NSItemProvider) async throws -> UIImage {
-        try await withCheckedThrowingContinuation { continuation in
-            provider.loadObject(ofClass: UIImage.self) { object, error in
-                if let image = object as? UIImage { continuation.resume(returning: image) }
-                else { continuation.resume(throwing: error ?? NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError)) }
+        if provider.canLoadObject(ofClass: UIImage.self) {
+            return try await withCheckedThrowingContinuation { continuation in
+                provider.loadObject(ofClass: UIImage.self) { object, error in
+                    if let image = object as? UIImage { continuation.resume(returning: image) }
+                    else { continuation.resume(throwing: error ?? NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError)) }
+                }
             }
         }
+        // Legacy UIActivity hosts advertise only public.image and vend UIImage through loadItem.
+        // Asking those providers for Data produces an archived object rather than an encoded image.
+        let item = try await loadItem(provider, type: UTType.image.identifier)
+        if let image = item as? UIImage { return image }
+        let data: Data
+        if let encoded = item as? Data { data = encoded }
+        else if let file = item as? URL, file.isFileURL,
+                let size = try file.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 32 * 1024 * 1024 {
+            data = try Data(contentsOf: file, options: .mappedIfSafe)
+        } else { throw NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError) }
+        guard data.count <= 32 * 1024 * 1024,
+              let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary),
+              let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                  kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: 4096] as CFDictionary) else {
+            throw NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError)
+        }
+        return UIImage(cgImage: cg)
     }
     private func isImage(_ provider: NSItemProvider) -> Bool {
         provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) || provider.canLoadObject(ofClass: UIImage.self)
@@ -86,7 +105,7 @@ final class ShareViewController: UITableViewController {
                 let supported = Set(CGImageSourceCopyTypeIdentifiers() as? [String] ?? [])
                 let concrete = provider.registeredTypeIdentifiers.filter { supported.contains($0) }
                 let encoded = concrete.first { $0 == UTType.png.identifier || $0 == UTType.jpeg.identifier } ?? concrete.first
-                if encoded == nil, provider.canLoadObject(ofClass: UIImage.self) {
+                if encoded == nil {
                     let object = try await loadImage(provider)
                     guard object.size.width > 0, object.size.height > 0 else { say(NSLocalizedString("This item is not supported", comment: "")); return }
                     let factor = min(object.scale, 4096 / max(object.size.width, object.size.height))

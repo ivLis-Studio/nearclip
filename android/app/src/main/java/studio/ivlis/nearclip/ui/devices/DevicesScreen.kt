@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -44,6 +45,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -87,8 +89,8 @@ fun DevicesScreen(
         AlertDialog(onDismissRequest = { policyId = null }, title = { Text(stringResource(R.string.sync_settings)) },
             text = { Column {
                 @Composable fun option(label: String, value: Boolean, change: (Boolean) -> Unit) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(label, Modifier.weight(1f)); androidx.compose.material3.Switch(checked = value, onCheckedChange = change)
+                    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = value, role = Role.Switch, onValueChange = change), verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, Modifier.weight(1f)); androidx.compose.material3.Switch(checked = value, onCheckedChange = null)
                     }
                 }
                 option(stringResource(R.string.sync_policy_send), policy.send) { policy = policy.copy(send = it) }

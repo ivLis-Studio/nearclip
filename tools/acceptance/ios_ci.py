@@ -17,7 +17,7 @@ harness_base=base.copy();harness_base[harness_base.index('NearclipiOS')]='Nearcl
 subprocess.run(harness_base+['build'],check=True)
 subprocess.run(['xcrun','simctl','boot',args.sim],check=False)
 developer=Path(os.environ.get('DEVELOPER_DIR') or subprocess.check_output(['xcode-select','-p'],text=True).strip())
-simulator=next((path for path in [developer/'Applications/Simulator.app',developer/'Applications/Device Hub.app',developer/'Applications/DeviceHub.app'] if path.exists()), developer/'Applications/Simulator.app')
+simulator=next((path for path in [developer/'Applications/Simulator.app',developer.parent/'Applications/Simulator.app',developer/'Applications/Device Hub.app',developer/'Applications/DeviceHub.app',developer.parent/'Applications/DeviceHub.app'] if path.exists()), developer/'Applications/Simulator.app')
 if simulator.exists():
     subprocess.run(['open','-a',str(simulator),'--args','-CurrentDeviceUDID',args.sim],check=True)
 else:
