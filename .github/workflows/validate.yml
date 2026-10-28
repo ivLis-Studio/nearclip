@@ -45,6 +45,26 @@ jobs:
         with:
           name: iPhone-iPad-test-IPA
           path: dist/Nearclip-iOS.ipa
+  ios-ui:
+    # The Xcode 27 build image omits Simulator.app. Exercise UI on the complete macOS 26 image.
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tailnet/go.mod
+          cache-dependency-path: tailnet/go.sum
+      - uses: actions/cache@v4
+        id: bridge
+        with:
+          path: apple/NearclipKit/Binaries/NCTailnet.xcframework
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/go.mod', 'tailnet/go.sum', 'tailnet/capi/**', 'tailnet/bridge/**', 'tailnet/include/**', 'tailnet/build.sh') }}
+      - if: steps.bridge.outputs.cache-hit != 'true'
+        run: tailnet/build.sh apple
+      - run: swift build --package-path apple/NearclipKit
+      - run: command -v xcodegen || brew install xcodegen
+      - run: xcodegen generate --spec apple/project.yml
       - name: Test iPhone UI in the simulator
         shell: bash
         run: |
