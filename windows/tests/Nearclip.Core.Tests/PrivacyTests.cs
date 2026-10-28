@@ -80,6 +80,13 @@ public sealed class PrivacyTests
         Assert.Null(WireJson.ReadClip(doc.RootElement));
     }
 
+    [Fact]
+    public void ExplicitSharingPreservesTheOriginalDevicesHistory() {
+        var source=Ids.New();var recipient=Ids.New();
+        var clip=new Clip(Ids.New(),Clock.NowMs(),source,"text",Text:"shared URL",Recipients:[recipient]);
+        Assert.True(clip.IsAddressedTo(source));Assert.True(clip.IsAddressedTo(recipient));Assert.False(clip.IsAddressedTo(Ids.New()));
+    }
+
     static void Pair(TestPeer a, TestPeer b) {
         _ = a.Port; b.Node.Join(a.Node.CreateTicket().Invite);
         b.Wait<NodeEvent.PeerUp>("paired", e => e.Member.Id == a.Id);

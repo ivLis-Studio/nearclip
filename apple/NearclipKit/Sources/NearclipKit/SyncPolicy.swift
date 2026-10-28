@@ -15,6 +15,7 @@ public struct SyncPolicy: Codable, Equatable, Sendable {
 }
 
 public extension Clip {
+    func isAddressed(to device: String) -> Bool { recipients == nil || recipients!.contains(device) || src == device }
     var hasValidIdentity: Bool {
         func valid(_ id: String) -> Bool { id.count == 36 && UUID(uuidString: id) != nil }
         return valid(id) && valid(src) && (recipients.map { $0.count <= 256 && $0.allSatisfy(valid) } ?? true)

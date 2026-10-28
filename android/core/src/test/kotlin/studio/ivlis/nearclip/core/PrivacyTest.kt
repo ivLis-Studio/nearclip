@@ -62,6 +62,7 @@ class PrivacyTest {
         assertFalse(SyncPolicy(codes=false).permits(code,true))
         assertFalse(SyncPolicy(send=false).permits(code,true));assertTrue(SyncPolicy(send=false).permits(code,false))
         val restricted=code.copy(recipients=listOf(newId()))
+        assertTrue(restricted.isAddressedTo(code.src));assertTrue(restricted.isAddressedTo(restricted.recipients!![0]));assertFalse(restricted.isAddressedTo(newId()))
         assertEquals(restricted.recipients,Clip.fromWire(restricted.wireJson(),"g",now)?.recipients)
     }
 }

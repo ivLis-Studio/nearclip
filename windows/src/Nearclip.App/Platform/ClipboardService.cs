@@ -298,7 +298,11 @@ internal sealed class ClipboardService
                 if (dib is not null) SetData(Native.CF_DIBV5, dib);
             }
             SetData(MarkerFormat, Encoding.UTF8.GetBytes(clip.Id));
-            if (clip.IsCode) SetData(ExcludeFormat, new byte[4]);
+            if (clip.IsCode) {
+                SetData(ExcludeFormat, new byte[4]);
+                SetData(HistoryFormat, new byte[4]);
+                SetData(CloudFormat, new byte[4]);
+            }
         }
         finally
         {

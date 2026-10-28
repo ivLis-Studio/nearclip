@@ -52,6 +52,7 @@ public sealed record Clip(
     public bool IsImage => Kind == "image";
     public bool IsText => Kind == "text";
     public bool IsCode => Otp == true && IsText;
+    public bool IsAddressedTo(string device) => Recipients is null || Recipients.Contains(device) || Src == device;
     public bool IsExpired(long now) => IsCode && (Ts <= now - 180_000 || Ts > now + 60_000);
 }
 

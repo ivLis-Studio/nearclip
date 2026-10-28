@@ -26,6 +26,29 @@ def privacy_case(implementations, offline=False):
         b.restart();b.send(cmd='connect',host='127.0.0.1',port=c.port);time.sleep(.35)
         assert not has(b,ident),'restricted clip leaked through catch-up'
         policy(a,b,send=True)
+        # An isolated iOS extension uses its phone's identity and a separate temporary store.
+        # After it exits, the main app (same device id) must catch up the selected share.
+        import shutil
+        a.quit()
+        extension_state=tempfile.mkdtemp(prefix='nearclip-share-engine-')
+        for name in ['state.json','history-key']:
+            path=os.path.join(a.state,name)
+            if os.path.exists(path):shutil.copy2(path,os.path.join(extension_state,name))
+        for name in ['secrets']:
+            path=os.path.join(a.state,name)
+            if os.path.exists(path):shutil.copytree(path,os.path.join(extension_state,name))
+        extension=Peer(a.impl,a.cmd,'Share engine',state=extension_state)
+        try:
+            policy(extension,b,send=False)
+            extension.send(cmd='connect',host='127.0.0.1',port=c.port)
+            extension.expect('extension connected',lambda e:e.get('ev')=='peer_up' and e.get('id')==c.id)
+            extension.send(cmd='send_text',text='shared from the temporary extension')
+            shared=c.expect('extension share received',lambda e:e.get('ev')=='clip' and e.get('text')=='shared from the temporary extension')
+        finally:
+            extension.quit();shutil.rmtree(extension_state,ignore_errors=True)
+        a.restart();a.send(cmd='connect',host='127.0.0.1',port=c.port)
+        a.expect('main app catches up its extension clip',lambda e:e.get('ev')=='clip' and e.get('id')==shared['id'])
+        assert not has(b,shared['id']),'extension share leaked to the excluded peer'
         policy(b,a,codes=False)
         a.send(cmd='send_text',text='482915',otp=True)
         code=c.expect('code allowed',lambda e:e.get('ev')=='clip' and e.get('text')=='482915')

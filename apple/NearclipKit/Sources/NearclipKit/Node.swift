@@ -180,11 +180,11 @@ public final class NearclipNode: @unchecked Sendable {
     }
     private func canSend(_ c: Clip, to s: PeerSession) -> Bool {
         guard let id = s.peerId, !c.isExpired() else { return false }
-        if let to = c.recipients, !to.contains(id) || !s.supportsPolicies { return false }
+        if c.recipients != nil, !c.isAddressed(to: id) || !s.supportsPolicies { return false }
         return (store.state.policies?[id] ?? SyncPolicy()).permits(c, sending: true)
     }
     private func canReceive(_ c: Clip) -> Bool {
-        c.hasValidIdentity && !c.isExpired() && (c.recipients == nil || c.recipients!.contains(deviceId)) &&
+        c.hasValidIdentity && !c.isExpired() && c.isAddressed(to: deviceId) &&
         (store.state.policies?[c.src] ?? SyncPolicy()).permits(c, sending: false)
     }
 

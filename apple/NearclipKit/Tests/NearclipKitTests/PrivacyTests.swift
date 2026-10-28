@@ -31,6 +31,13 @@ final class PrivacyTests: XCTestCase {
         valid.recipients = ["invalid"]
         XCTAssertFalse(valid.hasValidIdentity)
     }
+    func testSelectedRecipientAndOriginalDeviceCanKeepSharedHistory() {
+        let source = newNearclipId(), recipient = newNearclipId(), other = newNearclipId()
+        let clip = Clip(id: newNearclipId(), ts: nowMs(), src: source, kind: "text", text: "shared URL", recipients: [recipient])
+        XCTAssertTrue(clip.isAddressed(to: source))
+        XCTAssertTrue(clip.isAddressed(to: recipient))
+        XCTAssertFalse(clip.isAddressed(to: other))
+    }
     func testExpiryAndPolicies() {
         let now: Int64 = 1_800_000_000_000
         let code = Clip(id: newNearclipId(), ts: now, src: newNearclipId(), kind: "text", text: "1234", otp: true)

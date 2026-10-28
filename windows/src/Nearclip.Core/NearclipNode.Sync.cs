@@ -11,9 +11,9 @@ public sealed partial class NearclipNode
     public SyncPolicy PolicyFor(string id) => Q.Invoke(() => _store.State.Policies.GetValueOrDefault(id) ?? new SyncPolicy());
     public void SetPolicy(string id, SyncPolicy policy) => Q.Invoke(() => { _store.State.Policies[id] = policy; _store.SaveNow(); });
     bool CanSend(Clip c, PeerSession s) => s.PeerId is { } id && !c.IsExpired(Clock.NowMs()) &&
-        (c.Recipients is null || (s.SupportsPolicies && c.Recipients.Contains(id))) &&
+        (c.Recipients is null || (s.SupportsPolicies && c.IsAddressedTo(id))) &&
         (_store.State.Policies.GetValueOrDefault(id) ?? new SyncPolicy()).Permits(c, true);
-    bool CanReceive(Clip c) => !c.IsExpired(Clock.NowMs()) && (c.Recipients is null || c.Recipients.Contains(DeviceId)) &&
+    bool CanReceive(Clip c) => !c.IsExpired(Clock.NowMs()) && c.IsAddressedTo(DeviceId) &&
         (_store.State.Policies.GetValueOrDefault(c.Src) ?? new SyncPolicy()).Permits(c, false);
 
     StoredClip Produce(Clip c, byte[]? blob)

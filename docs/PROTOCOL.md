@@ -536,7 +536,7 @@ In addition to 4.5, a network change tells the node (`NCTailnetNetworkChanged`; 
 
 `welcome.features` advertises `policy1` and `rekey1`. An absent array means neither extension is supported; the v1 handshake and existing cryptographic vectors remain unchanged.
 
-`clip.recipients`, when present, is an allowlist of destination device UUIDs chosen by the origin. A peer must not store, apply or forward the clip if it is not a recipient. A sender must not send such a clip to a peer without `policy1`, including during inventory/want catch-up. A relay preserves this field. Local per-peer preferences additionally gate outgoing content and incoming content by its original `src`. Policy changes cannot recall data already stored on another device.
+`clip.recipients`, when present, is an allowlist of destination device UUIDs chosen by the origin. The origin device is implicitly authorized so its own share-extension submissions can return to its history. Any other peer must not store, apply or forward the clip if it is not a recipient. A sender must not send such a clip to a peer without `policy1`, including during inventory/want catch-up. A relay preserves this field. Local per-peer preferences additionally gate outgoing content and incoming content by its original `src`. Policy changes cannot recall data already stored on another device.
 
 All implementations expire `otp` text clips at `ts + 180000`, even when pinned, and refuse codes with `ts > now + 60000`. Pruning broadcasts ordinary deletion tombstones. Receipt, forwarding, inventory and copy actions also enforce expiry rather than depending on a timely timer tick. Clients predating these checks cannot provide this guarantee.
 

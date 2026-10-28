@@ -122,6 +122,7 @@ data class Clip(
     val isImage: Boolean get() = kind == ClipKind.IMAGE
     val isText: Boolean get() = kind == ClipKind.TEXT
     val isCode: Boolean get() = otp && isText
+    fun isAddressedTo(device: String) = recipients == null || device in recipients || src == device
     fun isExpired(now: Long) = isCode && (ts <= now - 180_000 || ts > now + 60_000)
 
     fun wireJson(): JsonObject = buildJsonObject {

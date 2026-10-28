@@ -1308,9 +1308,9 @@ class NearclipEngine(
     fun policyFor(id: String): studio.ivlis.nearclip.core.model.SyncPolicy = call { st.policies[id] ?: studio.ivlis.nearclip.core.model.SyncPolicy() }
     fun setPolicy(id: String, policy: studio.ivlis.nearclip.core.model.SyncPolicy) = call { st.policies[id] = policy; markPersist(); writeNow() }
     private fun canSend(c: Clip, s: MemberSession) = !c.isExpired(clock()) &&
-        (c.recipients == null || (s.supportsPolicies && s.peerId in c.recipients)) &&
+        (c.recipients == null || (s.supportsPolicies && c.isAddressedTo(s.peerId))) &&
         (st.policies[s.peerId] ?: studio.ivlis.nearclip.core.model.SyncPolicy()).permits(c, true)
-    private fun canReceive(c: Clip) = !c.isExpired(clock()) && (c.recipients == null || deviceId in c.recipients) &&
+    private fun canReceive(c: Clip) = !c.isExpired(clock()) && c.isAddressedTo(deviceId) &&
         (st.policies[c.src] ?: studio.ivlis.nearclip.core.model.SyncPolicy()).permits(c, false)
 
     private fun produce(original: Clip): SendResult {
