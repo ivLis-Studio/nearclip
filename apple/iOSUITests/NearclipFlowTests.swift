@@ -94,13 +94,14 @@ final class NearclipFlowTests: XCTestCase {
             let send = app.switches["policy.send"]
             XCTAssertTrue(send.waitForExistence(timeout: 5))
             XCTAssertEqual(send.value as? String, "1")
-            send.tap()
-            XCTAssertEqual(send.value as? String, "0")
+            send.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
+            let disabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == '0'"), object: send)
+            XCTAssertEqual(XCTWaiter().wait(for: [disabled], timeout: 5), .completed)
             shot("09b-device-policy")
             app.buttons["policy.done"].tap()
             peer.tap()
             XCTAssertEqual(app.switches["policy.send"].value as? String, "0")
-            app.switches["policy.send"].tap()
+            app.switches["policy.send"].coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap()
             app.buttons["policy.done"].tap()
         }
         app.navigationBars.buttons.element(boundBy: 0).tap()
@@ -131,13 +132,22 @@ final class NearclipFlowTests: XCTestCase {
         if !share.waitForExistence(timeout: 10) { tapIfExists(safari.buttons["More"].firstMatch) }
         XCTAssertTrue(share.waitForExistence(timeout: 10)); share.tap()
         shot("60-safari-share")
-        let nearclip = safari.buttons["Nearclip"].firstMatch
-        if !nearclip.waitForExistence(timeout: 3) {
-            let more = safari.buttons["More"].firstMatch
-            XCTAssertTrue(more.waitForExistence(timeout: 5)); more.tap()
+        print("Share hierarchy: \(safari.debugDescription)")
+        func visible(_ label: String) -> XCUIElement? {
+            safari.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label))
+                .allElementsBoundByIndex.first { $0.exists && $0.isHittable }
         }
-        let activity = safari.descendants(matching: .any).matching(NSPredicate(format: "label == 'Nearclip'")).firstMatch
-        XCTAssertTrue(activity.waitForExistence(timeout: 8)); activity.tap()
+        if visible("Nearclip") == nil {
+            // App activities are horizontally scrollable; the accessibility tree also includes offscreen More buttons.
+            for _ in 0..<4 {
+                if let nearclip = visible("Nearclip") { nearclip.tap(); break }
+                if let more = visible("More") { more.tap(); break }
+                let apps = safari.collectionViews.firstMatch
+                if apps.exists { apps.swipeLeft() } else { safari.swipeUp() }
+            }
+            if let nearclip = visible("Nearclip") { nearclip.tap() }
+        } else { visible("Nearclip")?.tap() }
+        print("Extension hierarchy: \(safari.debugDescription)")
         let destination = safari.staticTexts["CI Windows PC"].firstMatch
         XCTAssertTrue(destination.waitForExistence(timeout: 15)); shot("61-share-destination"); destination.tap()
         let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: destination)
