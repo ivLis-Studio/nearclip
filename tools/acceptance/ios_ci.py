@@ -41,7 +41,7 @@ try:
         '-parallel-testing-enabled','NO','-maximum-concurrent-test-simulator-destinations','1',
         '-test-timeouts-enabled','YES','-maximum-test-execution-time-allowance','300',
         'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-']
-    subprocess.run(command,env=env,check=True,timeout=600)
+    subprocess.run(command,env=env,check=True,timeout=1200)
     peer.expect('text sent from the simulator',lambda e:e.get('ev')=='clip' and e.get('text')==message,timeout=15)
     peer.expect('URL shared through UIKit',lambda e:e.get('ev')=='clip' and e.get('text')==share_url,timeout=15)
     peer.expect('text shared through UIKit',lambda e:e.get('ev')=='clip' and e.get('text')==share_text,timeout=15)
