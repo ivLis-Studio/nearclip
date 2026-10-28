@@ -127,9 +127,17 @@ final class NearclipFlowTests: XCTestCase {
         safari.launchArguments = language(); safari.launch(); safari.open(URL(string: url)!)
         tapIfExists(safari.buttons["Continue"], timeout: 2)
         tapIfExists(safari.buttons["Start Browsing"], timeout: 2)
+        // A fresh Safari can still be showing its start page while the URL is loading.
+        // Its compact toolbar exposes sharing through More; some runtimes label the action Share Tab.
+        XCTAssertTrue(safari.webViews.staticTexts["Privacy Policy"].firstMatch.waitForExistence(timeout: 30))
         shot("60a-safari-open")
-        let share = safari.buttons["Share"].firstMatch
-        if !share.waitForExistence(timeout: 10) { tapIfExists(safari.buttons["More"].firstMatch) }
+        let share = safari.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Share")).firstMatch
+        if !share.waitForExistence(timeout: 3) {
+            let more = safari.buttons["More"].firstMatch
+            XCTAssertTrue(more.waitForExistence(timeout: 5)); more.tap()
+            shot("60b-safari-menu")
+            print("Safari menu hierarchy: \(safari.debugDescription)")
+        }
         XCTAssertTrue(share.waitForExistence(timeout: 10)); share.tap()
         shot("60-safari-share")
         print("Share hierarchy: \(safari.debugDescription)")
