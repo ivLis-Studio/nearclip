@@ -8,7 +8,7 @@ final class LocalVault {
     private static let magic = Data("NCV1".utf8)
     init(secrets: SecretStore) throws {
         let account = "local-history-v1"
-        if let bytes = secrets.load(account) {
+        if let bytes = try secrets.loadChecked(account) {
             guard bytes.count == 32 else { throw NearclipError.crypto("invalid local history key") }
             key = SymmetricKey(data: bytes)
         } else {

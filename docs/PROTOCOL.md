@@ -530,3 +530,16 @@ WireGuard is an additional outer layer, and DERP relays only ever see WireGuard 
 In addition to 4.5, a network change tells the node (`NCTailnetNetworkChanged`; on Android
 `NCTailnetSetNetwork` with the current interfaces) so it re-binds its sockets and finds new paths at once.
 
+
+
+## 11. Policy and privacy extensions (2026-10-28)
+
+`welcome.features` advertises `policy1` and `rekey1`. An absent array means neither extension is supported; the v1 handshake and existing cryptographic vectors remain unchanged.
+
+`clip.recipients`, when present, is an allowlist of destination device UUIDs chosen by the origin. A peer must not store, apply or forward the clip if it is not a recipient. A sender must not send such a clip to a peer without `policy1`, including during inventory/want catch-up. A relay preserves this field. Local per-peer preferences additionally gate outgoing content and incoming content by its original `src`. Policy changes cannot recall data already stored on another device.
+
+All implementations expire `otp` text clips at `ts + 180000`, even when pinned, and refuse codes with `ts > now + 60000`. Pruning broadcasts ordinary deletion tombstones. Receipt, forwarding, inventory and copy actions also enforce expiry rather than depending on a timely timer tick. Clients predating these checks cannot provide this guarantee.
+
+Device removal rotates the group key. A `rekey` message contains `previous` (the old group tag), `groupId`, `key` (base64url of the new 32-byte key) and the updated `members`. It travels only inside an already registered member session. A receiver checks the old tag and group, verifies it remains a member, persists the key, forwards the message to eligible registered sessions excluding removed peers, installs the new derived tag/auth key, then closes old sessions. Fresh handshakes use the new key. Old keys are not kept for recovery. Offline peers and peers without `rekey1` require re-pairing; simultaneous independent rotations may also require re-pairing. Group members remain trusted administrators; this does not make previously shared information retractable.
+
+The local disk envelope is unrelated to the wire protocol: `NCV1 || nonce[12] || ciphertext || tag[16]`, AES-256-GCM with the file's basename as associated data. Each installation uses its own local-history key, separate from the rotatable sync key.

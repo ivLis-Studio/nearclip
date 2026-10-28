@@ -9,6 +9,7 @@ public struct ShareSeed: Codable, Sendable {
     public var members: [MemberRecord]
     public var paused: Bool
     public var images: Bool
+    public var remote: TailnetStatus?
 }
 
 public final class MemorySecretStore: SecretStore {
@@ -26,7 +27,9 @@ public extension NearclipNode {
         try seed.state.write(to: directory.appendingPathComponent("state.json"), options: [.atomic])
         let secrets = MemorySecretStore()
         try secrets.save(seed.groupKey, account: "group-key-" + seed.groupId)
-        return try NearclipNode(config: .init(stateDirectory: directory, deviceName: seed.deviceName, platform: "ios",
+        let node = try NearclipNode(config: .init(stateDirectory: directory, deviceName: seed.deviceName, platform: "ios",
                                                port: 0, bonjour: true, secretStore: secrets))
+        if let remote = seed.remote { node.borrowShareRoute(remote) }
+        return node
     }
 }

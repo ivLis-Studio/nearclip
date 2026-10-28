@@ -215,7 +215,7 @@ public sealed partial class NearclipNode : IDisposable
             if (!_running || _paused || !_syncImages) return;
             _announced[id] = DateTime.UtcNow;
             foreach (var s in _online.Values.ToList())
-                if (s.IsMember) s.SendJson(WireJson.Incoming(id));
+                if (s.IsMember && (_store.State.Policies.GetValueOrDefault(s.PeerId ?? "") ?? new SyncPolicy()) is { Send: true, Images: true }) s.SendJson(WireJson.Incoming(id));
         });
         return id;
     }

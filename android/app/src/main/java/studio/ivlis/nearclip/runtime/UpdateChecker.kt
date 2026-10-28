@@ -10,10 +10,10 @@ import java.net.URI
 object UpdateChecker {
     const val RELEASE_URL = "https://github.com/ivLis-Studio/nearclip/releases/latest"
     private val versionPattern = Regex("\\d+\\.\\d+\\.\\d+")
-    suspend fun check(context: Context, current: String): String? = withContext(Dispatchers.IO) {
+    suspend fun check(context: Context, current: String, force: Boolean = false): String? = withContext(Dispatchers.IO) {
         val prefs = context.getSharedPreferences("nearclip.updates", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
-        if (now - prefs.getLong("at", 0) < 86_400_000L) return@withContext prefs.getString("newer", null)
+        if (!force && now - prefs.getLong("at", 0) < 86_400_000L) return@withContext prefs.getString("newer", null)
         val connection = URI("https://api.github.com/repos/ivLis-Studio/nearclip/releases/latest").toURL().openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 10_000; connection.readTimeout = 10_000

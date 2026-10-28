@@ -27,7 +27,7 @@ internal sealed class DpapiSecretStore : ISecretStore
         catch (Exception e)
         {
             Log.Write("dpapi load failed: " + e.Message);
-            return null;
+            throw new CryptographicException("The saved Nearclip key could not be unlocked. It has not been replaced.", e);
         }
     }
 

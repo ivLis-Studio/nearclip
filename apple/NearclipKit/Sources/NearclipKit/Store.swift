@@ -4,8 +4,13 @@ import Security
 /// Where the group key lives. Apps use the Keychain, the CLI a file.
 public protocol SecretStore: AnyObject {
     func load(_ account: String) -> Data?
+    func loadChecked(_ account: String) throws -> Data?
     func save(_ data: Data, account: String) throws
     func delete(_ account: String)
+}
+
+public extension SecretStore {
+    func loadChecked(_ account: String) throws -> Data? { load(account) }
 }
 
 public final class FileSecretStore: SecretStore {
@@ -49,8 +54,23 @@ public final class KeychainSecretStore: SecretStore {
         return out as? Data
     }
 
+    public func loadChecked(_ account: String) throws -> Data? {
+        var q = base(account)
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: CFTypeRef?
+        let status = SecItemCopyMatching(q as CFDictionary, &out)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = out as? Data else { throw NearclipError.io("keychain \(status)") }
+        return data
+    }
+
     public func save(_ data: Data, account: String) throws {
-        SecItemDelete(base(account) as CFDictionary)
+        // Updating in place preserves the previous key if the Keychain is temporarily unavailable.
+        let attributes: [String: Any] = [kSecValueData as String: data]
+        let updated = SecItemUpdate(base(account) as CFDictionary, attributes as CFDictionary)
+        if updated == errSecSuccess { return }
+        guard updated == errSecItemNotFound else { throw NearclipError.io("keychain \(updated)") }
         var q = base(account)
         q[kSecValueData as String] = data
         q[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly

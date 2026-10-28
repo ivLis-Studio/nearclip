@@ -13,7 +13,7 @@ def policy(peer,target,**settings):
     peer.mark();peer.send(cmd='policy',peer=target.id,**settings)
     peer.expect('policy saved',lambda e:e.get('ev')=='policy' and e.get('peer')==target.id)
 
-def privacy_case(implementations):
+def privacy_case(implementations, offline=False):
     peers=[Peer(impl,cmd,'Privacy'+str(i)) for i,(impl,cmd) in enumerate(implementations)]
     a,b,c=peers
     try:
@@ -29,15 +29,23 @@ def privacy_case(implementations):
         policy(b,a,codes=False)
         a.send(cmd='send_text',text='482915',otp=True)
         code=c.expect('code allowed',lambda e:e.get('ev')=='clip' and e.get('text')=='482915')
-        assert not code.get('apply',False),'code was applied automatically'
+        assert code.get('apply') is False,'code was applied automatically or test output lacks apply'
         time.sleep(.35);assert not has(b,code['id']),'code receive policy ignored'
         # Removing one online peer rotates the key on the remaining peer and reconnects automatically.
+        if offline: b.quit()
         a.mark();c.mark();a.send(cmd='remove',peer=b.id)
-        b.expect('removed device left',lambda e:e.get('ev')=='left')
+        if not offline: b.expect('removed device left',lambda e:e.get('ev')=='left')
         c.expect('remaining peer reconnected',lambda e:e.get('ev')=='peer_up' and e.get('id')==a.id,timeout=30)
+        if offline:
+            b.restart();b.send(cmd='connect',host='127.0.0.1',port=a.port);b.send(cmd='connect',host='127.0.0.1',port=c.port)
         a.send(cmd='send_text',text='works after key rotation')
         c.expect('new-key clip',lambda e:e.get('ev')=='clip' and e.get('text')=='works after key rotation')
+        time.sleep(.35)
         assert not any(x.get('text')=='works after key rotation' for x in history(b))
+        if offline:
+            pair_qr(a,b)
+            a.send(cmd='send_text',text='re-pairing restores access')
+            b.expect('re-paired clip',lambda e:e.get('ev')=='clip' and e.get('text')=='re-pairing restores access')
     finally:
         for p in peers:p.quit()
         for p in peers:shutil.rmtree(p.state,ignore_errors=True)
@@ -51,7 +59,7 @@ def expiry_case(implementations):
         for p in [b,c]:p.expect('normal clip',lambda e:e.get('ev')=='clip' and e.get('text')=='ordinary content stays')
         a.send(cmd='send_text',text='739251',otp=True)
         received=[p.expect('live code',lambda e:e.get('ev')=='clip' and e.get('text')=='739251') for p in [b,c]]
-        for e in received:assert not e.get('apply',False)
+        for e in received:assert e.get('apply') is False
         code_id=received[0]['id']
         for waited in range(0,190,10):
             print(f'OTP expiration: {waited}/190 seconds',flush=True);time.sleep(10)
@@ -74,4 +82,5 @@ if __name__=='__main__':
     if args.expiry:expiry_case(names)
     else:
         for permutation in itertools.permutations(names):
-            privacy_case(permutation);print('PASS privacy policy + rekey: '+' -> '.join(n for n,c in permutation),flush=True)
+            for offline in [False,True]:
+                privacy_case(permutation,offline=offline);print('PASS policy + '+('offline ' if offline else 'online ')+'rekey: '+' -> '.join(n for n,c in permutation),flush=True)

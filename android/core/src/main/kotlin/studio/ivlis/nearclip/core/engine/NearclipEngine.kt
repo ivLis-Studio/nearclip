@@ -309,7 +309,10 @@ class NearclipEngine(
         post {
             if (!running || paused) return@post
             announced[id] = clock()
-            for (s in online.values) s.sendJson(Msg.incoming(id))
+            for (s in online.values) {
+                val p = st.policies[s.peerId] ?: studio.ivlis.nearclip.core.model.SyncPolicy()
+                if (p.send && p.images) s.sendJson(Msg.incoming(id))
+            }
         }
         return id
     }
@@ -1167,7 +1170,7 @@ class NearclipEngine(
                     dropTransfer(id, s, "cancelled")
                     return@call
                 }
-                if (!canReceive(asm.clip)) { asm.file.delete(); return@call }
+                if (!canReceive(asm.clip)) { asm.file.delete(); dropTransfer(id, s, "cancelled"); return@call }
                 store.writeFile(Persistence.blobFileName(asm.clip), asm.file.readBytes())
                 asm.file.delete()
                 acceptClip(asm.clip, asm.live, s)
@@ -1393,7 +1396,8 @@ class NearclipEngine(
             if (transfers[id]?.total == 0L) dropTransfer(id, s, "cancelled")
             return
         }
-        if (obj.str("kind") != ClipKind.IMAGE || !syncImages) return
+        val policy = st.policies[s.peerId] ?: studio.ivlis.nearclip.core.model.SyncPolicy()
+        if (!policy.receive || !policy.images || obj.str("kind") != ClipKind.IMAGE || !syncImages) return
         if (transfers.containsKey(id) || index.containsKey(id) || st.tombstones.containsKey(id)) return
         transfers[id] = Transfer(s.peerId, 0, 0, hashSetOf(s.sid), clock())
         emitTransfer(id, IncomingTransfer.State.PREPARING)

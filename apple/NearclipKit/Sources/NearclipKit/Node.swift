@@ -163,9 +163,10 @@ public final class NearclipNode: @unchecked Sendable {
             var state = store.state
             state.members = memberList()
             return ShareSeed(state: try JSONEncoder().encode(state), groupId: state.groupId, groupKey: groupKey,
-                             deviceName: deviceName, members: memberList().filter { !$0.removed && $0.id != deviceId }, paused: paused, images: images)
+                             deviceName: deviceName, members: memberList().filter { !$0.removed && $0.id != deviceId }, paused: paused, images: images, remote: tailnetStatus.isRunning ? tailnetStatus : nil)
         }
     }
+    func borrowShareRoute(_ status: TailnetStatus) { queue.sync { tailnetStatus = status } }
     public func supportsTargeting(_ id: String) -> Bool { queue.sync { online[id]?.supportsPolicies == true } }
     public func outgoingIdle(to id: String) -> Bool { queue.sync { online[id].map { !$0.conn.isClosed && $0.conn.pendingSends == 0 } ?? false } }
 
@@ -228,7 +229,10 @@ public final class NearclipNode: @unchecked Sendable {
         queue.async {
             guard self.running, !self.paused else { return }
             self.announced[id] = Date()
-            for s in self.online.values where s.isMember { s.sendJSON(IncomingMsg(id: id, kind: "image")) }
+            for s in self.online.values where s.isMember {
+                let p = self.store.state.policies?[s.peerId ?? ""] ?? SyncPolicy()
+                if p.send && p.images { s.sendJSON(IncomingMsg(id: id, kind: "image")) }
+            }
         }
         return id
     }
@@ -1100,7 +1104,10 @@ public final class NearclipNode: @unchecked Sendable {
     }
 
     private func acceptClip(_ c: Clip, blob: Data?, live: Bool, from s: PeerSession?) {
-        guard canReceive(c) else { return }
+        guard canReceive(c) else {
+            if let s { dropTransfer(c.id, session: s, reason: "cancelled") }
+            return
+        }
         transfers[c.id] = nil
         let src = store.members[c.src]
         let sc = StoredClip(clip: c, groupId: store.state.groupId, pinned: false, receivedAt: nowMs(),
@@ -1127,7 +1134,8 @@ public final class NearclipNode: @unchecked Sendable {
             if let t = transfers[id], t.total == 0 { dropTransfer(id, session: s, reason: "cancelled") }
             return
         }
-        guard m.kind == "image", transfers[id] == nil, !store.has(id), store.state.tombstones[id] == nil else { return }
+        let policy = store.state.policies?[pid] ?? SyncPolicy()
+        guard policy.receive, policy.images, m.kind == "image", transfers[id] == nil, !store.has(id), store.state.tombstones[id] == nil else { return }
         transfers[id] = Transfer(from: pid, total: 0, received: 0, sessions: [ObjectIdentifier(s)], updated: Date())
         emitTransfer(id, .preparing)
     }

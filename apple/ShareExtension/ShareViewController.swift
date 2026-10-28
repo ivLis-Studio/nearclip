@@ -1,4 +1,5 @@
 import NearclipKit
+import ImageIO
 import UIKit
 import UniformTypeIdentifiers
 
@@ -27,6 +28,22 @@ final class ShareViewController: UITableViewController {
         navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .cancel, primaryAction: UIAction { [weak self] _ in self?.cancel() })
         operation = Task { await prepare() }
     }
+    private func loadData(_ provider: NSItemProvider, type: String) async throws -> Data {
+        try await withCheckedThrowingContinuation { continuation in
+            provider.loadDataRepresentation(forTypeIdentifier: type) { data, error in
+                if let data { continuation.resume(returning: data) }
+                else { continuation.resume(throwing: error ?? NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError)) }
+            }
+        }
+    }
+    private func loadItem(_ provider: NSItemProvider, type: String) async throws -> NSSecureCoding {
+        try await withCheckedThrowingContinuation { continuation in
+            provider.loadItem(forTypeIdentifier: type, options: nil) { item, error in
+                if let item { continuation.resume(returning: item) }
+                else { continuation.resume(throwing: error ?? NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError)) }
+            }
+        }
+    }
     private func say(_ text: String) { status.text = text }
     private func prepare() async {
         do {
@@ -40,17 +57,30 @@ final class ShareViewController: UITableViewController {
             guard let provider = providers.first else { say(NSLocalizedString("Nothing to send", comment: "")); return }
             if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
                 guard seed.images else { say(NSLocalizedString("Turn on image sync in Nearclip first.", comment: "")); return }
-                let data = try await provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier)
-                guard data.count <= 32 * 1024 * 1024, let photo = UIImage(data: data) else { say(NSLocalizedString("Image is too large", comment: "")); return }
-                image = photo.pngData()
-                if (image?.count ?? Int.max) > 32 * 1024 * 1024 { image = photo.jpegData(compressionQuality: 0.9); mime = "image/jpeg" }
+                let data = try await loadData(provider, type: UTType.image.identifier)
+                guard data.count <= 32 * 1024 * 1024,
+                      let source = CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary) else {
+                    say(NSLocalizedString("Image is too large", comment: "")); return
+                }
+                let type = CGImageSourceGetType(source) as String?
+                if type == UTType.jpeg.identifier { image = data; mime = "image/jpeg" }
+                else if type == UTType.png.identifier { image = data }
+                else {
+                    // Bound decoding memory inside the share extension (for HEIC and other formats).
+                    let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true,
+                        kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: 4096]
+                    guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+                        say(NSLocalizedString("This item is not supported", comment: "")); return
+                    }
+                    image = UIImage(cgImage: cg).jpegData(compressionQuality: 0.9); mime = "image/jpeg"
+                }
                 guard let image, image.count <= 32 * 1024 * 1024 else { say(NSLocalizedString("Image is too large", comment: "")); return }
             } else if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-                let item = try await provider.loadItem(forTypeIdentifier: UTType.url.identifier)
+                let item = try await loadItem(provider, type: UTType.url.identifier)
                 if let url = item as? URL { text = url.absoluteString }
                 else if let url = item as? String { text = url }
             } else if provider.hasItemConformingToTypeIdentifier(UTType.text.identifier) {
-                let item = try await provider.loadItem(forTypeIdentifier: UTType.text.identifier)
+                let item = try await loadItem(provider, type: UTType.text.identifier)
                 text = (item as? String) ?? (item as? Data).flatMap { String(data: $0, encoding: .utf8) }
             }
             guard image != nil || text?.isEmpty == false else { say(NSLocalizedString("This item is not supported", comment: "")); return }

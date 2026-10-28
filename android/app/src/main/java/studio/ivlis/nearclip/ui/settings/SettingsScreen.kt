@@ -488,7 +488,7 @@ private fun UpdateRow() {
     var failed by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
     LaunchedEffect(retry) {
-        runCatching { studio.ivlis.nearclip.runtime.UpdateChecker.check(context, BuildConfig.VERSION_NAME) }
+        runCatching { studio.ivlis.nearclip.runtime.UpdateChecker.check(context, BuildConfig.VERSION_NAME, force = retry > 0) }
             .onSuccess { version = it; failed = false }.onFailure { failed = true }
     }
     SettingsGroup {

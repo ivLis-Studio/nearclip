@@ -118,7 +118,7 @@ public sealed partial class NearclipNode
 
     void AcceptClip(Clip c, byte[]? blob, bool live, PeerSession? from)
     {
-        if (!CanReceive(c)) return;
+        if (!CanReceive(c)) { if (from is not null) DropTransfer(c.Id, from, "cancelled"); return; }
         _transfers.Remove(c.Id);
         _store.Members.TryGetValue(c.Src, out var src);
         var sc = new StoredClip(c, GroupId, false, Clock.NowMs(), src?.Name, src?.Platform);
@@ -161,7 +161,8 @@ public sealed partial class NearclipNode
             if (_transfers.TryGetValue(id, out var pending) && pending.Total == 0) DropTransfer(id, s, "cancelled");
             return;
         }
-        if (Str(o, "kind") != "image" || !_syncImages) return;
+        var policy = _store.State.Policies.GetValueOrDefault(pid) ?? new SyncPolicy();
+        if (!policy.Receive || !policy.Images || Str(o, "kind") != "image" || !_syncImages) return;
         if (_transfers.ContainsKey(id) || _store.Has(id) || _store.State.Tombstones.ContainsKey(id)) return;
         var t = new Transfer(pid, 0);
         t.Sessions.Add(s);
