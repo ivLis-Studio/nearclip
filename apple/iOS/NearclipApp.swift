@@ -336,11 +336,12 @@ final class AppEnvironment {
     // MARK: Verification codes (PROTOCOL.md §6.7)
 
     private func offerCode(_ sc: StoredClip) {
+        guard !sc.clip.isExpired() else { return }
         withAnimation(.spring(duration: 0.4)) { codeOffer = sc }
         codeOfferTask?.cancel()
         // Codes expire within minutes; so does the offer.
         codeOfferTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(90))
+            try? await Task.sleep(for: .milliseconds(min(90_000, max(0, sc.clip.ts + Clip.codeLifetime - nowMs()))))
             guard !Task.isCancelled else { return }
             self?.dismissCodeOffer()
         }
@@ -348,6 +349,7 @@ final class AppEnvironment {
 
     func copyOfferedCode() {
         guard let sc = codeOffer else { return }
+        guard !sc.clip.isExpired() else { dismissCodeOffer(); return }
         model.copyCode(sc)
         dismissCodeOffer()
         show(Toast(text: String(localized: "Copied"), symbol: "checkmark.circle.fill", tint: Brand.online))

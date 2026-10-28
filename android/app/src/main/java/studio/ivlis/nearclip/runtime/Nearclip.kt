@@ -69,7 +69,7 @@ sealed interface UiMessage {
     /** A large image that was shown arriving did not make it (PROTOCOL §6.6). */
     data class TransferFailed(val name: String) : UiMessage
     /** A verification code arrived from another device (PROTOCOL §6.7): "Copy it?". */
-    data class CodeArrived(val id: String, val name: String, val code: String) : UiMessage
+    data class CodeArrived(val id: String, val name: String, val code: String, val expiresAt: Long = System.currentTimeMillis() + 180_000) : UiMessage
 }
 
 sealed interface PairingUi {
@@ -309,8 +309,8 @@ class Nearclip private constructor(val app: Application) {
         val code = clip.text ?: return
         if (!offeredCodes.add(clip.id) || holds(clip)) return
         val name = sourceName(clip)
-        if (uiVisible) _messages.tryEmit(UiMessage.CodeArrived(clip.id, name, code))
-        else Notifications.code(app, clip.id, name, code)
+        if (uiVisible) _messages.tryEmit(UiMessage.CodeArrived(clip.id, name, code, clip.ts + CODE_OFFER_MS))
+        else Notifications.code(app, clip.id, name, code, clip.ts + CODE_OFFER_MS)
     }
 
     /** "Copy" on a code offer: to this phone's clipboard only. */

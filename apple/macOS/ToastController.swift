@@ -42,7 +42,10 @@ final class ToastController {
 
     /// A verification code from another device: "A verification code arrived from Junseo's iPhone. Copy it?". It waits
     /// for an answer — shown even with arrival notices off — and goes after a minute, as codes expire.
-    func code(_ sc: StoredClip) { present(.code(sc), hideAfter: 60, always: true) }
+    func code(_ sc: StoredClip) {
+        guard !sc.clip.isExpired() else { return }
+        present(.code(sc), hideAfter: min(60, Double(max(0, sc.clip.ts + Clip.codeLifetime - nowMs())) / 1000), always: true)
+    }
 
     /// The image shown arriving changed; nil when none is arriving any more.
     func transfer(_ t: IncomingTransfer?) {
@@ -170,6 +173,7 @@ final class ToastController {
     /// Copy on a code offer: the code goes to this Mac's clipboard, and the capsule says so.
     private func copyShownCode() {
         guard case .code(let sc) = shown else { return }
+        guard !sc.clip.isExpired() else { hide(); return }
         model.copyCode(sc)
         shown = nil
         present(.copied(sc), hideAfter: 1.8, always: true)
@@ -183,6 +187,7 @@ final class ToastController {
     }
 
     private func hideIfIdle() {
+        if case .code(let sc) = shown, sc.clip.isExpired() { hide(); return }
         guard let p = panel else { return }
         if NSMouseInRect(NSEvent.mouseLocation, p.frame, false) {
             scheduleHide(after: 1)
