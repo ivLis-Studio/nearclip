@@ -46,9 +46,9 @@ jobs:
           name: iPhone-iPad-test-IPA
           path: dist/Nearclip-iOS.ipa
   ios-ui:
-    # Validate UI independently, using the runtime matching this image's selected Xcode SDK.
+    # Validate UI independently on an installed stable runtime compatible with the selected SDK.
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
@@ -71,7 +71,7 @@ jobs:
       - run: command -v xcodegen || brew install xcodegen
       - run: xcodegen generate --spec apple/project.yml
       - name: Test iPhone UI in the simulator
-        timeout-minutes: 15
+        timeout-minutes: 25
         shell: bash
         run: |
           SIMULATOR_ID=$(python3 tools/acceptance/select_ios_simulator.py)

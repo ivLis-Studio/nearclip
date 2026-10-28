@@ -20,7 +20,7 @@ if simulator.exists():
     subprocess.run(['open','-a',str(simulator),'--args','-CurrentDeviceUDID',args.sim],check=True)
 else:
     print('Using headless CoreSimulator; this toolchain has no Simulator.app',flush=True)
-subprocess.run(['xcrun','simctl','bootstatus',args.sim,'-b'],check=True,timeout=240)
+subprocess.run(['xcrun','simctl','bootstatus',args.sim,'-b'],check=True,timeout=600)
 # Issue the short-lived pairing ticket only after compilation and simulator boot have completed.
 peer=Peer('swift',shlex.quote(str(cli))+' --platform win','CI Windows PC')
 try:
