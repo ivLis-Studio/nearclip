@@ -51,7 +51,14 @@ class ClipboardBridge(private val context: Context) {
         return Text(text, desc.timestamp, ours, sensitive)
     }
 
-    fun writeText(text: String, clipId: String): Boolean = set(ClipData.newPlainText(LABEL, text), clipId)
+    fun writeText(text: String, clipId: String, sensitive: Boolean = false): Boolean = set(ClipData.newPlainText(LABEL, text), clipId, sensitive)
+
+    fun clearCode(id: String, text: String, written: Long?) {
+        if (written == null || stamp() != written) return
+        val clip = try { cm.primaryClip } catch (_: Exception) { null } ?: return
+        if (clip.description.extras?.getString(EXTRA_ORIGIN) != id || clip.itemCount != 1 || clip.getItemAt(0).text?.toString() != text) return
+        if (android.os.Build.VERSION.SDK_INT >= 28) cm.clearPrimaryClip() else cm.setPrimaryClip(ClipData.newPlainText("", ""))
+    }
 
     fun writeImage(file: File, clipId: String): Boolean {
         if (!file.isFile) return false
@@ -59,8 +66,8 @@ class ClipboardBridge(private val context: Context) {
         return set(ClipData.newUri(context.contentResolver, LABEL, uri), clipId)
     }
 
-    private fun set(clip: ClipData, clipId: String): Boolean = try {
-        clip.description.extras = PersistableBundle().apply { putString(EXTRA_ORIGIN, clipId) }
+    private fun set(clip: ClipData, clipId: String, sensitive: Boolean = false): Boolean = try {
+        clip.description.extras = PersistableBundle().apply { putString(EXTRA_ORIGIN, clipId); if (sensitive) putBoolean(EXTRA_IS_SENSITIVE, true) }
         cm.setPrimaryClip(clip)
         true
     } catch (_: Exception) {

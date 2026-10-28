@@ -98,7 +98,7 @@ public sealed partial class NearclipNode : IDisposable
         Directory.CreateDirectory(options.StateDirectory);
         Q.OnError = e => Emit(new NodeEvent.Log("engine error: " + e));
         _events.OnError = e => Console.Error.WriteLine("event handler error: " + e);
-        _store = new NodeStore(options.StateDirectory, options.DeviceName, Q);
+        _store = new NodeStore(options.StateDirectory, options.DeviceName, Q, options.SecretStore);
         DeviceId = _store.State.DeviceId;
         DeviceName = _store.State.DeviceName;
         var key = options.SecretStore.Load("group-key-" + _store.State.GroupId);
@@ -313,7 +313,7 @@ public sealed partial class NearclipNode : IDisposable
         _store.Members[id] = r;
         if (_online.TryGetValue(id, out var s)) s.Bye("removed");
         foreach (var (pid, o) in _online.ToList()) if (pid != id) o.SendJson(Members([r]));
-        _store.SaveSoon();
+        RotateAfterRemoval();
         Emit(new NodeEvent.MembersChanged(MemberList()));
     });
 
@@ -902,6 +902,7 @@ public sealed partial class NearclipNode : IDisposable
             Emit(new NodeEvent.TicketExpired());
         }
         ExpireTransfers(now);
+        Prune();
         if (_tick++ % 5 != 0 || _paused) return;
         RedialDisconnected(now);
     }
@@ -934,7 +935,7 @@ public sealed partial class NearclipNode : IDisposable
         // Removal is decided only after the peer's welcome has been merged (PROTOCOL.md §4.3, see SessionWelcome):
         // a device that was removed and re-added while this device was offline carries a newer record of itself
         // than our tombstone, so answering "bye removed" here would wrongly remove it again.
-        s.SendJson(Welcome(OwnRecord, MemberList(), OwnEndpoints()));
+        s.SendJson(Welcome(OwnRecord, MemberList(), OwnEndpoints(), extended: true));
     }
 
     internal void SessionWelcome(PeerSession s, MemberRecord device, List<MemberRecord> members, List<Endpoint> addrs)
@@ -990,6 +991,9 @@ public sealed partial class NearclipNode : IDisposable
     {
         switch (type)
         {
+            case "rekey":
+                ApplyRekey(o, s);
+                break;
             case "clip":
                 if (Prop(o, "clip") is { } ce && ReadClip(ce) is { } clip) HandleClip(clip, Bool(o, "live") ?? false, s);
                 break;

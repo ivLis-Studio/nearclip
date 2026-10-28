@@ -22,8 +22,9 @@ internal object Msg {
     val PONG: JsonObject = buildJsonObject { put("t", "pong") }
     val PAIR_DECLINE: JsonObject = buildJsonObject { put("t", "pair_decline") }
 
-    fun welcome(device: MemberRecord, members: List<MemberRecord>, addrs: List<Endpoint>) = buildJsonObject {
+    fun welcome(device: MemberRecord, members: List<MemberRecord>, addrs: List<Endpoint>, extended: Boolean = false) = buildJsonObject {
         put("t", "welcome")
+        if (extended) putJsonArray("features") { add(kotlinx.serialization.json.JsonPrimitive("policy1")); add(kotlinx.serialization.json.JsonPrimitive("rekey1")) }
         put("device", device.toJson())
         putJsonArray("members") { members.forEach { add(it.toJson()) } }
         putJsonArray("addrs") { addrs.forEach { add(it.toJson()) } }

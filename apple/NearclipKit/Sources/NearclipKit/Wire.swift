@@ -31,7 +31,7 @@ enum Wire {
 struct IdTs: Codable, Hashable { var id: String; var ts: Int64 }
 struct GroupWire: Codable { var id: String; var key: String }
 
-struct WelcomeMsg: Codable { var t = "welcome"; var device: MemberRecord; var members: [MemberRecord]?; var addrs: [Endpoint]? }
+struct WelcomeMsg: Codable { var t = "welcome"; var device: MemberRecord; var members: [MemberRecord]?; var addrs: [Endpoint]?; var features: [String]? = ["policy1", "rekey1"] }
 struct ByeMsg: Codable { var t = "bye"; var reason: String? }
 struct ErrorMsg: Codable { var t = "error"; var code: String?; var msg: String? }
 struct ClipMsg: Codable { var t = "clip"; var live: Bool?; var clip: Clip }
@@ -43,5 +43,6 @@ struct MembersMsg: Codable { var t = "members"; var members: [MemberRecord]? }
 struct IncomingMsg: Codable { var t = "incoming"; var id: String; var kind: String? = nil; var cancel: Bool? = nil }
 struct PairRequestMsg: Codable { var t = "pair_request"; var device: MemberRecord }
 struct PairAcceptMsg: Codable { var t = "pair_accept"; var group: GroupWire; var device: MemberRecord; var members: [MemberRecord]? }
+struct RekeyMsg: Codable { var t = "rekey"; var previous: String; var groupId: String; var key: String; var members: [MemberRecord] }
 struct SimpleMsg: Codable { var t: String }
 

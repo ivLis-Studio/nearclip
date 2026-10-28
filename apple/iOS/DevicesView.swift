@@ -9,6 +9,7 @@ struct DevicesView: View {
     @State private var name = ""
     @State private var confirmRemove: MemberRecord?
     @State private var confirmLeave = false
+    @State private var syncMember: MemberRecord?
 
     var body: some View {
         if embedded {
@@ -60,10 +61,12 @@ struct DevicesView: View {
                                 .foregroundStyle(.secondary)
                             }
                         }
+                        .onTapGesture { syncMember = m }
                         .swipeActions {
                             Button("Remove", role: .destructive) { confirmRemove = m }
                         }
                         .contextMenu {
+                            Button("Sync settings…", systemImage: "arrow.triangle.2.circlepath") { syncMember = m }
                             Button("Remove…", systemImage: "minus.circle", role: .destructive) { confirmRemove = m }
                         }
                     }
@@ -93,6 +96,7 @@ struct DevicesView: View {
                     Text("This device stops syncing and starts over with a new, empty group. History stays on this device.")
                 }
             }
+            .sheet(item: $syncMember) { DeviceSyncSettings(model: model, member: $0) }
             .navigationTitle("Devices")
             .navigationBarTitleDisplayMode(.inline)
             .accessibilityIdentifier("devices.list")
@@ -101,7 +105,7 @@ struct DevicesView: View {
             .confirmationDialog(Text("Remove ‘\(confirmRemove?.name ?? "")’?"), isPresented: Binding(get: { confirmRemove != nil }, set: { if !$0 { confirmRemove = nil } }), titleVisibility: .visible) {
                 Button("Remove", role: .destructive) { if let m = confirmRemove { model.remove(m) } }
             } message: {
-                Text("It will stop syncing with your devices.")
+                Text("It will stop syncing. Encryption keys will change. Devices that are offline or running an older version must be paired again.")
             }
             .confirmationDialog(Text("Leave your devices?"), isPresented: $confirmLeave, titleVisibility: .visible) {
                 Button("Leave", role: .destructive) { model.leaveGroup() }

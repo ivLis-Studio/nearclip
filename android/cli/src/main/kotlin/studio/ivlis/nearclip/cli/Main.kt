@@ -2,6 +2,7 @@ package studio.ivlis.nearclip.cli
 
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import studio.ivlis.nearclip.core.engine.EngineConfig
@@ -128,7 +129,7 @@ fun main(args: Array<String>) {
                 put("ev", "peer_up"); put("id", ev.record.id); put("name", ev.record.name); put("route", ev.route.wire)
             })
             is EngineEvent.PeerDown -> emit(buildJsonObject { put("ev", "peer_down"); put("id", ev.id) })
-            is EngineEvent.ClipAdded -> if (!ev.local) emit(clipJson(ev.clip, ev.live, "clip"))
+            is EngineEvent.ClipAdded -> if (!ev.local) emit(JsonObject(clipJson(ev.clip, ev.live, "clip") + ("apply" to JsonPrimitive(ev.apply))))
             is EngineEvent.Transfer -> emit(buildJsonObject {
                 val t = ev.transfer
                 put("ev", "transfer"); put("id", t.id); put("from", t.from); put("state", t.state.wire)
@@ -196,6 +197,11 @@ fun main(args: Array<String>) {
                     val p = o.int("port")
                     if (host != null && p != null && p in 1..65535) engine.connect(Endpoint(host, p))
                     else emit(buildJsonObject { put("ev", "error"); put("msg", "connect needs host and port") })
+                }
+                "policy" -> o.str("peer")?.let { id ->
+                    engine.setPolicy(id, studio.ivlis.nearclip.core.model.SyncPolicy(o.bool("send") ?: true, o.bool("receive") ?: true,
+                        o.bool("images") ?: true, o.bool("codes") ?: true))
+                    emit(buildJsonObject { put("ev", "policy"); put("peer", id) })
                 }
                 "send_text" -> o.str("text")?.let { engine.sendText(it, otp = o.bool("otp") == true) }
                 "send_image" -> {

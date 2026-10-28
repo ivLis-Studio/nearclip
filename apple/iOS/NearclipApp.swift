@@ -116,13 +116,21 @@ final class AppEnvironment {
             self.prompts.present(model: self.model, prompt: prompt)
         }
         model.onCode = { [weak self] sc in self?.offerCode(sc) }
+        model.onPolicyChanged = { [weak self] in self?.exportShareContext() }
         if settings.onboardingDone { startEngine() }
+    }
+
+    func exportShareContext() {
+        guard let seed = try? model.node.shareSeed(paused: settings.paused, images: settings.syncImages),
+              let data = try? JSONEncoder().encode(seed) else { return }
+        try? KeychainSecretStore(service: "studio.ivlis.nearclip.share").save(data, account: "context")
     }
 
     func startEngine() {
         guard !started else { return }
         started = true
         model.start()
+        exportShareContext()
         // Launched in the background for a Shortcuts automation: the clipboard is left alone until Nearclip is opened.
         guard UIApplication.shared.applicationState != .background else { return }
         model.armCopyNewest()
@@ -142,6 +150,7 @@ final class AppEnvironment {
             checkClipboard()
         case .background:
             guard started else { return }
+            exportShareContext()
             // Finish in-flight transfers, then go quiet until the app is opened again.
             bgTask = UIApplication.shared.beginBackgroundTask(withName: "nearclip-finish") { [weak self] in
                 MainActor.assumeIsolated { self?.endBackgroundTask() }
@@ -403,6 +412,7 @@ final class IOSClipboard: ClipboardWriter {
 
     @discardableResult
     func write(_ clip: Clip, blob: Data?) -> Bool {
+        guard !clip.isExpired() else { return false }
         let unchanged = UIPasteboard.general.changeCount == lastKeyChange
         if clip.isImage, let blob {
             let file = ContentKey.of(clip)
@@ -422,7 +432,10 @@ final class IOSClipboard: ClipboardWriter {
         } else if let text = clip.text {
             let key = ContentKey.text(text)
             if unchanged, key == lastKey { return false }
-            UIPasteboard.general.string = text
+            if clip.isCode {
+                UIPasteboard.general.setItems([[UTType.utf8PlainText.identifier: text]], options: [
+                    .expirationDate: Date(timeIntervalSince1970: Double(clip.ts + Clip.codeLifetime) / 1000), .localOnly: true])
+            } else { UIPasteboard.general.string = text }
             remember(key)
         } else {
             return false

@@ -112,10 +112,11 @@ node.onEvent = { ev in
         emit(["ev": "peer_up", "id": rec.id, "name": rec.name, "route": route.rawValue])
     case .peerDown(let id):
         emit(["ev": "peer_down", "id": id])
-    case .clipAdded(let sc, let live, _, let local):
+    case .clipAdded(let sc, let live, let apply, let local):
         if !local {
             var o = clipJSON(sc.clip, live: live)
             o["ev"] = "clip"
+            o["apply"] = apply
             emit(o)
         }
     case .clipsDeleted(let ids):
@@ -176,6 +177,12 @@ func handle(_ cmd: String, _ o: [String: Any]) {
     case "connect":
         guard let host = o["host"] as? String, let p = o["port"] as? Int, let p16 = UInt16(exactly: p) else { return }
         node.connect(host: host, port: p16)
+    case "policy":
+        if let id = o["peer"] as? String {
+            node.setPolicy(SyncPolicy(send: o["send"] as? Bool ?? true, receive: o["receive"] as? Bool ?? true,
+                                      images: o["images"] as? Bool ?? true, codes: o["codes"] as? Bool ?? true), for: id)
+            out.async { emit(["ev": "policy", "peer": id]) }
+        }
     case "send_text":
         guard let t = o["text"] as? String else { return }
         node.sendText(t, otp: (o["otp"] as? Bool) ?? false)

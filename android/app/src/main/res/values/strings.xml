@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name" translatable="false">Nearclip</string>
     <string name="tagline_display">Copy here.\nPaste there.</string>
@@ -126,7 +126,7 @@
     <string name="leave_confirm">Leave</string>
     <string name="remove_device">Remove…</string>
     <string name="remove_title">Remove ‘%s’?</string>
-    <string name="remove_body">It will stop syncing with your devices.</string>
+    <string name="remove_body">Encryption keys will change. Offline devices and older versions must be paired again.</string>
     <string name="rename_device">Rename device</string>
     <string name="device_name">Device name</string>
     <string name="add_device_subtitle">Pair a phone, tablet or computer on the same Wi-Fi.</string>
@@ -240,8 +240,6 @@
     <string name="remote_starting">Starting…</string>
     <string name="remote_paused">Paused</string>
     <string name="remote_paused_hint">It turns back on when you resume syncing.</string>
-
-    <!-- Verification codes (runtime/CodeForwarding.kt, PROTOCOL §6.7) -->
     <string name="channel_codes">Verification codes</string>
     <string name="channel_codes_description">Offers to copy a verification code that arrived on another device.</string>
     <string name="code_arrived">A verification code arrived from %1$s. Copy it?</string>
@@ -357,4 +355,13 @@
         <item quantity="one">%d d ago</item>
         <item quantity="other">%d d ago</item>
     </plurals>
+    <string name="sync_settings">Sync settings</string>
+    <string name="sync_policy_send">Send to this device</string>
+    <string name="sync_policy_receive">Receive from this device</string>
+    <string name="sync_policy_images">Include images</string>
+    <string name="sync_policy_codes">Include verification codes</string>
+    <string name="check_updates">Check for updates</string>
+    <string name="update_available">Update available</string>
+    <string name="update_failed">Could not check. Tap to retry.</string>
+    <string name="update_check_detail">Checks GitHub for new releases.</string>
 </resources>

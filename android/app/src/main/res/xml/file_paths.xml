@@ -4,4 +4,5 @@
     <files-path
         name="blobs"
         path="nearclip/blobs/" />
+    <files-path name="previews" path="nearclip/tmp/" />
 </paths>

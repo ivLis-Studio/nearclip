@@ -131,7 +131,7 @@ node.Event += ev =>
             Emit(w => { w.WriteString("ev", "peer_down"); w.WriteString("id", d.Id); });
             break;
         case NodeEvent.ClipAdded { Local: false } a:
-            Emit(w => { w.WriteString("ev", "clip"); WriteClip(w, a.Clip.Clip, a.Live); });
+            Emit(w => { w.WriteString("ev", "clip"); w.WriteBoolean("apply", a.Apply); WriteClip(w, a.Clip.Clip, a.Live); });
             break;
         case NodeEvent.TransferChanged tc:
             Emit(w =>
@@ -211,6 +211,13 @@ void Handle(string cmd, JsonElement o)
         case "connect":
             if (WireJson.Str(o, "host") is { } h && WireJson.Long(o, "port") is { } cp) node.Connect(h, (int)cp);
             else Emit(w => { w.WriteString("ev", "error"); w.WriteString("msg", "connect needs host and port"); });
+            break;
+        case "policy":
+            if (WireJson.Str(o, "peer") is { } target) {
+                node.SetPolicy(target, new SyncPolicy(WireJson.Bool(o,"send") ?? true, WireJson.Bool(o,"receive") ?? true,
+                    WireJson.Bool(o,"images") ?? true, WireJson.Bool(o,"codes") ?? true));
+                Emit(w => { w.WriteString("ev","policy"); w.WriteString("peer",target); });
+            }
             break;
         case "send_text":
             if (WireJson.Str(o, "text") is { } text) node.SendText(text, WireJson.Bool(o, "otp") == true);

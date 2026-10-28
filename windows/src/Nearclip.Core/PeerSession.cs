@@ -53,6 +53,8 @@ internal sealed class PeerSession
     public SessionMode Mode { get; private set; }
     public SessionPhase Phase { get; private set; }
     public DateTime Created { get; } = DateTime.UtcNow;
+    public bool SupportsPolicies { get; set; }
+    public bool SupportsRekey { get; set; }
     public string? PeerId { get; private set; }
     public string? PeerName { get; private set; }
     public string? PeerPlatform { get; private set; }
@@ -621,6 +623,8 @@ internal sealed class PeerSession
                         throw NearclipException.Protocol("expected welcome");
                     ReceivedWelcome = true;
                     PeerRecord = dev with { Id = PeerId ?? dev.Id };
+                    SupportsPolicies = Arr(o, "features").Any(x => x.GetString() == "policy1");
+                    SupportsRekey = Arr(o, "features").Any(x => x.GetString() == "rekey1");
                     _node.SessionWelcome(this, PeerRecord, ReadMembers(o, "members"), ReadEndpoints(o, "addrs"));
                     return;
                 }

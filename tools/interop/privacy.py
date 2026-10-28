@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Privacy regression tests over real Swift/Kotlin/C# TCP peers. No device clipboard is touched."""
+import argparse, itertools, os, shlex, tempfile, time, shutil
+from run import Peer, detect, pair_qr
+
+
+def history(peer):
+    peer.mark();peer.send(cmd='list')
+    return peer.expect('history',lambda e:e.get('ev')=='history')['clips']
+
+def has(peer,ident):return any(c.get('id')==ident for c in history(peer))
+def policy(peer,target,**settings):
+    peer.mark();peer.send(cmd='policy',peer=target.id,**settings)
+    peer.expect('policy saved',lambda e:e.get('ev')=='policy' and e.get('peer')==target.id)
+
+def privacy_case(implementations):
+    peers=[Peer(impl,cmd,'Privacy'+str(i)) for i,(impl,cmd) in enumerate(implementations)]
+    a,b,c=peers
+    try:
+        pair_qr(a,b);pair_qr(a,c)
+        policy(a,b,send=False)
+        a.send(cmd='send_text',text='only the permitted peer may receive this')
+        copied=c.expect('allowed live clip',lambda e:e.get('ev')=='clip' and e.get('text')=='only the permitted peer may receive this')
+        ident=copied['id'];time.sleep(.35)
+        assert not has(b,ident),'restricted clip leaked through relay'
+        b.restart();b.send(cmd='connect',host='127.0.0.1',port=c.port);time.sleep(.35)
+        assert not has(b,ident),'restricted clip leaked through catch-up'
+        policy(a,b,send=True)
+        policy(b,a,codes=False)
+        a.send(cmd='send_text',text='482915',otp=True)
+        code=c.expect('code allowed',lambda e:e.get('ev')=='clip' and e.get('text')=='482915')
+        assert not code.get('apply',False),'code was applied automatically'
+        time.sleep(.35);assert not has(b,code['id']),'code receive policy ignored'
+        # Removing one online peer rotates the key on the remaining peer and reconnects automatically.
+        a.mark();c.mark();a.send(cmd='remove',peer=b.id)
+        b.expect('removed device left',lambda e:e.get('ev')=='left')
+        c.expect('remaining peer reconnected',lambda e:e.get('ev')=='peer_up' and e.get('id')==a.id,timeout=30)
+        a.send(cmd='send_text',text='works after key rotation')
+        c.expect('new-key clip',lambda e:e.get('ev')=='clip' and e.get('text')=='works after key rotation')
+        assert not any(x.get('text')=='works after key rotation' for x in history(b))
+    finally:
+        for p in peers:p.quit()
+        for p in peers:shutil.rmtree(p.state,ignore_errors=True)
+
+def expiry_case(implementations):
+    peers=[Peer(impl,cmd,'Expiry'+str(i)) for i,(impl,cmd) in enumerate(implementations)]
+    a,b,c=peers
+    try:
+        pair_qr(a,b);pair_qr(a,c)
+        a.send(cmd='send_text',text='ordinary content stays')
+        for p in [b,c]:p.expect('normal clip',lambda e:e.get('ev')=='clip' and e.get('text')=='ordinary content stays')
+        a.send(cmd='send_text',text='739251',otp=True)
+        received=[p.expect('live code',lambda e:e.get('ev')=='clip' and e.get('text')=='739251') for p in [b,c]]
+        for e in received:assert not e.get('apply',False)
+        code_id=received[0]['id']
+        for waited in range(0,190,10):
+            print(f'OTP expiration: {waited}/190 seconds',flush=True);time.sleep(10)
+        for p in peers:
+            clips=history(p)
+            assert not any(c.get('id')==code_id for c in clips),p.impl+' retained expired code'
+            assert any(c.get('text')=='ordinary content stays' for c in clips)
+        b.restart();b.send(cmd='connect',host='127.0.0.1',port=a.port);time.sleep(.5)
+        assert not has(b,code_id),'expired code resurrected on restart'
+        print('PASS real-time 3-minute code expiry, normal-history preservation and restart',flush=True)
+    finally:
+        for p in peers:p.quit()
+        for p in peers:shutil.rmtree(p.state,ignore_errors=True)
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser();parser.add_argument('--swift');parser.add_argument('--expiry',action='store_true');args=parser.parse_args()
+    impls=detect()
+    if args.swift:impls['swift']=args.swift
+    names=[(name,impls[name]) for name in ['swift','kotlin','dotnet']]
+    if args.expiry:expiry_case(names)
+    else:
+        for permutation in itertools.permutations(names):
+            privacy_case(permutation);print('PASS privacy policy + rekey: '+' -> '.join(n for n,c in permutation),flush=True)

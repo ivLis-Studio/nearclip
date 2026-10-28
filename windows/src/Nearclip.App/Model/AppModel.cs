@@ -305,6 +305,8 @@ internal sealed class AppModel
     public async Task CopyAsync(ClipItem item)
     {
         var c = item.Clip.Clip;
+        if (c.IsExpired(Clock.NowMs())) return;
+        if (c.IsCode) { await CopyCodeAsync(item.Clip); return; }
         var blob = c.IsImage ? _node.ReadBlob(c.Id) : null;
         if (c.IsImage && blob is null) return;
         if (WriteClipboard is { } write) await write(c, blob);
@@ -317,7 +319,7 @@ internal sealed class AppModel
     /// <summary>Offers a code from another device: when it arrives, or later (catch-up) while it can still be used.</summary>
     void OfferCode(StoredClip sc, bool live)
     {
-        if (Settings.Paused || sc.Clip.Src == DeviceId) return;
+        if (Settings.Paused || sc.Clip.IsExpired(Clock.NowMs()) || sc.Clip.Src == DeviceId) return;
         if (!live && Clock.NowMs() - sc.Clip.Ts > 3 * 60_000) return;
         if (!_offeredCodes.Add(sc.Id)) return;
         OnCode?.Invoke(sc);
@@ -326,6 +328,7 @@ internal sealed class AppModel
     /// <summary>"Copy" on a code offer: to this PC's clipboard only.</summary>
     public async Task CopyCodeAsync(StoredClip sc)
     {
+        if (sc.Clip.IsExpired(Clock.NowMs())) return;
         if (WriteClipboard is { } write) await write(sc.Clip, null);
         _node.NoteApplied(sc.Clip);
     }

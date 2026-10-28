@@ -203,7 +203,7 @@
   <data name="Dev_EmptyBody" xml:space="preserve"><value>휴대폰이나 다른 컴퓨터를 추가해 동기화를 시작하세요.</value></data>
   <data name="Remove_Ellipsis" xml:space="preserve"><value>제거…</value></data>
   <data name="Remove_Title" xml:space="preserve"><value>‘{0}’ 기기를 제거할까요?</value></data>
-  <data name="Remove_Body" xml:space="preserve"><value>더 이상 내 기기와 동기화되지 않습니다.</value></data>
+  <data name="Remove_Body" xml:space="preserve"><value>이 기기와의 동기화를 해제하고 암호화 키를 교체합니다. 오프라인이거나 이전 버전을 사용하는 기기는 다시 연결해야 합니다.</value></data>
   <data name="Remove" xml:space="preserve"><value>제거</value></data>
   <data name="Priv_PasswordManagers" xml:space="preserve"><value>암호 관리자</value></data>
   <data name="Priv_Skip" xml:space="preserve"><value>암호 및 비공개 항목 건너뛰기</value></data>
@@ -252,4 +252,10 @@
   <data name="Connected_SameNetwork" xml:space="preserve"><value>연결됨 · 같은 네트워크</value></data>
   <data name="Connected_Remote" xml:space="preserve"><value>연결됨 · 원격</value></data>
   <data name="About_Direct" xml:space="preserve"><value>기기 간 직접 연결</value></data>
+  <data name="SyncSettings_Title" xml:space="preserve"><value>동기화 설정…</value></data>
+  <data name="SyncPolicy_Send" xml:space="preserve"><value>이 기기로 보내기</value></data>
+  <data name="SyncPolicy_Receive" xml:space="preserve"><value>이 기기에서 받기</value></data>
+  <data name="SyncPolicy_Images" xml:space="preserve"><value>이미지 포함</value></data>
+  <data name="SyncPolicy_Codes" xml:space="preserve"><value>인증번호 포함</value></data>
+  <data name="Save" xml:space="preserve"><value>저장</value></data>
 </root>

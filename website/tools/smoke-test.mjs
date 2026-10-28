@@ -47,7 +47,7 @@ async function open(url, opts = {}) {
 console.log("assets and links");
 for (const file of ["index.html", "privacy.html", "404.html"]) {
   const html = fs.readFileSync(path.join(root, file), "utf8");
-  const refs = [...html.matchAll(/(?:src|href|poster|data-src-l)="([^"#][^"]*)"/g)].map((m) => m[1]).filter((u) => !/^(https?:|mailto:|\?)/.test(u));
+  const refs = [...html.matchAll(/(?:src|href|poster|data-src-l)="([^"#][^"]*)"/g)].map((m) => m[1]).filter((u) => !/^(https?:|mailto:|altstore:|sidestore:|\?)/.test(u));
   for (let ref of refs) {
     ref = ref.replace(/^\/nearclip\//, "").replace("%L", "ko");
     if (ref === "./") continue;

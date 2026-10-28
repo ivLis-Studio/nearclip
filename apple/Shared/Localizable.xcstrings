@@ -2966,6 +2966,136 @@
           }
         }
       }
+    },
+    "Send to this device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기로 보내기"
+          }
+        }
+      }
+    },
+    "Receive from this device": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기에서 받기"
+          }
+        }
+      }
+    },
+    "Include images": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 포함"
+          }
+        }
+      }
+    },
+    "Include verification codes": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인증번호 포함"
+          }
+        }
+      }
+    },
+    "Direction": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 방향"
+          }
+        }
+      }
+    },
+    "Content": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화할 항목"
+          }
+        }
+      }
+    },
+    "Sync settings…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동기화 설정…"
+          }
+        }
+      }
+    },
+    "Applies to live copies and history sync. Verification codes expire after 3 minutes.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실시간 복사와 기록 동기화에 적용됩니다. 인증번호는 3분 후 삭제됩니다."
+          }
+        }
+      }
+    },
+    "It will stop syncing. Encryption keys will change. Devices that are offline or running an older version must be paired again.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기와의 동기화를 해제하고 암호화 키를 교체합니다. 오프라인이거나 이전 버전을 사용하는 기기는 다시 연결해야 합니다."
+          }
+        }
+      }
+    },
+    "Check for updates": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업데이트 확인"
+          }
+        }
+      }
+    },
+    "You’re up to date": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최신 버전입니다"
+          }
+        }
+      }
+    },
+    "Couldn’t check for updates. Try again later.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업데이트를 확인하지 못했습니다. 나중에 다시 시도해주세요."
+          }
+        }
+      }
+    },
+    "Download version %@": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 버전 다운로드"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

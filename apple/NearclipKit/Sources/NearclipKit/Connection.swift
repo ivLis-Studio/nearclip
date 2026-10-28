@@ -29,6 +29,7 @@ final class FramedConnection {
     var onFrame: ((Data) -> Void)?
     var onClose: ((NearclipError?) -> Void)?
     private(set) var isClosed = false
+    private(set) var pendingSends = 0
     private(set) var isReady = false
     /// The candidate that won the race (client connections).
     private(set) var winner: DialCandidate?
@@ -220,8 +221,10 @@ final class FramedConnection {
         var frame = Data(capacity: payload.count + 4)
         withUnsafeBytes(of: UInt32(payload.count).bigEndian) { frame.append(contentsOf: $0) }
         frame.append(payload)
+        pendingSends += 1
         nw.send(content: frame, completion: .contentProcessed { [weak self] error in
             guard let self else { return }
+            self.pendingSends -= 1
             if let error { self.finish(.io(error.localizedDescription)); return }
             completion?()
         })

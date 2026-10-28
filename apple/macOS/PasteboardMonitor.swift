@@ -190,6 +190,7 @@ final class PasteboardMonitor: ClipboardWriter {
 
     @discardableResult
     func write(_ clip: Clip, blob: Data?) -> Bool {
+        guard !clip.isExpired() else { return false }
         // Already there (copied on this Mac too, or brought by Universal Clipboard): not written again.
         let unchanged = pb.changeCount == lastKeyChange
         let textKey = clip.isText ? clip.text.map(ContentKey.text) : nil
@@ -211,12 +212,23 @@ final class PasteboardMonitor: ClipboardWriter {
         } else {
             return false
         }
+        if clip.isCode { item.setData(Data(), forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")) }
         item.setData(Data(), forType: Self.marker)
         pb.clearContents()
         pb.writeObjects([item])
         lastChange = pb.changeCount
         generation += 1
         remember(textKey, file: fileKey, change: lastChange)
+        if clip.isCode {
+            let written = pb.changeCount
+            let wait = max(0, clip.ts + Clip.codeLifetime - nowMs())
+            Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(wait))
+                guard let self, self.pb.changeCount == written, self.pb.string(forType: .string) == clip.text else { return }
+                self.pb.clearContents(); self.lastChange = self.pb.changeCount
+                self.remember(nil, file: nil, change: self.lastChange)
+            }
+        }
         if clip.isImage, let blob {
             // The pixels, so the same picture coming back in another format (TIFF) is recognised too.
             let written = lastChange

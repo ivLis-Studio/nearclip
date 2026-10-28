@@ -255,6 +255,7 @@ internal sealed class ClipboardService
     /// was written: the clipboard already holds the same content, or it could not be opened.</summary>
     public async Task<bool> WriteAsync(Clip clip, byte[]? blob)
     {
+        if (clip.IsExpired(Clock.NowMs())) return false;
         byte[]? dib = null;
         string? key;
         if (clip.IsImage)
@@ -297,6 +298,7 @@ internal sealed class ClipboardService
                 if (dib is not null) SetData(Native.CF_DIBV5, dib);
             }
             SetData(MarkerFormat, Encoding.UTF8.GetBytes(clip.Id));
+            if (clip.IsCode) SetData(ExcludeFormat, new byte[4]);
         }
         finally
         {
@@ -306,7 +308,19 @@ internal sealed class ClipboardService
             _generation++;
             Remember(key, _ownSeq);
         }
+        if (clip.IsCode) _ = ExpireCodeAsync(clip, _ownSeq);
         return true;
+    }
+
+    async Task ExpireCodeAsync(Clip clip, uint written) {
+        await Task.Delay(TimeSpan.FromMilliseconds(Math.Clamp(clip.Ts + 180_000 - Clock.NowMs(), 0, 240_000)));
+        // Only our original clipboard write may be cleared. A newer copy, even of the same digits, wins.
+        if (Native.GetClipboardSequenceNumber() != written || !Open()) return;
+        try {
+            if (Native.GetClipboardSequenceNumber() != written) return;
+            var raw = Read(Native.CF_UNICODETEXT);
+            if (raw is not null && Encoding.Unicode.GetString(raw).TrimEnd('\0') == clip.Text) Native.EmptyClipboard();
+        } finally { Native.CloseClipboard(); }
     }
 
     static void SetData(uint format, byte[] data)

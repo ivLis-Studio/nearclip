@@ -18,6 +18,7 @@ internal sealed class NodeStore : IDisposable
         public Dictionary<string, long> LastSeen { get; set; } = new();
         public Dictionary<string, long> Tombstones { get; set; } = new();
         public long NewestLocalTs { get; set; }
+        public Dictionary<string, SyncPolicy> Policies { get; set; } = new();
     }
 
     internal sealed class PersistedClip
@@ -46,6 +47,9 @@ internal sealed class NodeStore : IDisposable
 
     const int InlineTextLimit = 256 * 1024;
 
+    readonly LocalVault _vault;
+    readonly object _cacheLock = new();
+    readonly string _cache = Path.Combine(Path.GetTempPath(), "nearclip-preview-" + Guid.NewGuid());
     readonly string _directory;
     readonly string _blobs;
     readonly SerialQueue _owner;
@@ -62,12 +66,15 @@ internal sealed class NodeStore : IDisposable
     public IReadOnlyList<StoredClip> History => _history;
     public string BlobDirectory => _blobs;
 
-    public NodeStore(string directory, string defaultName, SerialQueue owner)
+    public NodeStore(string directory, string defaultName, SerialQueue owner, ISecretStore secrets)
     {
+        _vault = new LocalVault(secrets);
+        Directory.CreateDirectory(_cache);
         _directory = directory;
         _blobs = Path.Combine(directory, "blobs");
         _owner = owner;
         Directory.CreateDirectory(_blobs);
+        foreach (var path in Directory.EnumerateFiles(_blobs).Where(p => Path.GetExtension(p) is ".bin" or ".txt")) _vault.Read(path);
         State = TryRead<PersistedState>("state.json") ?? new PersistedState
         {
             DeviceId = Ids.New(),
@@ -90,7 +97,7 @@ internal sealed class NodeStore : IDisposable
                 var clip = pc.Clip;
                 if (pc.TextFile)
                 {
-                    try { clip = clip with { Text = File.ReadAllText(TextPath(clip.Id)) }; }
+                    try { clip = clip with { Text = System.Text.Encoding.UTF8.GetString(_vault.Read(TextPath(clip.Id))) }; }
                     catch (IOException) { continue; }
                 }
                 var sc = new StoredClip(clip, pc.GroupId, pc.Pinned, pc.ReceivedAt, pc.SrcName, pc.SrcPlatform, pc.LocalOnly);
@@ -106,17 +113,25 @@ internal sealed class NodeStore : IDisposable
         {
             var path = Path.Combine(_directory, name);
             if (!File.Exists(path)) return null;
-            return JsonSerializer.Deserialize<T>(File.ReadAllBytes(path), JsonOptions);
+            return JsonSerializer.Deserialize<T>(_vault.Read(path), JsonOptions);
         }
+        catch (System.Security.Cryptography.CryptographicException) { throw; }
         catch (Exception) { return null; }
     }
 
-    public string BlobPath(string id) => Path.Combine(_blobs, id + ".bin");
+    string RawBlobPath(string id) => Path.Combine(_blobs, id + ".bin");
+    public string BlobPath(string id) {
+        lock (_cacheLock) {
+            var path = Path.Combine(_cache, id + ".bin");
+            if (!File.Exists(path) && ReadBlob(id) is { } data) File.WriteAllBytes(path, data);
+            return path;
+        }
+    }
     string TextPath(string id) => Path.Combine(_blobs, id + ".txt");
 
     public byte[]? ReadBlob(string id)
     {
-        try { return File.ReadAllBytes(BlobPath(id)); }
+        try { return _vault.Read(RawBlobPath(id)); }
         catch (IOException) { return null; }
         catch (UnauthorizedAccessException) { return null; }
     }
@@ -127,7 +142,7 @@ internal sealed class NodeStore : IDisposable
     public void Add(StoredClip clip, byte[]? blob)
     {
         if (_byId.ContainsKey(clip.Id)) return;
-        if (blob is not null) WriteAtomic(BlobPath(clip.Id), blob);
+        if (blob is not null) _vault.Write(RawBlobPath(clip.Id), blob);
         var idx = _history.FindIndex(c => c.Clip.Ts < clip.Clip.Ts);
         if (idx < 0) idx = _history.Count;
         _history.Insert(idx, clip);
@@ -139,7 +154,8 @@ internal sealed class NodeStore : IDisposable
     {
         if (!_byId.Remove(id)) return false;
         _history.RemoveAll(c => c.Id == id);
-        TryDelete(BlobPath(id));
+        TryDelete(RawBlobPath(id));
+        lock (_cacheLock) TryDelete(Path.Combine(_cache, id + ".bin"));
         TryDelete(TextPath(id));
         SaveSoon();
         return true;
@@ -217,9 +233,9 @@ internal sealed class NodeStore : IDisposable
         void Work()
         {
             foreach (var (path, text) in sideTexts)
-                if (!File.Exists(path)) WriteAtomic(path, System.Text.Encoding.UTF8.GetBytes(text));
-            WriteAtomic(Path.Combine(dir, "state.json"), stateBytes);
-            WriteAtomic(Path.Combine(dir, "history.json"), historyBytes);
+                if (!File.Exists(path)) _vault.Write(path, System.Text.Encoding.UTF8.GetBytes(text));
+            _vault.Write(Path.Combine(dir, "state.json"), stateBytes);
+            _vault.Write(Path.Combine(dir, "history.json"), historyBytes);
         }
         if (sync) _io.Invoke(Work); else _io.Post(Work);
     }
@@ -247,5 +263,6 @@ internal sealed class NodeStore : IDisposable
         SaveNow();
         _disposed = true;
         _io.Dispose();
+        try { Directory.Delete(_cache, true); } catch (IOException) { }
     }
 }

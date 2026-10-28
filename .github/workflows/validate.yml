@@ -1,0 +1,67 @@
+name: Native validation
+on:
+  push:
+    branches: [main, 'ivAI/**']
+    paths: ['apple/**', 'android/**', 'windows/**', 'spec/**', 'tools/interop/**', '.github/workflows/validate.yml']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  apple:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tailnet/go.mod
+          cache-dependency-path: tailnet/go.sum
+      - uses: actions/cache@v4
+        id: bridge
+        with:
+          path: apple/NearclipKit/Binaries/NCTailnet.xcframework
+          key: apple-bridge-${{ runner.arch }}-${{ hashFiles('tailnet/**') }}
+      - if: steps.bridge.outputs.cache-hit != 'true'
+        run: tailnet/build.sh apple
+      - run: swift test --package-path apple/NearclipKit
+      - run: command -v xcodegen || brew install xcodegen
+      - run: xcodegen generate --spec apple/project.yml
+      - name: Build the native Mac app
+        run: xcodebuild -project apple/Nearclip.xcodeproj -scheme Nearclip -configuration Debug -destination 'platform=macOS' -derivedDataPath "$RUNNER_TEMP/mac-build" CODE_SIGNING_ALLOWED=NO build
+      - name: Archive iPhone and iPad with the share extension
+        run: xcodebuild -project apple/Nearclip.xcodeproj -scheme NearclipiOS -configuration Release -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Nearclip.xcarchive" CODE_SIGNING_ALLOWED=NO archive
+      - name: Package the sideload IPA
+        run: apple/scripts/build-ipa.sh "$RUNNER_TEMP/Nearclip.xcarchive"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: iPhone-iPad-test-IPA
+          path: dist/Nearclip-iOS.ipa
+      - name: Test iPhone UI in the simulator
+        shell: bash
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          SIMULATOR_ID=$(python3 -c 'import json,os; d=json.load(open(os.environ["RUNNER_TEMP"]+"/simulators.json")); print(next(x["udid"] for runtime,devices in sorted(d["devices"].items(),reverse=True) if "iOS" in runtime for x in devices if x.get("isAvailable") and "iPhone" in x["name"]))')
+          xcodebuild -project apple/Nearclip.xcodeproj -scheme NearclipiOS -configuration Debug -destination "platform=iOS Simulator,id=$SIMULATOR_ID" -derivedDataPath "$RUNNER_TEMP/ios-tests" CODE_SIGNING_ALLOWED=NO test
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet run --project windows/tests/Nearclip.Core.Tests
+      - name: Get the unchanged native Tailscale bridge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release download --repo ivLis-Studio/nearclip --pattern Nearclip-Windows-x64.zip --dir "$env:RUNNER_TEMP/native"
+          Expand-Archive "$env:RUNNER_TEMP/native/Nearclip-Windows-x64.zip" "$env:RUNNER_TEMP/native/unpacked"
+          New-Item -ItemType Directory -Force windows/native/win-x64
+          Get-ChildItem "$env:RUNNER_TEMP/native/unpacked" -Recurse -Filter nctailnet.dll | Select-Object -First 1 | Copy-Item -Destination windows/native/win-x64/nctailnet.dll
+      - run: dotnet build windows/src/Nearclip.App/Nearclip.App.csproj -c Release -p:Platform=x64

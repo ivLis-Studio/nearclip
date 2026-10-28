@@ -3,7 +3,9 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ["website/public/**", ".github/workflows/website.yml"]
+    paths: ["website/public/**", ".github/workflows/website.yml", "tools/release/altstore_source.py"]
+  release:
+    types: [published, edited]
   workflow_dispatch:
 
 permissions:
@@ -23,6 +25,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+      - name: Refresh sideload source from the latest released IPA
+        run: python3 tools/release/altstore_source.py
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

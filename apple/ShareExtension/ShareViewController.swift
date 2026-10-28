@@ -1,0 +1,117 @@
+import NearclipKit
+import UIKit
+import UniformTypeIdentifiers
+
+@MainActor
+final class ShareViewController: UITableViewController {
+    private var seed: ShareSeed?
+    private var node: NearclipNode?
+    private var directory: URL?
+    private var operation: Task<Void, Never>?
+    private var text: String?
+    private var image: Data?
+    private var mime = "image/png"
+    private var peers: [MemberRecord] = []
+    private let status = UILabel()
+    private var sending = false
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .systemGroupedBackground
+        status.numberOfLines = 0; status.textAlignment = .center
+        status.font = .preferredFont(forTextStyle: .headline)
+        status.text = NSLocalizedString("Preparing…", comment: "")
+        status.frame = CGRect(x: 16, y: 0, width: view.bounds.width - 32, height: 100)
+        tableView.tableHeaderView = status
+        navigationItem.title = "Nearclip"
+        navigationItem.leftBarButtonItem = UIBarButtonItem(systemItem: .cancel, primaryAction: UIAction { [weak self] _ in self?.cancel() })
+        operation = Task { await prepare() }
+    }
+    private func say(_ text: String) { status.text = text }
+    private func prepare() async {
+        do {
+            guard let data = KeychainSecretStore(service: "studio.ivlis.nearclip.share").load("context") else {
+                say(NSLocalizedString("Open Nearclip and add a device first.", comment: "")); return
+            }
+            let seed = try JSONDecoder().decode(ShareSeed.self, from: data)
+            guard !seed.paused else { say(NSLocalizedString("Syncing paused", comment: "")); return }
+            self.seed = seed
+            let providers = (extensionContext?.inputItems as? [NSExtensionItem] ?? []).flatMap { $0.attachments ?? [] }
+            guard let provider = providers.first else { say(NSLocalizedString("Nothing to send", comment: "")); return }
+            if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                guard seed.images else { say(NSLocalizedString("Turn on image sync in Nearclip first.", comment: "")); return }
+                let data = try await provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier)
+                guard data.count <= 32 * 1024 * 1024, let photo = UIImage(data: data) else { say(NSLocalizedString("Image is too large", comment: "")); return }
+                image = photo.pngData()
+                if (image?.count ?? Int.max) > 32 * 1024 * 1024 { image = photo.jpegData(compressionQuality: 0.9); mime = "image/jpeg" }
+                guard let image, image.count <= 32 * 1024 * 1024 else { say(NSLocalizedString("Image is too large", comment: "")); return }
+            } else if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
+                let item = try await provider.loadItem(forTypeIdentifier: UTType.url.identifier)
+                if let url = item as? URL { text = url.absoluteString }
+                else if let url = item as? String { text = url }
+            } else if provider.hasItemConformingToTypeIdentifier(UTType.text.identifier) {
+                let item = try await provider.loadItem(forTypeIdentifier: UTType.text.identifier)
+                text = (item as? String) ?? (item as? Data).flatMap { String(data: $0, encoding: .utf8) }
+            }
+            guard image != nil || text?.isEmpty == false else { say(NSLocalizedString("This item is not supported", comment: "")); return }
+            guard (text?.utf8.count ?? 0) <= 4 * 1024 * 1024 else { say(NSLocalizedString("Text is too large", comment: "")); return }
+            let dir = FileManager.default.temporaryDirectory.appendingPathComponent("nearclip-share-" + UUID().uuidString)
+            directory = dir
+            let node = try NearclipNode.shareNode(seed: seed, directory: dir)
+            self.node = node
+            peers = seed.members.filter { node.policy(for: $0.id).send && (image == nil || node.policy(for: $0.id).images) }
+            say(peers.isEmpty ? NSLocalizedString("Open Nearclip and add a device first.", comment: "") : NSLocalizedString("Send to…", comment: ""))
+            tableView.reloadData()
+        } catch { say(NSLocalizedString("Couldn’t prepare this item. Try again in Nearclip.", comment: "")) }
+    }
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int { peers.count }
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
+        let peer = peers[indexPath.row]
+        cell.textLabel?.text = peer.name; cell.detailTextLabel?.text = peer.platform
+        cell.imageView?.image = UIImage(systemName: peer.platform == "win" || peer.platform == "mac" ? "desktopcomputer" : "iphone")
+        cell.accessoryType = .disclosureIndicator
+        return cell
+    }
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        guard !sending, let node else { return }
+        sending = true; tableView.isUserInteractionEnabled = false
+        let peer = peers[indexPath.row]
+        for member in seed?.members ?? [] {
+            var policy = node.policy(for: member.id)
+            policy.send = member.id == peer.id; policy.receive = false
+            node.setPolicy(policy, for: member.id)
+        }
+        say(NSLocalizedString("Connecting…", comment: ""))
+        node.start()
+        operation = Task {
+            let deadline = Date().addingTimeInterval(20)
+            while !Task.isCancelled, Date() < deadline, !node.snapshot().online.contains(peer.id) { try? await Task.sleep(for: .milliseconds(100)) }
+            guard !Task.isCancelled else { return }
+            guard node.snapshot().online.contains(peer.id) else { fail(); return }
+            guard node.supportsTargeting(peer.id) else {
+                say(NSLocalizedString("Update Nearclip on the other device first.", comment: "")); node.stop(); return
+            }
+            say(NSLocalizedString("Sending…", comment: ""))
+            if let image { node.sendImage(image, mime: mime) } else if let text { node.sendText(text) }
+            while !Task.isCancelled, Date() < deadline, !node.outgoingIdle(to: peer.id) { try? await Task.sleep(for: .milliseconds(100)) }
+            guard !Task.isCancelled else { return }
+            guard node.outgoingIdle(to: peer.id) else { fail(); return }
+            cleanup()
+            extensionContext?.completeRequest(returningItems: nil)
+        }
+    }
+    private func fail() {
+        say(NSLocalizedString("Couldn’t connect. Open Nearclip on the other device and try again.", comment: ""))
+        node?.stop(); sending = false; tableView.isUserInteractionEnabled = true
+    }
+    private func cleanup() {
+        node?.stop(); node = nil
+        if let directory { try? FileManager.default.removeItem(at: directory) }
+    }
+    private func cancel() {
+        operation?.cancel(); cleanup()
+        extensionContext?.cancelRequest(withError: NSError(domain: "Nearclip", code: NSUserCancelledError))
+    }
+    override func viewDidDisappear(_ animated: Bool) { super.viewDidDisappear(animated); operation?.cancel(); cleanup() }
+}

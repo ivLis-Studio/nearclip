@@ -225,6 +225,7 @@ private struct DevicesSettings: View {
     let model: AppModel
     let windows: WindowManager
     @State private var confirmRemove: MemberRecord?
+    @State private var syncMember: MemberRecord?
     @State private var confirmLeave = false
 
     var body: some View {
@@ -247,8 +248,13 @@ private struct DevicesSettings: View {
                     .padding(.vertical, 4)
                 }
                 ForEach(model.otherMembers) { m in
-                    DeviceRow(model: model, member: m)
+                    HStack {
+                        DeviceRow(model: model, member: m)
+                        Button { syncMember = m } label: { Image(systemName: "slider.horizontal.3") }
+                            .help("Sync settings…")
+                    }
                         .contextMenu {
+                            Button("Sync settings…") { syncMember = m }
                             Button("Remove…", role: .destructive) { confirmRemove = m }
                         }
                         .swipeActions {
@@ -294,9 +300,10 @@ private struct DevicesSettings: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(item: $syncMember) { DeviceSyncSettings(model: model, member: $0) }
         .alert(item: $confirmRemove) { m in
             Alert(title: Text("Remove ‘\(m.name)’?"),
-                  message: Text("It will stop syncing with your devices."),
+                  message: Text("It will stop syncing. Encryption keys will change. Devices that are offline or running an older version must be paired again."),
                   primaryButton: .destructive(Text("Remove")) { model.remove(m) },
                   secondaryButton: .cancel())
         }
@@ -519,6 +526,9 @@ private struct AboutSettings: View {
             .font(.callout)
             .foregroundStyle(.secondary)
             .padding(.top, 6)
+            #if !APPSTORE
+            UpdateView()
+            #endif
             Button("Open-source licenses…") { showLicenses = true }
                 .buttonStyle(.link)
                 .font(.callout)

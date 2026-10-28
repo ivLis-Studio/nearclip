@@ -33,6 +33,7 @@ internal class PersistedState(
     val lastSeen: HashMap<String, Long> = HashMap(),
     val tombstones: HashMap<String, Long> = HashMap(),
     var newestLocalTs: Long = 0,
+    val policies: HashMap<String, studio.ivlis.nearclip.core.model.SyncPolicy> = HashMap(),
 )
 
 internal object Persistence {
@@ -62,10 +63,12 @@ internal object Persistence {
         }
         o.obj("lastSeen")?.forEach { (pid, _) -> o.obj("lastSeen")?.long(pid)?.let { st.lastSeen[pid] = it } }
         o.obj("tombstones")?.let { t -> t.keys.forEach { cid -> t.long(cid)?.let { st.tombstones[cid] = it } } }
+        o.obj("policies")?.forEach { (id, v) -> (v as? JsonObject)?.let { st.policies[id] = studio.ivlis.nearclip.core.model.SyncPolicy.from(it) } }
         return st
     }
 
     fun stateJson(st: PersistedState, store: Store): String = buildJsonObject {
+        putJsonObject("policies") { st.policies.forEach { (id, p) -> put(id, p.json()) } }
         put("v", 1)
         put("deviceId", st.deviceId)
         put("deviceName", st.deviceName)
@@ -95,7 +98,7 @@ internal object Persistence {
             val kind = c.str("kind") ?: continue
             var body = c.str("text")
             if (kind == ClipKind.TEXT && c.bool("textFile") == true) {
-                body = try { store.file(textFileName(id)).readText(Charsets.UTF_8) } catch (_: Exception) { continue }
+                body = try { store.readFile(textFileName(id)).toString(Charsets.UTF_8) } catch (_: Exception) { continue }
             }
             out.add(
                 Clip(
@@ -116,6 +119,7 @@ internal object Persistence {
                     sourcePlatform = c.str("srcPlatform"),
                     localOnly = c.bool("localOnly") ?: false,
                     otp = c.bool("otp") ?: false,
+                    recipients = c.arr("recipients")?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content },
                 ),
             )
         }
@@ -130,8 +134,7 @@ internal object Persistence {
             val big = c.isText && (c.text?.length ?: 0) > INLINE_TEXT_LIMIT / 4 &&
                 (c.text ?: "").toByteArray(Charsets.UTF_8).size > INLINE_TEXT_LIMIT
             if (big) {
-                val f = store.file(textFileName(c.id))
-                if (!f.exists()) f.writeText(c.text ?: "", Charsets.UTF_8)
+                if (!store.hasFile(textFileName(c.id))) store.writeFile(textFileName(c.id), (c.text ?: "").toByteArray(Charsets.UTF_8))
             }
             clips.add(
                 buildJsonObject {
@@ -153,6 +156,7 @@ internal object Persistence {
                     c.sourcePlatform?.let { put("srcPlatform", it) }
                     if (c.localOnly) put("localOnly", true)
                     if (c.otp) put("otp", true)
+                    c.recipients?.let { put("recipients", JsonArray(it.map { id -> kotlinx.serialization.json.JsonPrimitive(id) })) }
                 },
             )
         }

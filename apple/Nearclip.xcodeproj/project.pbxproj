@@ -14,15 +14,18 @@
 		186CF86D19B3D3189A999BBA /* HistoryPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 551FEA9D92ECA7E972211549 /* HistoryPanel.swift */; };
 		1A5DEBEA02AB117CA561D65A /* RemoteStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537D4ECA837CA73D20C6262B /* RemoteStatus.swift */; };
 		1CDB9F0962CB3DC200601DD8 /* NearclipFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9783437598AC5F7D8DE60D0 /* NearclipFlowTests.swift */; };
+		1D5D724EA345A3A2F665F5FB /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AC215835B8FEFED5910C39A7 /* PrivacyInfo.xcprivacy */; };
 		1EEE42D6428C4BCAC49777AC /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = D855A09E60DC9709CE7EDF2C /* App.swift */; };
 		203B8C912EA5F0574DB1B0D7 /* SendCodeIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BCDDA1CC9A03C5E2FA75BC8 /* SendCodeIntent.swift */; };
 		228F4B968C8BBDE61A12B052 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 390EF43994EBD5101628E2F8 /* AppSettings.swift */; };
 		25C8C4A266F38CF608CA5389 /* ClipPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C57D763B0454F256D7E5E43 /* ClipPresentation.swift */; };
 		2670D4E5801D5AD2A469E3CD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 14BB1B9168653FCCED79DF1F /* Assets.xcassets */; };
 		2E6E26B9C2B598FCDAD56570 /* ClipPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C57D763B0454F256D7E5E43 /* ClipPresentation.swift */; };
+		330BABC5DAB01ECCADC764C1 /* NearclipKit in Frameworks */ = {isa = PBXBuildFile; productRef = F4D46CA4FB8E6D69B6AA97B1 /* NearclipKit */; };
 		333ACE8C31E11322EE622B90 /* RemoteStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537D4ECA837CA73D20C6262B /* RemoteStatus.swift */; };
 		3411FF410AFD6BDD560381D0 /* MacSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E3B15AE58D2DEEECAC4365 /* MacSystem.swift */; };
 		36CE3427A48B4176F1C6E593 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D3C41DF8478E4CDD005E811 /* HistoryView.swift */; };
+		36E0E11A959EE33FEE00F05F /* DeviceSyncSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 973588F1769449C8C4CBFF42 /* DeviceSyncSettings.swift */; };
 		37B922B499E66E1EEB908BD6 /* Thumbnails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C1280C9250B841816265EE1 /* Thumbnails.swift */; };
 		38E1BB24E73D43BAF68A59EA /* Thumbs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C389176653434EF574C96FC /* Thumbs.swift */; };
 		39AC4CA215FF9CB2BC5C055F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 14BB1B9168653FCCED79DF1F /* Assets.xcassets */; };
@@ -37,10 +40,12 @@
 		506BCFDACD2FFD1F1AE682B1 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF034EEF6C1CDC94F1EEF8FB /* AppModel.swift */; };
 		58F95B92575F4340079B5B6C /* Observe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A74C4024E0539DECB1414799 /* Observe.swift */; };
 		59DD44FB314DE17D9DE3B01A /* CodeGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 695C19C6970B6728F9E22DCC /* CodeGuideView.swift */; };
+		5D62B67D689C3FEF41652CEB /* DeviceSyncSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 973588F1769449C8C4CBFF42 /* DeviceSyncSettings.swift */; };
 		6067512AF4E75A8882F510D9 /* THIRD_PARTY_NOTICES.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8C6A7833E9EAEE8423E7960D /* THIRD_PARTY_NOTICES.txt */; };
 		62CC5315E49D77F1D90BD909 /* NearclipKit in Frameworks */ = {isa = PBXBuildFile; productRef = E6E0DD5AA526C11ABB13B349 /* NearclipKit */; };
 		68103537D393B3736704DE39 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43EAEA2E8E541FAF46148C0 /* HomeView.swift */; };
 		6C25D14C9725770C26D3365F /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = D855A09E60DC9709CE7EDF2C /* App.swift */; };
+		6EC90689ADD8E7AAA770D71D /* NearclipShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 1512D0C101FE6C0B545CE4FE /* NearclipShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		70481531D8714E83CD3756C6 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A842106DD543E15C7080D0C /* SettingsView.swift */; };
 		71899E271AA3397A615C69DE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFC1FAFD1CCC8EC0799F582A /* Assets.xcassets */; };
 		75EEC6E6BA833B72E4DBBAE9 /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E325BAAA0B3E26334FF44B11 /* WindowManager.swift */; };
@@ -67,6 +72,7 @@
 		BB718426A4ECD365A794FEC4 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D3C41DF8478E4CDD005E811 /* HistoryView.swift */; };
 		BC974FDA8FB8DFEBC60D721E /* MacSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E3B15AE58D2DEEECAC4365 /* MacSystem.swift */; };
 		BFBD21F0D3D3B78C260B4BF7 /* WindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E325BAAA0B3E26334FF44B11 /* WindowManager.swift */; };
+		C6402C08213D5F40F0759910 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D736DE1556B9D8D8344A2DED /* ShareViewController.swift */; };
 		C8258C53CE1481BA9F25CE0A /* NearclipKit in Frameworks */ = {isa = PBXBuildFile; productRef = 45F394FA2168EB2F39881174 /* NearclipKit */; };
 		C8A343C4CD2F9767CB12C67A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 488193C6F4E63CE52B3BFDC6 /* PrivacyInfo.xcprivacy */; };
 		CB27885ED8291F9FD2B8B676 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C631F61D199146524AEC0508 /* Localizable.xcstrings */; };
@@ -80,6 +86,7 @@
 		F175AFD30A991706A89FA415 /* HotKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E2EFDC029390C803A86F7E0 /* HotKey.swift */; };
 		F1C39607A0339EC9C799C87C /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF034EEF6C1CDC94F1EEF8FB /* AppModel.swift */; };
 		F35E0CD344E241B0E3A95A11 /* THIRD_PARTY_NOTICES.txt in Resources */ = {isa = PBXBuildFile; fileRef = 8C6A7833E9EAEE8423E7960D /* THIRD_PARTY_NOTICES.txt */; };
+		F63FDE02274123F915F25C65 /* DeviceSyncSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 973588F1769449C8C4CBFF42 /* DeviceSyncSettings.swift */; };
 		FCF429ECE3E03227840CA5C1 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF034EEF6C1CDC94F1EEF8FB /* AppModel.swift */; };
 /* End PBXBuildFile section */
 
@@ -91,10 +98,32 @@
 			remoteGlobalIDString = 01F602BDCEE4341D33362C2B;
 			remoteInfo = NearclipiOS;
 		};
+		F399A1C9225F864071834841 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F82123BDB5B66E577235101E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E497410E4160096E8DCED8FB;
+			remoteInfo = NearclipShare;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D4DB28BC34BBC656589BC7C3 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				6EC90689ADD8E7AAA770D71D /* NearclipShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		14BB1B9168653FCCED79DF1F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		1512D0C101FE6C0B545CE4FE /* NearclipShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = NearclipShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		1817C11A39867D99CA9888BA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		2E2EFDC029390C803A86F7E0 /* HotKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKey.swift; sourceTree = "<group>"; };
 		390EF43994EBD5101628E2F8 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
@@ -110,6 +139,7 @@
 		642CFE021022A091BC115C9C /* NearclipAppStore.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NearclipAppStore.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		695C19C6970B6728F9E22DCC /* CodeGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeGuideView.swift; sourceTree = "<group>"; };
 		6D3C41DF8478E4CDD005E811 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		70F8FF1747A8C5B41408CEC8 /* Nearclip.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Nearclip.entitlements; sourceTree = "<group>"; };
 		785267A00EE47872FBF39D9D /* NearclipApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearclipApp.swift; sourceTree = "<group>"; };
 		7C389176653434EF574C96FC /* Thumbs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Thumbs.swift; sourceTree = "<group>"; };
 		7ED2AEFB5493EB45835DACF9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -118,6 +148,7 @@
 		8C1280C9250B841816265EE1 /* Thumbnails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Thumbnails.swift; sourceTree = "<group>"; };
 		8C6A7833E9EAEE8423E7960D /* THIRD_PARTY_NOTICES.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = THIRD_PARTY_NOTICES.txt; path = ../../tailnet/notices/THIRD_PARTY_NOTICES.txt; sourceTree = "<group>"; };
 		8FC60E14C21E271C810CFA70 /* NearclipiOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = NearclipiOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		973588F1769449C8C4CBFF42 /* DeviceSyncSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceSyncSettings.swift; sourceTree = "<group>"; };
 		A137E8B0703E6ED8C652AFFE /* Nearclip.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nearclip.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A74C4024E0539DECB1414799 /* Observe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Observe.swift; sourceTree = "<group>"; };
 		A91262F9110F51C89BB221D5 /* QRCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCode.swift; sourceTree = "<group>"; };
@@ -126,12 +157,14 @@
 		B1E3B15AE58D2DEEECAC4365 /* MacSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSystem.swift; sourceTree = "<group>"; };
 		BDC184789C8895E8FF98B5E3 /* AddDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDeviceView.swift; sourceTree = "<group>"; };
 		BF034EEF6C1CDC94F1EEF8FB /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		C4774470DD556825D87B65F3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C631F61D199146524AEC0508 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C848A71B9B7E67DE581D2B4D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		CD66BBD7DDE56E870E5DD005 /* OpenSourceNotices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenSourceNotices.swift; sourceTree = "<group>"; };
 		D207F66CDDE49C251E7B72E7 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		D2265AA51A4EF5BEB3034DCF /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		D43EAEA2E8E541FAF46148C0 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		D736DE1556B9D8D8344A2DED /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		D855A09E60DC9709CE7EDF2C /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		DE17CDD430EB6F55936D5065 /* ToastController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToastController.swift; sourceTree = "<group>"; };
 		DFC1FAFD1CCC8EC0799F582A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -158,6 +191,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5D644C56E51B2E7995031474 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				330BABC5DAB01ECCADC764C1 /* NearclipKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		CE0325F9F6972D1919E3F7A5 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -169,6 +210,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		069A0929C46B6F7EAEED89BC /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				C4774470DD556825D87B65F3 /* Info.plist */,
+				D736DE1556B9D8D8344A2DED /* ShareViewController.swift */,
+			);
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
 		5895E426AD8715C6A828E9AE /* Packages */ = {
 			isa = PBXGroup;
 			children = (
@@ -193,6 +243,7 @@
 				F12AC517B01CAD8ECDA08040 /* macOS */,
 				5895E426AD8715C6A828E9AE /* Packages */,
 				F68FB44C66830FB520A83BF5 /* Shared */,
+				069A0929C46B6F7EAEED89BC /* ShareExtension */,
 				DEE704AE2F2D8DD4E1754970 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -204,6 +255,7 @@
 				642CFE021022A091BC115C9C /* NearclipAppStore.app */,
 				EE4F69DDDCF5035EE3F300EF /* NearclipiOS.app */,
 				8FC60E14C21E271C810CFA70 /* NearclipiOSUITests.xctest */,
+				1512D0C101FE6C0B545CE4FE /* NearclipShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -243,6 +295,7 @@
 				D43EAEA2E8E541FAF46148C0 /* HomeView.swift */,
 				1817C11A39867D99CA9888BA /* Info.plist */,
 				D207F66CDDE49C251E7B72E7 /* InfoPlist.xcstrings */,
+				70F8FF1747A8C5B41408CEC8 /* Nearclip.entitlements */,
 				785267A00EE47872FBF39D9D /* NearclipApp.swift */,
 				E64797528974FC9115215AA0 /* OnboardingView.swift */,
 				AC215835B8FEFED5910C39A7 /* PrivacyInfo.xcprivacy */,
@@ -259,6 +312,7 @@
 				BF034EEF6C1CDC94F1EEF8FB /* AppModel.swift */,
 				390EF43994EBD5101628E2F8 /* AppSettings.swift */,
 				3C57D763B0454F256D7E5E43 /* ClipPresentation.swift */,
+				973588F1769449C8C4CBFF42 /* DeviceSyncSettings.swift */,
 				C631F61D199146524AEC0508 /* Localizable.xcstrings */,
 				CD66BBD7DDE56E870E5DD005 /* OpenSourceNotices.swift */,
 				A91262F9110F51C89BB221D5 /* QRCode.swift */,
@@ -278,10 +332,12 @@
 				EBB42D05955F16C9CBCC7BCB /* Sources */,
 				DC6514366F8DF8647B990AB0 /* Resources */,
 				45FA1ED622AFE00CF062FB6D /* Frameworks */,
+				D4DB28BC34BBC656589BC7C3 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				FD2A52E940E3BFC68E8A4901 /* PBXTargetDependency */,
 			);
 			name = NearclipiOS;
 			packageProductDependencies = (
@@ -349,6 +405,26 @@
 			productReference = 8FC60E14C21E271C810CFA70 /* NearclipiOSUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		E497410E4160096E8DCED8FB /* NearclipShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DFD84A33208130083B42F142 /* Build configuration list for PBXNativeTarget "NearclipShare" */;
+			buildPhases = (
+				544A373CAB57321AEDBF2D2B /* Sources */,
+				EAC296774BB827241CA8D6AB /* Resources */,
+				5D644C56E51B2E7995031474 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NearclipShare;
+			packageProductDependencies = (
+				F4D46CA4FB8E6D69B6AA97B1 /* NearclipKit */,
+			);
+			productName = NearclipShare;
+			productReference = 1512D0C101FE6C0B545CE4FE /* NearclipShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -393,6 +469,7 @@
 			targets = (
 				5A4048CE6AF2D741BD766C75 /* Nearclip */,
 				552467098CC1E0D1FFCC2D8B /* NearclipAppStore */,
+				E497410E4160096E8DCED8FB /* NearclipShare */,
 				01F602BDCEE4341D33362C2B /* NearclipiOS */,
 				7717AB2DD1FC109BC5E777B4 /* NearclipiOSUITests */,
 			);
@@ -436,6 +513,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		EAC296774BB827241CA8D6AB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D5D724EA345A3A2F665F5FB /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -444,6 +529,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1CDB9F0962CB3DC200601DD8 /* NearclipFlowTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		544A373CAB57321AEDBF2D2B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C6402C08213D5F40F0759910 /* ShareViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -456,6 +549,7 @@
 				FCF429ECE3E03227840CA5C1 /* AppModel.swift in Sources */,
 				228F4B968C8BBDE61A12B052 /* AppSettings.swift in Sources */,
 				2E6E26B9C2B598FCDAD56570 /* ClipPresentation.swift in Sources */,
+				36E0E11A959EE33FEE00F05F /* DeviceSyncSettings.swift in Sources */,
 				186CF86D19B3D3189A999BBA /* HistoryPanel.swift in Sources */,
 				BB718426A4ECD365A794FEC4 /* HistoryView.swift in Sources */,
 				CDCF4A7BDEC7FB3FCBA75C4E /* HotKey.swift in Sources */,
@@ -483,6 +577,7 @@
 				F1C39607A0339EC9C799C87C /* AppModel.swift in Sources */,
 				860C811185A3AD3AD98CC50F /* AppSettings.swift in Sources */,
 				8C2FAB3466A2879621F8613B /* ClipPresentation.swift in Sources */,
+				F63FDE02274123F915F25C65 /* DeviceSyncSettings.swift in Sources */,
 				8EC5908F05154A8BF9B0A7FD /* HistoryPanel.swift in Sources */,
 				36CE3427A48B4176F1C6E593 /* HistoryView.swift in Sources */,
 				F175AFD30A991706A89FA415 /* HotKey.swift in Sources */,
@@ -510,6 +605,7 @@
 				43C6D5C77A8400AAEDAD01FB /* AppSettings.swift in Sources */,
 				25C8C4A266F38CF608CA5389 /* ClipPresentation.swift in Sources */,
 				59DD44FB314DE17D9DE3B01A /* CodeGuideView.swift in Sources */,
+				5D62B67D689C3FEF41652CEB /* DeviceSyncSettings.swift in Sources */,
 				8EDC640DB0B8AEE7AAF1F4B5 /* DevicesView.swift in Sources */,
 				68103537D393B3736704DE39 /* HomeView.swift in Sources */,
 				81148FA1972962F35EEDC37C /* NearclipApp.swift in Sources */,
@@ -530,6 +626,11 @@
 			isa = PBXTargetDependency;
 			target = 01F602BDCEE4341D33362C2B /* NearclipiOS */;
 			targetProxy = 456FAEAF5536C5C04B47DFB2 /* PBXContainerItemProxy */;
+		};
+		FD2A52E940E3BFC68E8A4901 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E497410E4160096E8DCED8FB /* NearclipShare */;
+			targetProxy = F399A1C9225F864071834841 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -633,6 +734,24 @@
 			};
 			name = Release;
 		};
+		5C751DFDF74BA08A595C65FE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = iOS/Nearclip.entitlements;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = studio.ivlis.nearclip.share;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		60DFC4BFD0C40675C95595F9 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -680,6 +799,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iOS/Nearclip.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = iOS/Info.plist;
@@ -779,6 +899,24 @@
 			};
 			name = Debug;
 		};
+		CE8B2A8D0A8F1549047992B6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = iOS/Nearclip.entitlements;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = studio.ivlis.nearclip.share;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		DCED15C447EB9E9E4D629F97 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -805,6 +943,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iOS/Nearclip.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = iOS/Info.plist;
@@ -858,6 +997,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		DFD84A33208130083B42F142 /* Build configuration list for PBXNativeTarget "NearclipShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CE8B2A8D0A8F1549047992B6 /* Debug */,
+				5C751DFDF74BA08A595C65FE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		FCD5341FE5E9D9804962A432 /* Build configuration list for PBXNativeTarget "NearclipAppStore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -886,6 +1034,10 @@
 			productName = NearclipKit;
 		};
 		E6E0DD5AA526C11ABB13B349 /* NearclipKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = NearclipKit;
+		};
+		F4D46CA4FB8E6D69B6AA97B1 /* NearclipKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = NearclipKit;
 		};

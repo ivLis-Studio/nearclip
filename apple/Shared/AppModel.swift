@@ -37,6 +37,7 @@ protocol ClipboardWriter: AnyObject {
 @MainActor
 @Observable
 final class AppModel {
+    @ObservationIgnored var onPolicyChanged: (() -> Void)?
     @ObservationIgnored let node: NearclipNode
     let settings: AppSettings
     @ObservationIgnored weak var clipboard: ClipboardWriter?
@@ -239,6 +240,8 @@ final class AppModel {
     /// Copies an item from history: it becomes the clipboard here and the newest clip everywhere.
     func copy(_ item: ClipItem) {
         let c = item.clip.clip
+        guard !c.isExpired() else { return }
+        if c.isCode { copyCode(item.clip); return }
         let blob = c.isImage ? node.blobData(for: c.id) : nil
         if c.isImage && blob == nil { return }
         clipboard?.write(c, blob: blob)
@@ -349,7 +352,7 @@ final class AppModel {
 
     /// Offers a code from another device: when it arrives, or later (catch-up) while it can still be used.
     func offerCode(_ sc: StoredClip, live: Bool) {
-        guard sc.clip.isCode, sc.clip.src != deviceId, !settings.paused else { return }
+        guard sc.clip.isCode, !sc.clip.isExpired(), sc.clip.src != deviceId, !settings.paused else { return }
         guard live || nowMs() - sc.clip.ts < 180_000 else { return }
         guard offeredCodes.insert(sc.id).inserted else { return }
         onCode?(sc)
@@ -357,6 +360,7 @@ final class AppModel {
 
     /// "Copy" on a code offer: to this device's clipboard only.
     func copyCode(_ sc: StoredClip) {
+        guard !sc.clip.isExpired() else { return }
         clipboard?.write(sc.clip, blob: nil)
         lastAppliedTs = max(lastAppliedTs, sc.clip.ts)
         node.noteApplied(sc.clip)

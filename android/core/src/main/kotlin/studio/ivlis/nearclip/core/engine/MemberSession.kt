@@ -82,6 +82,8 @@ internal class MemberSession(
 
     // Engine-thread state.
     var welcomed = false
+    var supportsPolicies = false
+    var supportsRekey = false
     var registered = false
     val requested = HashSet<String>()
 
