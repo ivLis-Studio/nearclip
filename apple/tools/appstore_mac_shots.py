@@ -2,11 +2,11 @@
 """Mac App Store screenshots of the menu bar app, with clean demo devices and clips.
 
 Runs an isolated copy of the app (its own state directory, port 45900, defaults suite and a private pasteboard, so the
-Nearclip you use is untouched), names it "MacBook Pro", pairs three CLI peers that stand in for an iPhone, a Windows PC
-and a Galaxy phone, sends a short history, then opens each surface and captures its window (no shadow, 2x):
+Nearclip you use is untouched), names it "MacBook Pro", pairs three CLI peers that stand in for an iPhone, an iPad
+and another Mac, sends a short history, then opens each surface and captures its window (no shadow, 2x):
 panel.png (the history panel under the menu bar) and devices.png (Settings › Devices). promo/appstore.sh frames them.
 
-  python3 apple/tools/appstore_mac_shots.py --lang en --out promo/out/appstore/raw/mac-en
+  python3 apple/tools/appstore_mac_shots.py --lang en --out promo/out/appstore/raw/apple-mac-en
 
 Needs the Debug build at apple/build/dd (xcodebuild -scheme Nearclip -derivedDataPath apple/build/dd build) and
 Screen Recording permission for the terminal.
@@ -21,22 +21,22 @@ APP = os.path.join(ROOT, "apple/build/dd/Build/Products/Debug/Nearclip.app/Conte
 CLI = shlex.quote(os.path.join(ROOT, "apple/NearclipKit/.build/release/nearclip-cli"))
 PHOTO = os.path.join(ROOT, "promo/assets/lisbon.jpg")
 COPY = {
-    "en": {"pc": "Studio PC", "clips": [
-        ("galaxy", "image", None),
-        ("pc", "text", "Slides for tomorrow's 10 AM meeting"),
+    "en": {"ipad": "iPad", "clips": [
+        ("macmini", "image", None),
+        ("ipad", "text", "Slides for tomorrow's 10 AM meeting"),
         ("iphone", "text", "https://github.com/ivLis-Studio/nearclip"),
-        ("galaxy", "text", "482913"),
+        ("macmini", "text", "482913"),
         ("iphone", "text", "41-1 Yeonmujang-gil, Seongdong-gu, Seoul"),
-        ("pc", "text", "#4C5BF5"),
+        ("ipad", "text", "#4C5BF5"),
         ("iphone", "text", "Meeting moved to 8 PM"),
     ]},
-    "ko": {"pc": "작업실 PC", "clips": [
-        ("galaxy", "image", None),
-        ("pc", "text", "내일 10시 회의 자료 공유드립니다"),
+    "ko": {"ipad": "iPad", "clips": [
+        ("macmini", "image", None),
+        ("ipad", "text", "내일 10시 회의 자료 공유드립니다"),
         ("iphone", "text", "https://github.com/ivLis-Studio/nearclip"),
-        ("galaxy", "text", "482913"),
+        ("macmini", "text", "482913"),
         ("iphone", "text", "서울 성동구 연무장길 41-1"),
-        ("pc", "text", "#4C5BF5"),
+        ("ipad", "text", "#4C5BF5"),
         ("iphone", "text", "회의 8시로 변경됐어요"),
     ]},
 }
@@ -100,26 +100,24 @@ def main():
     subprocess.run(["defaults", "delete", "studio.ivlis.nearclip.appstore-" + args.lang], capture_output=True)
 
     app = App(base, args.lang)
-    app.start("add")
-    wait_file(os.path.join(app.state, "state.json"))
-    time.sleep(1)
-    app.stop()
-    # This Mac is called "MacBook Pro" in the pictures, not by the name of the Mac that took them.
-    st = json.load(open(os.path.join(app.state, "state.json")))
-    st["deviceName"] = "MacBook Pro"
-    json.dump(st, open(os.path.join(app.state, "state.json"), "w"))
-    if os.path.exists(app.ticket):
-        os.remove(app.ticket)
+    # Seed before first launch: current versions encrypt state on load, so the old
+    # launch-then-edit-JSON sequence cannot read the migrated state file.
+    import uuid
+    os.makedirs(app.state, exist_ok=True)
+    st = {"deviceId": str(uuid.uuid4()), "deviceName": "MacBook Pro", "groupId": str(uuid.uuid4()),
+          "joinedAt": int(time.time() * 1000), "members": [], "endpoints": {}, "lastSeen": {}, "tombstones": {}}
+    with open(os.path.join(app.state, "state.json"), "w") as f:
+        json.dump(st, f)
     app.start("add")
 
     peers = {
         "iphone": Peer("swift", CLI + " --platform ios", "iPhone", state=os.path.join(base, "iphone")),
-        "pc": Peer("swift", CLI + " --platform win", copy["pc"], state=os.path.join(base, "pc")),
-        "galaxy": Peer("swift", CLI + " --platform android", "Galaxy S25", state=os.path.join(base, "galaxy")),
+        "ipad": Peer("swift", CLI + " --platform ios", copy["ipad"], state=os.path.join(base, "ipad")),
+        "macmini": Peer("swift", CLI + " --platform mac", "Mac mini", state=os.path.join(base, "macmini")),
     }
     try:
         last = None
-        for k in ("iphone", "pc", "galaxy"):
+        for k in ("iphone", "ipad", "macmini"):
             uri = wait_file(app.ticket, other_than=last)
             last = uri
             peers[k].send(cmd="pair_qr", uri=local_uri(uri))
