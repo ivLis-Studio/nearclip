@@ -1,0 +1,14 @@
+Hello,
+
+Thank you for the clarification regarding Guideline 2.3.10.
+
+We have revised the English and Korean descriptions, promotional text and keywords for the macOS listing to focus on Mac, iPhone, iPad, and Nearclip's own clipboard-sharing experience. References to Android and other third-party platforms have been removed from these customer-facing fields. We have also replaced the macOS screenshots with Apple-focused examples.
+
+The English and Korean descriptions and promotional text for the iOS/iPadOS listing have been revised in the same way.
+
+This is a metadata correction. The selected macOS build remains 1.0.0 (1), and the app's functionality and required networking entitlements are unchanged. The App Review Information still explains the incoming peer connections and the optional remote connection used only for Nearclip's own device-to-device traffic.
+
+Please continue the review of the updated macOS submission.
+
+Thank you,
+Junseo Nam

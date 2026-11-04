@@ -4,7 +4,7 @@
      says which): ?dev=iphone|ipad|mac&lang=en|ko&n=<1-based index into SHOTS[dev]>.
      iPhone and iPad frame real simulator screenshots (apple/tools/appstore_shots.py → out/appstore/raw/<dev>-<lang>/);
      the Mac frames real window captures of the menu bar app (apple/tools/appstore_mac_shots.py → out/appstore/raw/mac-<lang>/)
-     on a desktop, or a held moment of the launch film. Colours and type are the film's: paper #F2F1EC, ink #101114,
+     on a desktop. Apple listing assets use Apple-focused examples. Colours and type are the film's: paper #F2F1EC, ink #101114,
      Iris #4C5BF5, Pretendard. -->
 <style>
   @font-face { font-family: "Pretendard"; src: local("Pretendard"), local("Pretendard-Regular"); }
@@ -37,30 +37,22 @@ const q = new URLSearchParams(location.search);
 const dev = q.get("dev") || "iphone", lang = q.get("lang") === "ko" ? "ko" : "en", n = +(q.get("n") || 1);
 document.documentElement.lang = lang;
 const W = innerWidth, H = innerHeight, b = document.body;
-const raw = f => "out/appstore/raw/" + dev + "-" + lang + "/" + f + ".png";
+const raw = f => "out/appstore/raw/" + (dev === "mac" ? "apple-" : "") + dev + "-" + lang + "/" + f + ".png";
 const T = (en, ko) => (lang === "ko" ? ko : en);
 
 // Each shot: background, the screenshot, how much of it shows (bleed: the device runs off the bottom edge), and copy.
 const SHOTS = {
   iphone: [
-    { bg: "paper", img: "06-home-history", h: T("One clipboard,<br><em>every device.</em>", "모든 기기를<br><em>하나의 클립보드로.</em>"), s: "Mac · Windows · Android · iPhone" },
-    { bg: "paper", img: "09-devices", h: T("Mac, PC, Galaxy.<br><em>All connected.</em>", "Mac, PC, 갤럭시까지<br><em>모두 연결.</em>"), s: T("Every device with every device, whoever made it.", "제조사와 상관없이, 모든 기기를 모든 기기와.") },
-    { bg: "iris", img: "11-add-device", zoom: [0.95, 0.765], h: T("Pair in seconds.<br><em>No account needed.</em>", "QR 한 번이면 연결.<br><em>계정은 필요 없어요.</em>"), s: T("Scan the code on your computer. No sign-up, no server.", "컴퓨터에 뜬 코드를 비추면 끝. 가입도, 서버도 없어요.") },
-    { bg: "ink", img: "10-settings", h: T("Even on<br><em>another network.</em>", "네트워크가 달라도<br><em>그대로.</em>"), s: T("Turn on Sync across networks. Tailscale is built in.", "설정에서 원격 연결만 켜세요. Tailscale 내장.") },
+    { bg: "paper", img: "04-home-empty", h: T("Your clipboard,<br><em>within reach.</em>", "내 클립보드를,<br><em>필요한 곳에서.</em>"), s: "Mac · iPhone · iPad" },
+    { bg: "ink", img: "10-settings", h: T("Sharing,<br><em>on your terms.</em>", "공유 방식도<br><em>내가 정해요.</em>"), s: T("Pause anytime. Choose when to send.", "필요할 때 일시정지하고, 보낼 시점을 정하세요.") },
   ],
   ipad: [
-    { bg: "paper", img: "06-home-history", h: T("One clipboard, <em>every device.</em>", "모든 기기를 <em>하나의 클립보드로.</em>"), s: "Mac · Windows · Android · iPhone · iPad" },
-    { bg: "paper", img: "09-devices", h: T("Mac, PC, Galaxy. <em>All connected.</em>", "Mac, PC, 갤럭시까지 <em>모두 연결.</em>"), s: T("Every device with every device, whoever made it.", "제조사와 상관없이, 모든 기기를 모든 기기와.") },
-    { bg: "iris", img: "11-add-device", h: T("Pair in seconds. <em>No account.</em>", "QR 한 번이면 연결. <em>계정은 필요 없어요.</em>"), s: T("Scan the code on your computer. No sign-up, no server.", "컴퓨터에 뜬 코드를 비추면 끝. 가입도, 서버도 없어요.") },
-    { bg: "ink", img: "10-settings", h: T("Even on <em>another network.</em>", "네트워크가 달라도 <em>그대로.</em>"), s: T("Turn on Sync across networks. Tailscale is built in.", "설정에서 원격 연결만 켜세요. Tailscale 내장.") },
+    { bg: "paper", img: "04-home-empty", h: T("Your clipboard, <em>within reach.</em>", "내 클립보드를, <em>필요한 곳에서.</em>"), s: "Mac · iPhone · iPad" },
+    { bg: "iris", img: "02-network", h: T("Connect directly. <em>Keep it private.</em>", "기기끼리 직접 연결. <em>내 기록은 안전하게.</em>"), s: T("Pair your own devices on your local network.", "같은 네트워크에서 내 기기들을 연결하세요.") },
   ],
   mac: [
-    { bg: "desk", win: "panel", keys: ["⌃", "⌘", "V"], h: T("Every device's history,<br><em>one shortcut away.</em>", "모든 기기의 기록을<br><em>단축키 하나로.</em>"), s: T("Copies from your iPhone, PC and Galaxy,<br>right under the menu bar.", "iPhone, PC, 갤럭시에서 복사한 것까지<br>메뉴 막대 바로 아래에서.") },
-    { film: "02-mac-to-windows" },
-    { bg: "desk", win: "devices", h: T("iPhone, PC, Galaxy.<br><em>All connected.</em>", "iPhone, PC,<br>갤럭시까지<br><em>모두 연결.</em>"), s: T("Every device with every device,<br>whoever made it.", "제조사와 상관없이,<br>모든 기기를 모든 기기와.") },
-    { film: "05-pair-with-qr" },
-    { film: "06-another-network" },
-    { film: "07-end-to-end" },
+    { bg: "desk", win: "panel", keys: ["⌃", "⌘", "V"], h: T("Your clipboard history,<br><em>one shortcut away.</em>", "내 클립보드 기록을<br><em>단축키 하나로.</em>"), s: T("Text, links and images,<br>right under the menu bar.", "텍스트, 링크, 이미지를<br>메뉴 막대 바로 아래에서.") },
+    { bg: "desk", win: "devices", h: T("Mac, iPhone, iPad.<br><em>All connected.</em>", "Mac, iPhone, iPad.<br><em>함께 연결.</em>"), s: T("Pair your own devices.<br>Share directly between them.", "내 기기를 연결하고<br>기기끼리 직접 주고받으세요.") },
   ],
 };
 const shot = SHOTS[dev][n - 1];
@@ -158,23 +150,7 @@ function desktop() {
   img.src = raw(shot.win);
 }
 
-if (shot.film) {
-  // A held moment of the film (the Microsoft Store screenshot, 16:9) on its own background, letterboxed to 16:10.
-  const src = "out/store/screenshots/" + lang + "/" + shot.film + ".png";
-  const img = new Image();
-  img.onload = () => {
-    const c = document.createElement("canvas");
-    c.width = 4; c.height = 4;
-    const x = c.getContext("2d");
-    x.drawImage(img, 0, 0, 4, 4, 0, 0, 4, 4);
-    const [r, g, bl] = x.getImageData(1, 1, 1, 1).data;
-    b.style.background = "rgb(" + r + "," + g + "," + bl + ")";
-    const h = W * 9 / 16;
-    b.innerHTML = '<img src="' + src + '" style="position:absolute;left:0;top:' + (H - h) / 2 + 'px;width:' + W + 'px;height:' + h + 'px">';
-    document.body.dataset.ready = "1";
-  };
-  img.src = src;
-} else if (dev === "mac") {
+if (dev === "mac") {
   desktop();
 } else {
   b.className = shot.bg;
