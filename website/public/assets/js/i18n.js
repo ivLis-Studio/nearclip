@@ -7,7 +7,7 @@ window.SITE_META = {
 
 window.SITE_X = {
   en: {
-    "dl.mac": "Download for Mac", "dl.win": "Get it from Microsoft Store", "dl.android": "Download for Android", "dl.ios": "Get it on iPhone", "dl.other": "Download",
+    "dl.mac": "Download for Mac", "dl.win": "Get it from Microsoft Store", "dl.android": "Download for Android", "dl.ios": "Download on the App Store", "dl.other": "Download",
     "dl.version": "Version %@ · free and open source", "dl.latest": "Version %@ · released %@",
     "film.play": "Play the film with sound", "film.pause": "Pause", "film.resume": "Play",
     "toast.receiving": "Receiving an image from %@…", "toast.copied": "Copied from %@", "toast.image": "Image · %@ MB", "toast.preparing": "Preparing…",
@@ -16,7 +16,7 @@ window.SITE_X = {
     "star.count": "%@ stars on GitHub",
   },
   ko: {
-    "dl.mac": "Mac용 다운로드", "dl.win": "Microsoft Store에서 받기", "dl.android": "Android용 다운로드", "dl.ios": "iPhone에서 쓰기", "dl.other": "다운로드",
+    "dl.mac": "Mac용 다운로드", "dl.win": "Microsoft Store에서 받기", "dl.android": "Android용 다운로드", "dl.ios": "App Store에서 받기", "dl.other": "다운로드",
     "dl.version": "버전 %@ · 무료 오픈 소스", "dl.latest": "버전 %@ · %@ 출시",
     "film.play": "소리와 함께 영상 재생", "film.pause": "일시정지", "film.resume": "재생",
     "toast.receiving": "%@에서 이미지 받는 중…", "toast.copied": "%@에서 복사됨", "toast.image": "이미지 · %@MB", "toast.preparing": "준비 중…",
@@ -86,8 +86,8 @@ window.SITE_I18N = {
     "lang.label": "언어",
     "bar.star": "GitHub에서 Nearclip에 Star 누르기",
 
-    "hero.newtag": "새 기능",
-    "hero.new": "폰에 온 인증번호, 컴퓨터에서 바로",
+    "hero.newtag": "정식 출시",
+    "hero.new": "iPhone·iPad용 Nearclip, 이제 App Store에서",
     "hero.title": "여기서 복사하고,<br><span class=\"two\">저기서 붙여넣기.</span>",
     "hero.lede": "제조사가 달라도 클립보드는 하나로. Mac에서 복사하고 Windows PC, 갤럭시, iPhone에서 바로 붙여넣으세요. 계정도 서버도 없이, 종단 간 암호화로 오가요.",
     "cta.film": "영상 보기",
@@ -230,11 +230,11 @@ window.SITE_I18N = {
     "dl.android.3": "알림을 허용하면 백그라운드 연결이 유지돼요.",
     "dl.ios.name": "iPhone &amp; iPad",
     "dl.ios.req": "iOS 17 이상",
-    "dl.ios.store": "App Store",
-    "dl.ios.1": "App Store 버전은 준비 중이에요. 그전에는 IPA를 <b>AltStore</b>나 <b>SideStore</b>로 설치할 수 있어요.",
-    "dl.ios.2": "AltStore나 SideStore의 My Apps에서 <b>+</b>를 눌러 파일을 고르세요. 내 Apple ID로 서명돼 설치돼요.",
-    "dl.ios.3": "무료 Apple ID라면 7일마다 앱에서 새로고침해 주세요.",
-  'dl.ios.source': '새 버전 안내를 받으려면 <a href="altstore://source?url=https%3A%2F%2Fivlis-studio.github.io%2Fnearclip%2Faltstore.json">AltStore 소스</a> 또는 <a href="sidestore://source?url=https%3A%2F%2Fivlis-studio.github.io%2Fnearclip%2Faltstore.json">SideStore 소스</a>를 추가하세요. <a href="altstore.json">소스 주소</a>',
+    "dl.ios.store": "App Store에서 받기",
+    "dl.ios.1": "iPhone이나 iPad의 <b>App Store</b>에서 설치하세요. 업데이트도 자동으로 받을 수 있어요.",
+    "dl.ios.2": "직접 설치하고 싶다면 IPA를 받아 <b>AltStore</b>나 <b>SideStore</b>로 설치할 수도 있어요.",
+    "dl.ios.3": "직접 설치한 앱을 무료 Apple ID로 서명했다면 7일마다 새로고침해 주세요.",
+  'dl.ios.source': '직접 설치 버전의 업데이트 안내는 <a href="altstore://source?url=https%3A%2F%2Fivlis-studio.github.io%2Fnearclip%2Faltstore.json">AltStore 소스</a> 또는 <a href="sidestore://source?url=https%3A%2F%2Fivlis-studio.github.io%2Fnearclip%2Faltstore.json">SideStore 소스</a>에서 받을 수 있어요. <a href="altstore.json">소스 주소</a>',
     "dl.latest": "GitHub 최신 릴리스", "dl.releases": "릴리스 노트와 SHA-256", "dl.source": "소스 코드",
 
     "star.kicker": "무료 오픈 소스",
@@ -255,7 +255,7 @@ window.SITE_I18N = {
     "faq.5.q": "비밀번호는요?", "faq.5.a": "비밀번호 관리자가 비공개로 표시한 항목은 동기화하지 않아요. 컴퓨터에선 앱 단위로 제외할 수 있고, 모든 기기에서 동기화를 일시정지할 수 있어요.",
     "faq.6.q": "얼마나 큰 걸 보낼 수 있나요?", "faq.6.a": "텍스트는 4MB, 이미지는 32MB까지예요. 큰 이미지는 복사하자마자 다른 기기에 진행률이 떠요.",
     "faq.7.q": "기기끼리 서로 못 찾아요.", "faq.7.a": "게스트 Wi-Fi나 회사 Wi-Fi는 기기 간 통신을 막는 경우가 많아요. 기기 추가에서 ‘주소로 연결’을 쓰거나 원격 연결을 켜 보세요. Windows에선 Nearclip이 개인 네트워크에서 허용돼 있는지 확인하세요.",
-    "faq.8.q": "iPhone 앱은 어디 있나요?", "faq.8.a": "App Store 등록을 준비 중이에요. 그전에는 IPA를 받아 AltStore나 SideStore로 설치하거나, Xcode로 직접 빌드할 수 있어요. 방법은 README에 있어요.",
+    "faq.8.q": "iPhone·iPad에는 어떻게 설치하나요?", "faq.8.a": "<a href=\"https://apps.apple.com/app/id6826568136\">App Store</a>에서 Nearclip을 받으세요. IPA를 받아 AltStore나 SideStore로 설치하거나, Xcode로 직접 빌드할 수도 있어요. 다른 설치 방법은 README에 있어요.",
 
     "foot.tag": "여기서 복사하고,<br>저기서 붙여넣기.",
     "foot.download": "다운로드", "foot.releases": "릴리스", "foot.privacy": "개인정보 처리방침",

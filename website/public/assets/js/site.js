@@ -7,8 +7,8 @@
   var LANGS = ["en", "ko"];
   var REPO = "ivLis-Studio/nearclip";
   var DL = "https://github.com/" + REPO + "/releases/latest/download/";
-  // Windows leads with the Microsoft Store; its ZIPs stay in the download list as the direct download.
-  var STORE = { win: "https://apps.microsoft.com/detail/9PNQ3Z9S83QS" };
+  // Published store versions lead; ZIP and IPA alternatives stay in the download list.
+  var STORE = { win: "https://apps.microsoft.com/detail/9PNQ3Z9S83QS", ios: "https://apps.apple.com/app/id6826568136" };
   var ASSET = { mac: "Nearclip-macOS.zip", android: "Nearclip-Android.apk" };
   // The star count shows next to the Star buttons once there's a real crowd behind it.
   var STAR_MIN = 10;
@@ -78,12 +78,12 @@
     applyLang(e.target.value);
   });
 
-  // ---- download buttons follow this device: the Store for Windows, the latest release for Mac and Android
+  // ---- download buttons follow this device: published stores, otherwise the latest direct release
   function assetURL(name) {
     var a = release && release.assets.filter(function (x) { return x.name === name; })[0];
     return a ? a.browser_download_url : DL + name;
   }
-  function mainURL() { return STORE[os] || (ASSET[os] ? assetURL(ASSET[os]) : os === "ios" ? "#dl-ios" : "#download"); }
+  function mainURL() { return STORE[os] || (ASSET[os] ? assetURL(ASSET[os]) : "#download"); }
   function renderPlatform() {
     var icon = STORE[os] ? "shopping-bag" : "download";
     $$(".dl-main").forEach(function (a) {
