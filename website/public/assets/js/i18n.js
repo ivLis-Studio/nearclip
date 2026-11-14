@@ -7,7 +7,7 @@ window.SITE_META = {
 
 window.SITE_X = {
   en: {
-    "dl.mac": "Download for Mac", "dl.win": "Get it from Microsoft Store", "dl.android": "Download for Android", "dl.ios": "Download on the App Store", "dl.other": "Download",
+    "dl.mac": "Download on the Mac App Store", "dl.win": "Get it from Microsoft Store", "dl.android": "Download for Android", "dl.ios": "Download on the App Store", "dl.other": "Download",
     "dl.version": "Version %@ · free and open source", "dl.latest": "Version %@ · released %@",
     "film.play": "Play the film with sound", "film.pause": "Pause", "film.resume": "Play",
     "toast.receiving": "Receiving an image from %@…", "toast.copied": "Copied from %@", "toast.image": "Image · %@ MB", "toast.preparing": "Preparing…",
@@ -16,7 +16,7 @@ window.SITE_X = {
     "star.count": "%@ stars on GitHub",
   },
   ko: {
-    "dl.mac": "Mac용 다운로드", "dl.win": "Microsoft Store에서 받기", "dl.android": "Android용 다운로드", "dl.ios": "App Store에서 받기", "dl.other": "다운로드",
+    "dl.mac": "Mac App Store에서 받기", "dl.win": "Microsoft Store에서 받기", "dl.android": "Android용 다운로드", "dl.ios": "App Store에서 받기", "dl.other": "다운로드",
     "dl.version": "버전 %@ · 무료 오픈 소스", "dl.latest": "버전 %@ · %@ 출시",
     "film.play": "소리와 함께 영상 재생", "film.pause": "일시정지", "film.resume": "재생",
     "toast.receiving": "%@에서 이미지 받는 중…", "toast.copied": "%@에서 복사됨", "toast.image": "이미지 · %@MB", "toast.preparing": "준비 중…",
@@ -87,7 +87,7 @@ window.SITE_I18N = {
     "bar.star": "GitHub에서 Nearclip에 Star 누르기",
 
     "hero.newtag": "정식 출시",
-    "hero.new": "iPhone·iPad용 Nearclip, 이제 App Store에서",
+    "hero.new": "Mac용 Nearclip, 이제 App Store에서",
     "hero.title": "여기서 복사하고,<br><span class=\"two\">저기서 붙여넣기.</span>",
     "hero.lede": "제조사가 달라도 클립보드는 하나로. Mac에서 복사하고 Windows PC, 갤럭시, iPhone에서 바로 붙여넣으세요. 계정도 서버도 없이, 종단 간 암호화로 오가요.",
     "cta.film": "영상 보기",
@@ -211,11 +211,11 @@ window.SITE_I18N = {
     "dl.lede": "모든 플랫폼에서 무료예요. 기기 두 대에 설치하면 바로 시작돼요.",
     "dl.here": "지금 이 기기",
     "dl.mac.req": "macOS 14 이상 · Apple 실리콘·Intel",
-    "dl.mac.store": "Mac App Store",
+    "dl.mac.store": "Mac App Store에서 받기",
     "dl.soon": "등록 준비 중",
     "dl.direct": "직접 다운로드",
-    "dl.mac.1": "압축을 풀고 <b>Nearclip</b>을 응용 프로그램 폴더로 옮기세요.",
-    "dl.mac.2": "열면 끝이에요. Apple의 서명과 공증을 받은 앱이고, 메뉴 막대에서 지내요.",
+    "dl.mac.1": "<b>Mac App Store</b>에서 설치하세요. 업데이트도 자동으로 받을 수 있어요.",
+    "dl.mac.2": "메뉴 막대에서 사용할 수 있어요. ZIP으로 받았다면 압축을 풀고 <b>Nearclip</b>을 응용 프로그램 폴더로 옮기세요.",
     "dl.mac.3": "처음 복사할 때 <b>항상 허용</b>을 골라야 클립보드를 읽을 수 있어요.",
     "dl.win.req": "Windows 10 1809 이상, Windows 11",
     "dl.win.store": "Microsoft Store<span class=\"long\">에서 받기</span>",

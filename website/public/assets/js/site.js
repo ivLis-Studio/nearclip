@@ -8,8 +8,8 @@
   var REPO = "ivLis-Studio/nearclip";
   var DL = "https://github.com/" + REPO + "/releases/latest/download/";
   // Published store versions lead; ZIP and IPA alternatives stay in the download list.
-  var STORE = { win: "https://apps.microsoft.com/detail/9PNQ3Z9S83QS", ios: "https://apps.apple.com/app/id6826568136" };
-  var ASSET = { mac: "Nearclip-macOS.zip", android: "Nearclip-Android.apk" };
+  var STORE = { mac: "https://apps.apple.com/app/id6826568136?platform=mac", win: "https://apps.microsoft.com/detail/9PNQ3Z9S83QS", ios: "https://apps.apple.com/app/id6826568136" };
+  var ASSET = { android: "Nearclip-Android.apk" };
   // The star count shows next to the Star buttons once there's a real crowd behind it.
   var STAR_MIN = 10;
   var stored = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };

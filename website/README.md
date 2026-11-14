@@ -20,16 +20,16 @@ node tools/shot.mjs <url> <out.png> [width] [height] [fullPage] [light|dark] [wa
   device to the other three; images show their progress first, like the apps. It plays by itself while on screen until
   the visitor presses a key on a device, and never with reduced motion.
 - `public/assets/js/site.js` picks the download for the visitor's device (`?os=mac|win|android|ios` forces one; Windows
-  goes to the Microsoft Store, iPhone/iPad to the App Store), reads the latest release's version and the repository's star count from GitHub (the count
+  goes to the Microsoft Store, Mac and iPhone/iPad to their App Store pages), reads the latest release's version and the repository's star count from GitHub (the count
   shows on the Star buttons from 10 stars up), and runs the pairs table (4 of 12 without Nearclip, 12 with it), the
   examples, the film, the verification-code stage and the image-progress toast.
 - The page asks for a GitHub star near the end and links the maker's portfolio, [ivlis.kr](https://ivlis.kr).
 - Windows leads with the Microsoft Store listing (`apps.microsoft.com/detail/9PNQ3Z9S83QS`); its card keeps the ZIPs
   below it as the direct download from GitHub.
 - iPhone/iPad lead with the published App Store listing (`apps.apple.com/app/id6826568136`), including the main
-  device-aware button, launch announcement and FAQ. The IPA and AltStore/SideStore sources remain optional alternatives.
-- Mac keeps its native ZIP download until the native Mac App Store version is publicly available. The iPhone/iPad
-  listing's compatibility with Apple silicon Macs is distinct from the native Mac app.
+  device-aware button and FAQ. The IPA and AltStore/SideStore sources remain optional alternatives.
+- Mac leads with the published native Mac App Store page (`apps.apple.com/app/id6826568136?platform=mac`), including
+  the main device-aware button and launch announcement. The native ZIP remains the direct download below the store button.
 - Download buttons link to `releases/latest/download/<file>`, so the release assets keep these names:
   `Nearclip-macOS.zip`, `Nearclip-Windows-x64.zip`, `Nearclip-Windows-arm64.zip`, `Nearclip-Android.apk`, `Nearclip-iOS.ipa`.
 - `public/assets/media/` is made by `tools/media.sh` from the promo film (`promo/`): the 16:9 and 9:16 cuts with their
