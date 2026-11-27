@@ -3,6 +3,7 @@ package studio.ivlis.nearclip
 import android.content.ClipData
 import android.content.Intent
 import android.content.ClipboardManager
+import android.os.Build
 import android.os.PersistableBundle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -98,18 +99,20 @@ class InstantCaptureTest {
                 copy(resumed)
                 waitUntil("copy missing after resume") { historyContains(resumed) }
 
-                // Simulate helper death independently of the Shizuku server and verify a clean rebind.
-                val helper = instrumentation.uiAutomation.executeShellCommand("pidof studio.ivlis.nearclip:clipboard").use {
-                    android.os.ParcelFileDescriptor.AutoCloseInputStream(it).bufferedReader().readText().trim()
+                if (Build.VERSION.SDK_INT >= 29) {
+                    // Simulate helper death independently of the Shizuku server and verify a clean rebind.
+                    val helper = instrumentation.uiAutomation.executeShellCommand("pidof studio.ivlis.nearclip:clipboard").use {
+                        android.os.ParcelFileDescriptor.AutoCloseInputStream(it).bufferedReader().readText().trim()
+                    }
+                    assertTrue("privileged helper not running", helper.matches(Regex("[0-9]+")))
+                    instrumentation.uiAutomation.executeShellCommand("kill $helper").close()
+                    waitUntil("helper death was not detected") { !runtime.capture.status.value.listening && runtime.capture.status.value.failed }
+                    runtime.capture.refresh()
+                    waitUntil("helper did not reconnect") { runtime.capture.status.value.listening }
+                    val reconnected = "capture-reconnected-" + System.nanoTime()
+                    copy(reconnected)
+                    waitUntil("copy missing after helper restart") { historyContains(reconnected) }
                 }
-                assertTrue("privileged helper not running", helper.matches(Regex("[0-9]+")))
-                instrumentation.uiAutomation.executeShellCommand("kill $helper").close()
-                waitUntil("helper death was not detected") { !runtime.capture.status.value.listening && runtime.capture.status.value.failed }
-                runtime.capture.refresh()
-                waitUntil("helper did not reconnect") { runtime.capture.status.value.listening }
-                val reconnected = "capture-reconnected-" + System.nanoTime()
-                copy(reconnected)
-                waitUntil("copy missing after helper restart") { historyContains(reconnected) }
 
                 onMain { runtime.setInstantCapture(false) }
                 waitUntil("opt-out left listener running") { !runtime.capture.status.value.listening }
