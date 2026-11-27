@@ -1,0 +1,23 @@
+{
+  "packageName": "studio.ivlis.nearclip",
+  "versionName": "1.2.0",
+  "versionCode": 5,
+  "website": "https://ivlis-studio.github.io/nearclip/",
+  "privacyPolicy": "https://ivlis-studio.github.io/nearclip/privacy.html",
+  "supportEmail": "support@ivl.is",
+  "category": "PRODUCTIVITY",
+  "paid": false,
+  "containsAds": false,
+  "en-US": {
+    "title": "Nearclip: Shared Clipboard",
+    "shortDescription": "Copy text, links and images between your devices. Private, encrypted sharing.",
+    "fullDescription": "Copy here. Paste there.\n\nNearclip connects the clipboard on your Android phone, Mac, Windows PC, iPhone and iPad. Send text, links and images between your own devices, then find them again in a searchable history.\n\nONE CLIPBOARD, ACROSS DEVICES\n• Pair with a QR code or compare a six-digit code.\n• Send from the app, Android Share, the text selection menu or a Quick Settings tile.\n• Receive clips in the background while the connection service is running.\n• See where a clip came from and follow the progress of large images.\n• Search, filter and pin your clips. Deleting an item also removes it from your paired devices.\n• Choose what each device may send and receive, or pause syncing.\n\nPRIVATE DEVICE-TO-DEVICE SHARING\nNearby devices connect directly on your local network. Clipboard contents are end-to-end encrypted, and local history is encrypted on your device. Nearclip has no clipboard-hosting server, ads or analytics. Local sharing does not require an account.\n\nOPTIONAL REMOTE CONNECTION\nFor devices on different networks, enable Remote connection and sign in to your own Tailscale account on each device. Tailscale is built in. Clipboard contents remain end-to-end encrypted; Tailscale handles the account and network information needed to connect your devices.\n\nVERIFICATION CODES, WHERE YOU NEED THEM\nWith notification access, Nearclip can detect 4–8 digit verification codes in supported messaging notifications and send only the code to your paired devices. Full messages and sender details stay on your phone. Codes expire after three minutes. Availability depends on Android's notification protections; Android 15 and later may require an additional allowance. You can turn this feature off at any time.\n\nANDROID CLIPBOARD ACCESS\nAndroid limits background clipboard access. Send manually with the app, Share or the Quick Settings tile. If you want instant clipboard import, enable the optional Shizuku integration in Settings and follow its permission setup. Shizuku is not required for normal use.\n\nNearclip is free and open source. Install Nearclip on at least two devices to start sharing. Android 8 or later is required. On iPhone and iPad, sending from the clipboard requires a user action, and background operation is limited by iOS.\n\nGet the companion apps and read the setup guide:\nhttps://ivlis-studio.github.io/nearclip/",
+    "releaseNotes": "First Google Play release. Share text, links and images across your devices, choose per-device sync settings, and keep local history encrypted."
+  },
+  "ko-KR": {
+    "title": "Nearclip - 클립보드 동기화",
+    "shortDescription": "Mac·Windows·Android·iPhone을 하나의 클립보드로. 내 기기끼리 안전하게 공유하세요.",
+    "fullDescription": "여기서 복사하고, 저기서 붙여넣기.\n\nNearclip은 Android 폰, Mac, Windows PC, iPhone과 iPad의 클립보드를 이어줍니다. 내 기기 사이에서 텍스트·링크·이미지를 보내고, 필요한 항목은 검색 가능한 기록에서 다시 찾으세요.\n\n기기가 달라도 클립보드는 하나\n• QR 코드를 스캔하거나 6자리 코드를 비교해 기기를 연결하세요.\n• 앱, Android 공유 메뉴, 텍스트 선택 메뉴, 빠른 설정 타일에서 보낼 수 있어요.\n• 연결 서비스가 실행되는 동안 백그라운드에서 클립을 받아요.\n• 보낸 기기와 큰 이미지의 수신 진행률을 확인하세요.\n• 기록을 검색하고 종류별로 보거나, 자주 쓰는 항목을 고정하세요. 한 기기에서 삭제하면 연결된 기기에도 적용돼요.\n• 기기마다 보내기·받기를 설정하거나 동기화를 일시정지할 수 있어요.\n\n내 기기끼리 직접, 안전하게\n같은 네트워크에서는 기기끼리 직접 연결합니다. 클립보드 내용은 종단 간 암호화하고, 기기에 저장하는 기록도 암호화해요. Nearclip에는 클립보드를 보관하는 서버, 광고, 분석 도구가 없습니다. 로컬 공유에는 계정이 필요하지 않아요.\n\n원할 때만 원격 연결\n네트워크가 다른 기기를 연결하려면 원격 연결을 켜고, 각 기기에서 내 Tailscale 계정으로 로그인하세요. Tailscale은 Nearclip에 내장돼 있어요. 클립보드 내용은 계속 종단 간 암호화되며, Tailscale은 기기 연결에 필요한 계정·네트워크 정보를 처리합니다.\n\n폰에 온 인증번호를 필요한 기기로\n알림 접근을 허용하면 지원하는 문자·메신저 알림에서 4~8자리 인증번호를 찾아 내 기기로 보낼 수 있어요. 전체 메시지와 보낸 사람 정보는 폰 밖으로 보내지 않습니다. 인증번호는 3분 뒤 만료되고, 언제든 기능을 끌 수 있어요. Android의 알림 보호 설정에 따라 이용이 제한될 수 있으며, Android 15 이상에서는 추가 허용이 필요할 수 있습니다.\n\nAndroid 클립보드 접근 안내\nAndroid는 백그라운드 앱의 클립보드 접근을 제한합니다. 기본적으로 앱, 공유 메뉴, 빠른 설정 타일에서 보내세요. 복사한 항목을 바로 불러오고 싶다면 설정에서 선택 기능인 Shizuku 연동을 켜고 권한 설정을 진행할 수 있어요. 기본 기능에는 Shizuku가 필요하지 않습니다.\n\nNearclip은 무료 오픈 소스입니다. 기기 두 대 이상에 설치하면 공유를 시작할 수 있어요. Android 8 이상을 지원합니다. iPhone·iPad에서는 클립보드 전송에 사용자 동작이 필요하며, 백그라운드 동작은 iOS의 제한을 받습니다.\n\n다른 기기용 앱과 설정 방법:\nhttps://ivlis-studio.github.io/nearclip/",
+    "releaseNotes": "Google Play 첫 출시입니다. 내 기기 사이에서 텍스트·링크·이미지를 공유하고, 기기별 동기화 설정과 암호화된 로컬 기록을 이용할 수 있습니다."
+  }
+}

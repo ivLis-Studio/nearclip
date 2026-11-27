@@ -14,6 +14,12 @@ android {
         versionCode = 5
         versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // CameraX also ships x86 libraries, but the embedded Tailscale JNI supports these three ABIs.
+        // Filter the bundle so Play never offers an x86 APK without libnctailnet.so.
+        ndk {
+            abiFilters += setOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
 
     buildTypes {
