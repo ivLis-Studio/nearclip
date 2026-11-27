@@ -47,4 +47,3 @@ On 2026-11-28 at 04:31 KST, Play Console Publishing overview showed **Changes in
 The submission includes Android 1.2.1 (6), full rollout to the selected 177 territories, both store localizations and the listed content declarations. Code 5 is excluded from the new release. Managed publishing is disabled, so approval publishes the accepted changes automatically. This records submission for review, not approval or public availability.
 
 Implementation: https://github.com/ivLis-Studio/nearclip/pull/8 (merged).
-
