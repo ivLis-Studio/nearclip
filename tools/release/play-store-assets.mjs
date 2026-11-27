@@ -42,8 +42,9 @@ for (const [locale, lines] of [
   await sharp(Buffer.from(svg)).removeAlpha().png().toFile(path.join(dir, "feature-1024x500.png"));
   const lang = locale === "ko-KR" ? "ko" : "en";
   for (const [source, name] of [["01-history.png", "01-history.png"], ["03-devices.png", "02-devices.png"], ["04-add-device.png", "03-add-device.png"], ["07-settings.png", "04-settings.png"]]) {
-    // Pixel content is unchanged; Play requires 24-bit RGB PNG rather than the capture's RGBA encoding.
-    await sharp(path.join(root, "docs/screenshots/android", lang + "-dark", source)).removeAlpha().png().toFile(path.join(dir, name));
+    // Preserve the complete native screen inside Play's portrait 9:16 format, without cropping or stretching UI.
+    await sharp(path.join(root, "docs/screenshots/android", lang + "-dark", source))
+      .resize(1080, 1920, { fit: "contain", background: "#1C1B1F" }).removeAlpha().png().toFile(path.join(dir, name));
   }
   console.log(locale + ": listing text, feature graphic and four native screenshots exported");
 }
