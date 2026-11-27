@@ -40,4 +40,11 @@ Backup download: https://github.com/ivLis-Studio/nearclip/releases/download/v1.2
 
 44-second H.264 1920×1080 video, with captions explaining the live Android integration run. The native app recording is from the 1.2.0 development test build of the unchanged connected-device transfer flow; 1.2.1 re-ran this integration test successfully. The 1.2.1 change is the separate optional Shizuku path; the test is not shipped inside the production bundle.
 
-Submission status is recorded after the final Play Console confirmation below.
+## Submission receipt
+
+On 2026-11-28 at 04:31 KST, Play Console Publishing overview showed **Changes in review** (검토 중인 변경사항) and **Your changes are in review** (변경사항을 검토 중입니다). The automatic pre-review scan had completed; the unsupported API-bypass SDK issue did not recur for code 6.
+
+The submission includes Android 1.2.1 (6), full rollout to the selected 177 territories, both store localizations and the listed content declarations. Code 5 is excluded from the new release. Managed publishing is disabled, so approval publishes the accepted changes automatically. This records submission for review, not approval or public availability.
+
+Implementation: https://github.com/ivLis-Studio/nearclip/pull/8 (merged).
+
