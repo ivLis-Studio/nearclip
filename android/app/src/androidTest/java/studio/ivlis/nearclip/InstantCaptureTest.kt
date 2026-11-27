@@ -1,7 +1,9 @@
 package studio.ivlis.nearclip
 
 import android.content.ClipData
+import android.content.Intent
 import android.content.ClipboardManager
+import android.os.Build
 import android.os.PersistableBundle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -25,7 +27,7 @@ class InstantCaptureTest {
     private fun onMain(block: () -> Unit) = instrumentation.runOnMainSync(block)
     private fun historyContains(text: String) = runtime.engine.state.value.history.any { it.text == text }
     private fun waitUntil(message: String, condition: () -> Boolean) {
-        val end = System.nanoTime() + 8_000_000_000L
+        val end = System.nanoTime() + 15_000_000_000L
         while (!condition() && System.nanoTime() < end) Thread.sleep(50)
         assertTrue(message, condition())
     }
@@ -38,20 +40,35 @@ class InstantCaptureTest {
         onMain { clipboard.setPrimaryClip(clip) }
     }
 
+    private fun assertHelperStopped() {
+        // A status flag alone is insufficient: verify the privileged process actually exited.
+        val output = instrumentation.uiAutomation.executeShellCommand("ps -A -o NAME").use {
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(it).bufferedReader().readText()
+        }
+        assertFalse("privileged clipboard helper survived opt-out", output.lineSequence().any {
+            it.trim() == "studio.ivlis.nearclip:clipboard"
+        })
+    }
+
     @Test
     fun backgroundCaptureRespectsSensitiveMarkersPauseAndOptOut() {
         val original = runtime.settings.value
-        assertTrue("finish onboarding before running this test", original.onboardingDone)
-        waitUntil("start Shizuku and allow Nearclip before running this test") { runtime.capture.status.value.ready }
-        ActivityScenario.launch(MainActivity::class.java).use {
-            try {
+        try {
+            if (InstrumentationRegistry.getArguments().getString("prepareOnboarding") == "true") {
+                // Only opt in on an explicitly selected disposable test installation.
+                runtime.settings.update { it.copy(onboardingDone = true, remoteEnabled = false, forwardCodes = false) }
+            }
+            assertTrue("finish onboarding before running this test", runtime.settings.value.onboardingDone)
+            waitUntil("start Shizuku and allow Nearclip before running this test") { runtime.capture.status.value.ready }
+            ActivityScenario.launch(MainActivity::class.java).use {
                 onMain {
                     runtime.settings.update { it.copy(sendOnOpen = false, copyNewestOnOpen = false) }
                     runtime.setPaused(false)
                     runtime.setInstantCapture(true)
                 }
                 waitUntil("listener did not start") { runtime.capture.status.value.listening }
-                instrumentation.uiAutomation.executeShellCommand("input keyevent KEYCODE_HOME").close()
+                context.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 waitUntil("Nearclip stayed in foreground") { !runtime.uiVisible }
 
                 val ordinary = "capture-test-" + System.nanoTime()
@@ -74,6 +91,7 @@ class InstantCaptureTest {
                 copy(paused)
                 Thread.sleep(800)
                 assertFalse("copy recorded while paused", historyContains(paused))
+                assertHelperStopped()
 
                 onMain { runtime.setPaused(false) }
                 waitUntil("listener did not resume") { runtime.capture.status.value.listening }
@@ -81,18 +99,34 @@ class InstantCaptureTest {
                 copy(resumed)
                 waitUntil("copy missing after resume") { historyContains(resumed) }
 
+                if (Build.VERSION.SDK_INT >= 29) {
+                    // Simulate helper death independently of the Shizuku server and verify a clean rebind.
+                    val helper = instrumentation.uiAutomation.executeShellCommand("pidof studio.ivlis.nearclip:clipboard").use {
+                        android.os.ParcelFileDescriptor.AutoCloseInputStream(it).bufferedReader().readText().trim()
+                    }
+                    assertTrue("privileged helper not running", helper.matches(Regex("[0-9]+")))
+                    instrumentation.uiAutomation.executeShellCommand("kill $helper").close()
+                    waitUntil("helper death was not detected") { !runtime.capture.status.value.listening && runtime.capture.status.value.failed }
+                    runtime.capture.refresh()
+                    waitUntil("helper did not reconnect") { runtime.capture.status.value.listening }
+                    val reconnected = "capture-reconnected-" + System.nanoTime()
+                    copy(reconnected)
+                    waitUntil("copy missing after helper restart") { historyContains(reconnected) }
+                }
+
                 onMain { runtime.setInstantCapture(false) }
                 waitUntil("opt-out left listener running") { !runtime.capture.status.value.listening }
                 val disabled = "capture-off-" + System.nanoTime()
                 copy(disabled)
                 Thread.sleep(800)
                 assertFalse("copy recorded after opt-out", historyContains(disabled))
-            } finally {
-                onMain {
-                    runtime.settings.update { original }
-                    runtime.setPaused(original.paused)
-                    runtime.ensureService()
-                }
+                assertHelperStopped()
+            }
+        } finally {
+            onMain {
+                runtime.settings.update { original }
+                runtime.setPaused(original.paused)
+                runtime.ensureService()
             }
         }
     }

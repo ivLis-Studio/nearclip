@@ -1,20 +1,18 @@
 package studio.ivlis.nearclip.runtime
 
-import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.ComponentName
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.os.Binder
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.Parcel
 import android.os.ParcelFileDescriptor
 import android.os.Process
-import androidx.annotation.RequiresApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,12 +21,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import moe.shizuku.server.IShizukuService
-import org.lsposed.hiddenapibypass.HiddenApiBypass
 import rikka.shizuku.Shizuku
-import rikka.shizuku.ShizukuBinderWrapper
-import rikka.shizuku.SystemServiceHelper
 import java.lang.reflect.InvocationTargetException
-import java.lang.reflect.Method
+import studio.ivlis.nearclip.BuildConfig
+import studio.ivlis.nearclip.capture.IClipboardAccess
+import studio.ivlis.nearclip.capture.IClipboardEvents
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.Executors
 
 /** Setup of "Bring copies into Nearclip instantly", in the order the user completes it. */
@@ -105,8 +105,7 @@ class InstantCapture(
             Shizuku.addBinderReceivedListenerSticky({ refresh() }, main)
             Shizuku.addBinderDeadListener({
                 worker.execute {
-                    source = null
-                    _status.update { it.copy(listening = false) }
+                    stop()
                 }
                 refresh()
             }, main)
@@ -203,12 +202,13 @@ class InstantCapture(
     private fun sync() {
         val st = _status.value
         val want = wanted && st.ready && !st.failed
-        if (want && !st.listening) start() else if (!want && st.listening) stop()
+        if (want && !st.listening) start() else if (!want && (st.listening || source != null)) stop()
     }
 
     private fun start() {
         try {
             val src = source ?: connect().also { source = it }
+            if (!wanted) { stop(); return }
             src.listen(listener)
             _status.update { it.copy(listening = true) }
             log("instant capture: listening")
@@ -218,10 +218,14 @@ class InstantCapture(
     }
 
     private fun stop() {
+        val old = source
+        source = null
         try {
-            source?.unlisten(listener)
+            old?.unlisten(listener)
         } catch (e: Throwable) {
             log("instant capture: stop failed: ${cause(e)}")
+        } finally {
+            old?.close()
         }
         _status.update { it.copy(listening = false) }
         log("instant capture: stopped")
@@ -229,8 +233,7 @@ class InstantCapture(
 
     private fun fail(what: String, e: Throwable) {
         log("instant capture: $what failed: ${cause(e)}")
-        if (_status.value.listening) stop()
-        source = null
+        stop()
         val setup = setup()
         _status.update { it.copy(setup = setup, listening = false, failed = setup == CaptureSetup.READY || setup == CaptureSetup.BUILT_IN) }
     }
@@ -263,17 +266,53 @@ class InstantCapture(
     private fun connect(): Source =
         if (Build.VERSION.SDK_INT >= 29) connectShell() else DirectSource(app.getSystemService(ClipboardManager::class.java))
 
-    /** The clipboard service's binder, called through Shizuku so that the service sees the shell user. */
-    @RequiresApi(29)
-    @SuppressLint("PrivateApi")
+    /** Shizuku's documented UserService keeps all framework reflection outside the app process. */
     private fun connectShell(): Source {
-        HiddenApiBypass.addHiddenApiExemptions(
-            "Landroid/content/IClipboard", "Landroid/content/IOnPrimaryClipChangedListener",
-        )
-        val binder = SystemServiceHelper.getSystemService(Context.CLIPBOARD_SERVICE) ?: error("no clipboard service")
-        val service = Class.forName("android.content.IClipboard\$Stub").getMethod("asInterface", IBinder::class.java)
-            .invoke(null, ShizukuBinderWrapper(binder)) ?: error("no clipboard interface")
-        return ShellSource(service, Process.myUid() / PER_USER_RANGE)
+        val args = Shizuku.UserServiceArgs(ComponentName(app, ClipboardUserService::class.java))
+            .tag("nearclip.clipboard")
+            .processNameSuffix("clipboard")
+            .daemon(false)
+            .version(BuildConfig.VERSION_CODE)
+            .debuggable(BuildConfig.DEBUG)
+        val ready = CompletableFuture<IBinder>()
+        val closed = AtomicBoolean(false)
+        val connection = object : ServiceConnection {
+            private var connected: IBinder? = null
+            override fun onServiceConnected(name: ComponentName, binder: IBinder) {
+                connected = binder
+                if (!closed.get() && ready.complete(binder)) return
+                // A bind completing after timeout/opt-out must not leave a privileged reader behind.
+                try { IClipboardAccess.Stub.asInterface(binder)?.destroy() } catch (_: Exception) {}
+            }
+            override fun onServiceDisconnected(name: ComponentName) {
+                ready.completeExceptionally(IllegalStateException("clipboard service disconnected"))
+                val old = connected
+                worker.execute {
+                    if ((source as? RemoteSource)?.binder === old && old != null) {
+                        fail("connection", IllegalStateException("clipboard service disconnected"))
+                    }
+                }
+            }
+        }
+        fun release() {
+            if (!closed.compareAndSet(false, true)) return
+            try {
+                Shizuku.unbindUserService(args, connection, true)
+            } catch (e: Exception) {
+                // The Shizuku server may die while its child UserService is still alive.
+                val binder = if (ready.isCompletedExceptionally) null else ready.getNow(null)
+                try { binder?.let { IClipboardAccess.Stub.asInterface(it)?.destroy() } } catch (_: Exception) {}
+                log("instant capture: service release: ${cause(e)}")
+            }
+        }
+        try {
+            Shizuku.bindUserService(args, connection)
+            val binder = ready.get(10, TimeUnit.SECONDS)
+            return RemoteSource(binder, Process.myUid() / PER_USER_RANGE, ::release)
+        } catch (e: Throwable) {
+            release()
+            throw e
+        }
     }
 
     private fun cause(e: Throwable): Throwable = (e as? InvocationTargetException)?.targetException ?: e
@@ -285,6 +324,7 @@ class InstantCapture(
         fun clip(): ClipData?
         fun listen(l: ChangeListener)
         fun unlisten(l: ChangeListener)
+        fun close() {}
     }
 
     /** Android 9 and earlier: the public API works from the background. */
@@ -307,63 +347,26 @@ class InstantCapture(
         }
     }
 
-    /**
-     * The hidden IClipboard interface. AIDL methods have no overloads, so they are found by name; their parameters
-     * changed between releases — (package, user) on Android 10 and 11, then an attribution tag, then a device id
-     * on 14 — so arguments are filled in by type: the listener first, then the calling package (the shell's, since
-     * Shizuku calls as the shell) and a null attribution tag, then the user id and the default device.
-     */
-    private class ShellSource(private val service: Any, private val userId: Int) : Source {
-        private val methods: Map<String, Method> = service.javaClass.methods.associateBy { it.name }
-
-        override fun description(): ClipDescription? = call("getPrimaryClipDescription") as ClipDescription?
-        override fun clip(): ClipData? = call("getPrimaryClip") as ClipData?
-        override fun listen(l: ChangeListener) { call("addPrimaryClipChangedListener", l.asInterface) }
-        override fun unlisten(l: ChangeListener) { call("removePrimaryClipChangedListener", l.asInterface) }
-
-        private fun call(name: String, listener: Any? = null): Any? {
-            val m = methods[name] ?: throw NoSuchMethodException(name)
-            var strings = 0
-            var ints = 0
-            val args = m.parameterTypes.mapIndexed { i, type ->
-                when {
-                    i == 0 && listener != null -> listener
-                    type == String::class.java -> if (strings++ == 0) SHELL_PACKAGE else null
-                    type == Int::class.javaPrimitiveType -> if (ints++ == 0) userId else 0
-                    type == Boolean::class.javaPrimitiveType -> false
-                    else -> null
-                }
-            }
-            return m.invoke(service, *args.toTypedArray())
-        }
+    private class RemoteSource(
+        val binder: IBinder,
+        private val userId: Int,
+        private val release: () -> Unit,
+    ) : Source {
+        private val remote = IClipboardAccess.Stub.asInterface(binder)
+        override fun description(): ClipDescription? = remote.description()
+        override fun clip(): ClipData? = remote.clip()
+        override fun listen(l: ChangeListener) { remote.listen(l, userId) }
+        override fun unlisten(l: ChangeListener) { remote.unlisten() }
+        override fun close() { release() }
     }
 
-    /** IOnPrimaryClipChangedListener on a plain Binder: its one call is the first transaction (oneway). */
-    @SuppressLint("PrivateApi") // hidden listener type used only by the opt-in, version-adapted Shizuku path
-    private class ChangeListener(val fire: () -> Unit) : Binder() {
-        init {
-            attachInterface(null, DESCRIPTOR)
-        }
-
-        /** This binder as the hidden listener type the clipboard service's proxy takes. */
-        val asInterface: Any by lazy {
-            Class.forName("$DESCRIPTOR\$Stub").getMethod("asInterface", IBinder::class.java).invoke(null, this)!!
-        }
-
-        override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-            if (code != IBinder.FIRST_CALL_TRANSACTION) return super.onTransact(code, data, reply, flags)
-            fire()
-            return true
-        }
-
-        private companion object {
-            const val DESCRIPTOR = "android.content.IOnPrimaryClipChangedListener"
-        }
+    /** Only our own AIDL interface crosses into the ordinary app process. */
+    private class ChangeListener(val fire: () -> Unit) : IClipboardEvents.Stub() {
+        override fun onPrimaryClipChanged() { fire() }
     }
 
     companion object {
         const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
-        private const val SHELL_PACKAGE = "com.android.shell"
         private const val REQUEST_CODE = 0x4e43
         private const val PER_USER_RANGE = 100_000
     }

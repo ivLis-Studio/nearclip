@@ -65,7 +65,6 @@ private val libraries = listOf(
     Library("Kotlin, kotlinx.coroutines, kotlinx.serialization", "JetBrains s.r.o."),
     Library("ZXing", "ZXing authors"),
     Library("Material Symbols", "Google"),
-    Library("Android Hidden API Bypass", "LSPosed"),
 )
 
 /** Used only by the opt-in "Bring copies into Nearclip instantly". */

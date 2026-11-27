@@ -1,17 +1,19 @@
 # Google Play first release — 2026-11-28
 
-App: Nearclip (`studio.ivlis.nearclip`), Android 1.2.0, version code 5.
+App: Nearclip (`studio.ivlis.nearclip`), Android 1.2.1, version code 6.
 
 ## Artifact and validation
 
-- Signed App Bundle SHA-256: `4c8782bbde2e1c10983990cbd02d839a460a29589f222881c1e61c73fb3e43e0`.
+- Signed App Bundle SHA-256: `7d0de8fba53262d3019a1bd2a1b018a497630112080c2c8ad5300775a2bcf638`.
 - Min SDK 26, target SDK 36. Bundletool validation and JAR signature verification passed.
 - Limit ABIs to arm64-v8a, armeabi-v7a and x86_64: CameraX also included x86, for which the Tailscale JNI is not built. Every offered ABI now includes that JNI library.
-- All 64-bit native ELF LOAD segments support 16 KB pages.
+- All 8 bundled 64-bit native ELF files have LOAD segments supporting 16 KB pages.
+- Google pre-review checks flagged the old HiddenApiBypass SDK in code 5. Android 1.2.1 removes that dependency entirely and moves opt-in clipboard access to Shizuku's documented UserService; the ordinary app uses its own AIDL. DEX inspection confirms the bypass SDK is absent.
+- InstantCaptureTest passed on the disposable Android 16/API 36.1 emulator with real Shizuku 13.6.0: **OK (1 test)**, 21.093 seconds. It covers background text, sensitive and own-origin filters, pause/resume, actual helper exit after pause/opt-out, and helper termination/rebinding. Test preparation grants Shizuku's runtime permission, then restarts its server so its configuration reflects that grant; this does not change end-user permission behavior.
 - 34 Android core tests passed. Release lint: no errors, one existing DiscouragedApi warning.
 - PR #6 native Apple, Windows and iPhone UI checks passed before merge.
-- ConnectedDeviceServiceTest ran on a new Android 16/API 36.1 emulator against a real Swift protocol peer: **OK (1 test)**, 43.756 seconds. It verified foreground service startup, connected-device declaration, delivery of unique peer text and a new image while the Activity was in the background, and service shutdown after opting out. It uses a debug test build; this is distinct from validating the signed production AAB.
-- Instrumentation setup drives app APIs. The recorded clipboard transfers and native app UI are real. No user device, notification-reading access, Shizuku, or Tailscale account was used.
+- ConnectedDeviceServiceTest ran on a new Android 16/API 36.1 emulator against a real Swift protocol peer: **OK (1 test)**, 42.906 seconds on 1.2.1 (also passed on 1.2.0). It verified foreground service startup, connected-device declaration, delivery of unique peer text and a new image while the Activity was in the background, and service shutdown after opting out. It uses a debug test build; this is distinct from validating the signed production AAB.
+- Instrumentation setup drives app APIs. The recorded clipboard transfers and native app UI are real. No user device, notification-reading access, or Tailscale account was used. Shizuku was separately tested only for opt-in clipboard import; the connected-device transfer test leaves that feature off.
 - The integration test requires explicit `pairingUri` and `expectedText` arguments and is skipped without them. `reviewCapture=true` additionally waits for a new image and holds native screens for recording. Run it only on a disposable emulator with the debug app, test APK and notification-posting permission installed.
 
 ## Listing and declarations
@@ -36,6 +38,6 @@ https://ivlis-studio.github.io/nearclip/assets/media/nearclip-connected-device-r
 
 Backup download: https://github.com/ivLis-Studio/nearclip/releases/download/v1.2.0/Nearclip-connected-device-review.mp4
 
-44-second H.264 1920×1080 video, with captions explaining the live Android integration run. The native app recording is from the development test build of the same 1.2.0 app source; the test is not shipped inside the production bundle.
+44-second H.264 1920×1080 video, with captions explaining the live Android integration run. The native app recording is from the 1.2.0 development test build of the unchanged connected-device transfer flow; 1.2.1 re-ran this integration test successfully. The 1.2.1 change is the separate optional Shizuku path; the test is not shipped inside the production bundle.
 
 Submission status is recorded after the final Play Console confirmation below.

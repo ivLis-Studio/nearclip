@@ -6,3 +6,6 @@
 # The embedded Tailscale node is called through JNI (tailnet/capi/jni.c): keep the class and its native methods.
 -keep class studio.ivlis.nearclip.core.tailnet.TailnetNative { *; }
 -keepclasseswithmembernames,includedescriptorclasses class * { native <methods>; }
+
+# Shizuku starts this Binder class by name in its own shell/root process.
+-keep class studio.ivlis.nearclip.runtime.ClipboardUserService { public <init>(); }

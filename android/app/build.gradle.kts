@@ -11,8 +11,8 @@ android {
         applicationId = "studio.ivlis.nearclip"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.2.0"
+        versionCode = 6
+        versionName = "1.2.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // CameraX also ships x86 libraries, but the embedded Tailscale JNI supports these three ABIs.
@@ -37,6 +37,7 @@ android {
 
     buildFeatures {
         compose = true
+        aidl = true
         buildConfig = true
     }
 
@@ -97,7 +98,6 @@ dependencies {
     // Opt-in instant capture (runtime/InstantCapture.kt): clipboard reads as the shell user through Shizuku.
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)
-    implementation(libs.hiddenapibypass)
 
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
