@@ -145,8 +145,9 @@ Settings › Sync › **Bring copies into Nearclip instantly** is off by default
 install → start → allow steps. Only explicitly enabling it (or granting Shizuku permission from this flow) turns
 it on; it also enables Stay connected in the background. The existing send paths keep working without Shizuku.
 
-* Android 10+: Shizuku API 13.1.5 plus HiddenApiBypass 6.1 (6.2 requires compileSdk 37). A clipboard binder wrapped
-  by Shizuku uses the shell identity; method arguments adapt to Android's attribution/user/device signatures.
+* Android 10+: Shizuku API 13.1.5 starts an opt-in UserService under the shell identity. Framework reflection
+  stays in that separate process; the app uses its own AIDL and does not patch ART or include an API-bypass SDK.
+  Pausing, opting out, or losing the client stops the listener and destroys the UserService.
 * Android 8–9: background reads use the public clipboard API and need no Shizuku.
 * Text and links only. URI-backed images/files are not read through Shizuku; use share/open/send for images.
 * Description metadata filters sensitive and Nearclip-origin copies before fetching content. The fetched data's

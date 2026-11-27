@@ -115,10 +115,11 @@ welcome + member LWW merge before deciding on bye removed.
   granting permission from this setup flow activates it. Enabling also enables Stay connected. Switch has a TalkBack label.
 - Reviewed ClipStack's ShizukuManager/ShizukuClipboardService at commit 934eb9c:
   https://github.com/liliangxing/ClipStack . Reference for install/start/permission and binder lifecycle; no code copied.
-  Nearclip calls the clipboard through ShizukuBinderWrapper instead of running a separate UserService, so no helper
-  process is left behind when the user opts out. Clipboard arguments adapt to platform signatures.
-- Shizuku API/provider 13.1.5 (MIT), HiddenApiBypass 6.1 (Apache-2.0), license text in the app. 6.2 needs compileSdk 37;
-  6.1 works with the app's SDK 36 and Android 16 emulator. Hidden-API exemptions limited to the clipboard interfaces.
+  The original binder-wrapper integration was replaced on 2026-11-28 with Shizuku's documented UserService.
+  Only the privileged helper reflects the framework clipboard API; the app uses its own AIDL interface.
+  The helper is non-daemon, stops on pause/opt-out/client death, and filters sensitive/own-origin clips.
+- Shizuku API/provider 13.1.5 (MIT). The old HiddenApiBypass dependency was removed for Google Play ART
+  compatibility. No runtime patching or ART layout assumptions remain.
 - Description-first checks skip own/sensitive clips without content access. Recheck the fetched ClipData flags to
   cover a change between metadata and data reads. Text/links only; no content/file URI reads through shell grants.
   Capture stops while paused, opted out, or when neither UI nor SyncService is active.
